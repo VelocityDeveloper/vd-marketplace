@@ -17,6 +17,7 @@ class Settings
             'default_order_status' => 'pending_payment',
             'payment_methods' => ['bank'],
             'seller_product_status' => 'publish',
+            'shipping_api_key' => '',
         ];
 
         return array_merge($defaults, $settings);
@@ -91,5 +92,28 @@ class Settings
             }
         }
         return site_url('/myaccount/');
+    }
+
+    public static function shipping_api_key()
+    {
+        $settings = self::all();
+        return trim((string) ($settings['shipping_api_key'] ?? ''));
+    }
+
+    public static function courier_labels()
+    {
+        return [
+            'jne' => 'JNE',
+            'pos' => 'POS Indonesia',
+            'tiki' => 'TIKI',
+            'sicepat' => 'SiCepat',
+            'jnt' => 'J&T',
+            'ninja' => 'Ninja Xpress',
+            'wahana' => 'Wahana',
+            'lion' => 'Lion Parcel',
+            'sap' => 'SAP Express',
+            'rex' => 'REX',
+            'ide' => 'IDExpress',
+        ];
     }
 }

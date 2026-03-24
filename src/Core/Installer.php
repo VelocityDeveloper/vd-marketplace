@@ -4,22 +4,11 @@ namespace VelocityMarketplace\Core;
 
 class Installer
 {
-    const DB_VERSION = '1.3.0';
-
     public function activate()
     {
         $this->ensure_roles();
         $this->create_default_pages();
         $this->seed_default_settings();
-        update_option('velocity_marketplace_db_version', self::DB_VERSION);
-    }
-
-    public function maybe_upgrade()
-    {
-        $version = (string) get_option('velocity_marketplace_db_version', '');
-        if ($version !== self::DB_VERSION) {
-            $this->activate();
-        }
     }
 
     private function create_default_pages()

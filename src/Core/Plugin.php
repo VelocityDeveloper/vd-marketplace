@@ -13,54 +13,61 @@ class Plugin
 
     private function load_core()
     {
-        $installer = new Installer();
-        add_action('init', [$installer, 'maybe_upgrade']);
+        $upgrade = new Upgrade();
+        $upgrade->register();
 
         $post_types = new PostTypes();
         $post_types->register();
 
-        $product_fields = new \VelocityMarketplace\Support\ProductFields();
+        $product_fields = new \VelocityMarketplace\Modules\Product\ProductFields();
         $product_fields->register();
 
         if (is_admin()) {
-            $meta_box = new \VelocityMarketplace\Admin\ProductMetaBox();
+            $meta_box = new \VelocityMarketplace\Modules\Product\ProductMetaBox();
             $meta_box->register();
 
-            $settings_page = new \VelocityMarketplace\Admin\SettingsPage();
+            $settings_page = new SettingsPage();
             $settings_page->register();
         }
     }
 
     private function load_api()
     {
-        $products = new \VelocityMarketplace\Api\ProductController();
+        $products = new \VelocityMarketplace\Modules\Product\ProductController();
         add_action('rest_api_init', [$products, 'register_routes']);
 
-        $cart = new \VelocityMarketplace\Api\CartController();
+        $cart = new \VelocityMarketplace\Modules\Cart\CartController();
         add_action('rest_api_init', [$cart, 'register_routes']);
 
-        $checkout = new \VelocityMarketplace\Api\CheckoutController();
+        $checkout = new \VelocityMarketplace\Modules\Checkout\CheckoutController();
         add_action('rest_api_init', [$checkout, 'register_routes']);
 
-        $captcha = new \VelocityMarketplace\Api\CaptchaController();
+        $captcha = new \VelocityMarketplace\Modules\Captcha\CaptchaController();
         add_action('rest_api_init', [$captcha, 'register_routes']);
 
-        $wishlist = new \VelocityMarketplace\Api\WishlistController();
+        $wishlist = new \VelocityMarketplace\Modules\Wishlist\WishlistController();
         add_action('rest_api_init', [$wishlist, 'register_routes']);
+
+        $shipping = new \VelocityMarketplace\Modules\Shipping\ShippingController();
+        add_action('rest_api_init', [$shipping, 'register_routes']);
     }
 
     private function load_frontend()
     {
+        $template = new \VelocityMarketplace\Frontend\Template();
+        $template->register();
+
         $assets = new \VelocityMarketplace\Frontend\Assets();
         $assets->register();
 
         $shortcode = new \VelocityMarketplace\Frontend\Shortcode();
         $shortcode->register();
 
-        $account = new \VelocityMarketplace\Frontend\Account();
+        $account = new \VelocityMarketplace\Modules\Account\Account();
         $account->register();
 
-        $actions = new \VelocityMarketplace\Frontend\Actions();
+        $actions = new \VelocityMarketplace\Modules\Account\Actions();
         $actions->register();
     }
 }
+

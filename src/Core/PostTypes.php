@@ -54,7 +54,7 @@ class PostTypes
             'labels' => $labels,
             'public' => true,
             'show_ui' => true,
-            'show_in_rest' => true,
+            'show_in_rest' => false,
             'has_archive' => true,
             'rewrite' => ['slug' => 'produk'],
             'supports' => ['title', 'editor', 'thumbnail', 'excerpt'],

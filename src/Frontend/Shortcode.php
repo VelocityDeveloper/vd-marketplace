@@ -2,7 +2,7 @@
 
 namespace VelocityMarketplace\Frontend;
 
-use VelocityMarketplace\Support\ProductData;
+use VelocityMarketplace\Modules\Product\ProductData;
 use VelocityMarketplace\Support\Settings;
 
 class Shortcode
@@ -129,10 +129,7 @@ class Shortcode
             return '';
         }
 
-        $image = get_the_post_thumbnail_url($product_id, sanitize_key((string) $atts['size']));
-        if (!$image && !empty($item['gallery_ids'])) {
-            $image = wp_get_attachment_image_url((int) $item['gallery_ids'][0], sanitize_key((string) $atts['size']));
-        }
+        $image = ProductData::image_url($product_id, sanitize_key((string) $atts['size']), $item['gallery_ids']);
 
         return $this->render_thumbnail_markup(
             $item,
@@ -430,3 +427,4 @@ class Shortcode
         return '<button type="button" class="' . esc_attr(trim((string) $class_name)) . ' vmp-action-toggle-wishlist' . ($active ? ' btn-danger' : '') . '" data-product-id="' . esc_attr((string) $product_id) . '" data-default-label="' . esc_attr((string) $text) . '" aria-pressed="' . ($active ? 'true' : 'false') . '" title="Wishlist">' . esc_html((string) $text) . '</button>';
     }
 }
+

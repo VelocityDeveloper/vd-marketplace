@@ -1,5 +1,6 @@
 <?php
-use VelocityMarketplace\Support\OrderData;
+use VelocityMarketplace\Modules\Order\OrderData;
+use VelocityMarketplace\Modules\Shipping\ShippingController;
 
 $invoice = isset($_GET['invoice']) ? sanitize_text_field((string) wp_unslash($_GET['invoice'])) : '';
 $order = null;
@@ -54,8 +55,7 @@ if ($invoice !== '') {
         $status = (string) get_post_meta($order_id, 'vmp_status', true);
         $payment = (string) get_post_meta($order_id, 'vmp_payment_method', true);
         $shipping = get_post_meta($order_id, 'vmp_shipping', true);
-        $receipt_no = (string) get_post_meta($order_id, 'vmp_receipt_no', true);
-        $receipt_courier = (string) get_post_meta($order_id, 'vmp_receipt_courier', true);
+        $shipping_groups = OrderData::shipping_groups($order_id);
         if (!is_array($shipping)) {
             $shipping = [];
         }
@@ -69,12 +69,54 @@ if ($invoice !== '') {
                         <div><strong>Pembayaran:</strong> <?php echo esc_html($payment !== '' ? $payment : '-'); ?></div>
                     </div>
                     <div class="col-md-6">
-                        <div><strong>Kurir:</strong> <?php echo esc_html($receipt_courier !== '' ? $receipt_courier : ($shipping['courier'] ?? '-')); ?></div>
-                        <div><strong>Layanan:</strong> <?php echo esc_html($shipping['service'] ?? '-'); ?></div>
-                        <div><strong>No Resi:</strong> <?php echo esc_html($receipt_no !== '' ? $receipt_no : '-'); ?></div>
+                        <div><strong>Tujuan:</strong> <?php echo esc_html(trim((string) (($shipping['subdistrict_destination_name'] ?? '') . ', ' . ($shipping['city_destination_name'] ?? '') . ', ' . ($shipping['province_destination_name'] ?? '')), ', ')); ?></div>
+                        <div><strong>Total Ongkir:</strong> <?php echo esc_html(number_format((float) ($shipping['cost'] ?? 0), 0, ',', '.')); ?></div>
                     </div>
                 </div>
+                <?php if (!empty($shipping_groups)) : ?>
+                    <div class="mt-3">
+                        <?php foreach ($shipping_groups as $shipping_group) : ?>
+                            <?php
+                            $seller_name = (string) ($shipping_group['seller_name'] ?? 'Toko');
+                            $receipt_no = (string) ($shipping_group['receipt_no'] ?? '');
+                            $receipt_courier = (string) ($shipping_group['receipt_courier'] ?? ($shipping_group['courier'] ?? ''));
+                            $waybill = null;
+                            if ($receipt_no !== '' && $receipt_courier !== '') {
+                                $maybe_waybill = ShippingController::fetch_waybill($receipt_no, $receipt_courier);
+                                if (!is_wp_error($maybe_waybill) && is_array($maybe_waybill)) {
+                                    $waybill = $maybe_waybill;
+                                }
+                            }
+                            ?>
+                            <div class="border rounded p-3 mb-3">
+                                <div class="fw-semibold"><?php echo esc_html($seller_name); ?></div>
+                                <div><strong>Kurir:</strong> <?php echo esc_html($receipt_courier !== '' ? $receipt_courier : '-'); ?></div>
+                                <div><strong>Layanan:</strong> <?php echo esc_html((string) ($shipping_group['service'] ?? '-')); ?></div>
+                                <div><strong>No Resi:</strong> <?php echo esc_html($receipt_no !== '' ? $receipt_no : '-'); ?></div>
+                                <?php
+                                $tracking_rows = [];
+                                if ($waybill && isset($waybill['data']['manifest']) && is_array($waybill['data']['manifest'])) {
+                                    $tracking_rows = $waybill['data']['manifest'];
+                                } elseif ($waybill && isset($waybill['data']['history']) && is_array($waybill['data']['history'])) {
+                                    $tracking_rows = $waybill['data']['history'];
+                                }
+                                ?>
+                                <?php if (!empty($tracking_rows)) : ?>
+                                    <div class="mt-2">
+                                        <?php foreach ($tracking_rows as $row) : ?>
+                                            <div class="border-top py-2">
+                                                <div class="fw-semibold"><?php echo esc_html((string) ($row['manifest_description'] ?? $row['description'] ?? '-')); ?></div>
+                                                <div class="small text-muted"><?php echo esc_html(trim((string) (($row['manifest_date'] ?? '') . ' ' . ($row['manifest_time'] ?? $row['date'] ?? '')))); ?></div>
+                                            </div>
+                                        <?php endforeach; ?>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                <?php endif; ?>
             </div>
         </div>
     <?php endif; ?>
 </div>
+

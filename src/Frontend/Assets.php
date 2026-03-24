@@ -3,6 +3,7 @@
 namespace VelocityMarketplace\Frontend;
 
 use VelocityMarketplace\Support\Settings;
+use VelocityMarketplace\Modules\Product\ProductData;
 
 class Assets
 {
@@ -13,7 +14,8 @@ class Assets
 
     public function enqueue()
     {
-        if (!$this->should_enqueue()) {
+        $context = $this->get_enqueue_context();
+        if (empty($context['enabled'])) {
             return;
         }
 
@@ -24,26 +26,52 @@ class Assets
             null,
             true
         );
-        wp_add_inline_script('alpinejs', 'window.deferLoadingAlpineJs = true;', 'before');
 
         wp_enqueue_style(
-            'velocity-marketplace-css',
-            VMP_URL . 'assets/css/style.css',
+            'velocity-marketplace-frontend-css',
+            VMP_URL . 'assets/css/frontend.css',
             [],
             VMP_VERSION
         );
 
         wp_enqueue_script(
-            'velocity-marketplace-js',
-            VMP_URL . 'assets/js/marketplace.js',
-            ['alpinejs'],
+            'velocity-marketplace-frontend-js',
+            VMP_URL . 'assets/js/frontend.js',
+            [],
             VMP_VERSION,
             true
         );
 
-        wp_enqueue_media();
-        if (function_exists('wp_enqueue_editor')) {
-            wp_enqueue_editor();
+        wp_enqueue_script('alpinejs');
+
+        if (!empty($context['profile'])) {
+            wp_enqueue_style(
+                'velocity-marketplace-dashboard-css',
+                VMP_URL . 'assets/css/dashboard.css',
+                ['velocity-marketplace-frontend-css'],
+                VMP_VERSION
+            );
+
+            wp_enqueue_script(
+                'velocity-marketplace-dashboard-js',
+                VMP_URL . 'assets/js/dashboard.js',
+                [],
+                VMP_VERSION,
+                true
+            );
+
+            wp_enqueue_script(
+                'velocity-marketplace-media-js',
+                VMP_URL . 'assets/js/media.js',
+                [],
+                VMP_VERSION,
+                true
+            );
+
+            wp_enqueue_media();
+            if (function_exists('wp_enqueue_editor')) {
+                wp_enqueue_editor();
+            }
         }
 
         $pages = get_option('velocity_marketplace_pages', []);
@@ -55,7 +83,7 @@ class Assets
         $currency_symbol = Settings::currency_symbol();
         $payment_methods = Settings::payment_methods();
 
-        wp_localize_script('velocity-marketplace-js', 'vmpSettings', [
+        wp_localize_script('velocity-marketplace-frontend-js', 'vmpSettings', [
             'restUrl' => esc_url_raw(rest_url('velocity-marketplace/v1/')),
             'nonce' => wp_create_nonce('wp_rest'),
             'catalogUrl' => esc_url_raw($catalog_url),
@@ -66,20 +94,31 @@ class Assets
             'currencySymbol' => $currency_symbol,
             'paymentMethods' => $payment_methods,
             'isLoggedIn' => is_user_logged_in(),
+            'noImageUrl' => esc_url_raw(ProductData::no_image_url()),
         ]);
     }
 
-    private function should_enqueue()
+    private function get_enqueue_context()
     {
         if (is_admin()) {
-            return false;
+            return [
+                'enabled' => false,
+                'profile' => false,
+            ];
+        }
+
+        if (is_post_type_archive('vmp_product') || is_singular('vmp_product')) {
+            return [
+                'enabled' => true,
+                'profile' => false,
+            ];
         }
 
         if (is_page()) {
             global $post;
             if ($post && isset($post->post_content)) {
                 $content = (string) $post->post_content;
-                $shortcodes = [
+                $enabled = $this->content_has_any_shortcode($content, [
                     'velocity_marketplace_catalog',
                     'velocity_marketplace_products',
                     'velocity_marketplace_product_card',
@@ -102,13 +141,30 @@ class Assets
                     'vm_checkout',
                     'vm_profile',
                     'vm_tracking',
-                ];
+                ]);
+                $profile = $this->content_has_any_shortcode($content, [
+                    'velocity_marketplace_profile',
+                    'vm_profile',
+                ]);
 
-                foreach ($shortcodes as $shortcode) {
-                    if (has_shortcode($content, $shortcode)) {
-                        return true;
-                    }
-                }
+                return [
+                    'enabled' => $enabled,
+                    'profile' => $profile,
+                ];
+            }
+        }
+
+        return [
+            'enabled' => false,
+            'profile' => false,
+        ];
+    }
+
+    private function content_has_any_shortcode($content, $shortcodes)
+    {
+        foreach ((array) $shortcodes as $shortcode) {
+            if (has_shortcode($content, (string) $shortcode)) {
+                return true;
             }
         }
 
