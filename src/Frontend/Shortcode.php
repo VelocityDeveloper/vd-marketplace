@@ -9,32 +9,18 @@ class Shortcode
 {
     public function register()
     {
-        add_shortcode('velocity_marketplace_catalog', [$this, 'render_catalog']);
-        add_shortcode('velocity_marketplace_products', [$this, 'render_products']);
-        add_shortcode('velocity_marketplace_product_card', [$this, 'render_product_card']);
-        add_shortcode('velocity_marketplace_thumbnail', [$this, 'render_thumbnail']);
-        add_shortcode('velocity_marketplace_price', [$this, 'render_price']);
-        add_shortcode('velocity_marketplace_add_to_cart', [$this, 'render_add_to_cart']);
-        add_shortcode('velocity_marketplace_add_to_wishlist', [$this, 'render_add_to_wishlist']);
-        add_shortcode('velocity_marketplace_cart', [$this, 'render_cart']);
-        add_shortcode('velocity_marketplace_checkout', [$this, 'render_checkout']);
-        add_shortcode('velocity_marketplace_profile', [$this, 'render_profile']);
-        add_shortcode('velocity_marketplace_tracking', [$this, 'render_tracking']);
-
-        add_shortcode('vm_catalog', [$this, 'render_catalog']);
-        add_shortcode('vm_products', [$this, 'render_products']);
-        add_shortcode('vm_product_card', [$this, 'render_product_card']);
-        add_shortcode('vm_thumbnail', [$this, 'render_thumbnail']);
-        add_shortcode('vm_price', [$this, 'render_price']);
-        add_shortcode('vm_add_to_cart', [$this, 'render_add_to_cart']);
-        add_shortcode('vm_add_to_wishlist', [$this, 'render_add_to_wishlist']);
-        add_shortcode('vm_cart', [$this, 'render_cart']);
-        add_shortcode('vm_checkout', [$this, 'render_checkout']);
-        add_shortcode('vm_profile', [$this, 'render_profile']);
-        add_shortcode('vm_tracking', [$this, 'render_tracking']);
-
-        add_shortcode('store_cart', [$this, 'render_cart']);
-        add_shortcode('store_checkout', [$this, 'render_checkout']);
+        add_shortcode('vmp_catalog', [$this, 'render_catalog']);
+        add_shortcode('vmp_products', [$this, 'render_products']);
+        add_shortcode('vmp_product_card', [$this, 'render_product_card']);
+        add_shortcode('vmp_thumbnail', [$this, 'render_thumbnail']);
+        add_shortcode('vmp_price', [$this, 'render_price']);
+        add_shortcode('vmp_add_to_cart', [$this, 'render_add_to_cart']);
+        add_shortcode('vmp_add_to_wishlist', [$this, 'render_add_to_wishlist']);
+        add_shortcode('vmp_cart', [$this, 'render_cart']);
+        add_shortcode('vmp_checkout', [$this, 'render_checkout']);
+        add_shortcode('vmp_profile', [$this, 'render_profile']);
+        add_shortcode('vmp_tracking', [$this, 'render_tracking']);
+        add_shortcode('vmp_store_profile', [$this, 'render_store_profile']);
     }
 
     public function render_catalog($atts = [])
@@ -239,6 +225,22 @@ class Shortcode
     public function render_tracking($atts = [])
     {
         return Template::render('tracking', []);
+    }
+
+    public function render_store_profile($atts = [])
+    {
+        $atts = shortcode_atts([
+            'seller' => 0,
+        ], $atts);
+
+        $seller_id = (int) $atts['seller'];
+        if ($seller_id <= 0) {
+            $seller_id = isset($_GET['seller']) ? (int) wp_unslash($_GET['seller']) : 0;
+        }
+
+        return Template::render('store-profile', [
+            'seller_id' => $seller_id,
+        ]);
     }
 
     private function resolve_product_id($given_id = 0)

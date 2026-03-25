@@ -2,7 +2,7 @@
 /**
  * Plugin Name: Velocity Marketplace
  * Description: Marketplace plugin berbasis REST API + Alpine.js untuk migrasi vmplace.
- * Version: 1.4.0
+ * Version: 1.0.0
  * Author: Velocity Developer
  * Text Domain: velocity-marketplace
  */
@@ -11,9 +11,12 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VMP_VERSION', '1.4.0');
+define('VMP_VERSION', '1.0.0');
 define('VMP_PATH', plugin_dir_path(__FILE__));
 define('VMP_URL', plugin_dir_url(__FILE__));
+define('VMP_SETTINGS_OPTION', 'vmp_settings');
+define('VMP_PAGES_OPTION', 'vmp_pages');
+define('VMP_DB_VERSION_OPTION', 'vmp_db_version');
 
 spl_autoload_register(function ($class) {
     $prefix = 'VelocityMarketplace\\';

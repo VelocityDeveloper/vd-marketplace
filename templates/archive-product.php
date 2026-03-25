@@ -19,13 +19,13 @@ get_header();
                 <?php if (!$item) : continue; endif; ?>
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card h-100 shadow-sm border-0 vmp-product-card">
-                        <?php echo do_shortcode('[vm_thumbnail id="' . (int) $item['id'] . '"]'); ?>
+                        <?php echo do_shortcode('[vmp_thumbnail id="' . (int) $item['id'] . '"]'); ?>
                         <div class="card-body d-flex flex-column">
                             <h2 class="card-title h6 mb-1"><a href="<?php echo esc_url($item['link']); ?>" class="text-decoration-none text-dark"><?php echo esc_html($item['title']); ?></a></h2>
                             <?php if (!empty($item['label'])) : ?>
                                 <div class="small text-muted mb-2"><?php echo esc_html($item['label']); ?></div>
                             <?php endif; ?>
-                            <?php echo do_shortcode('[vm_price id="' . (int) $item['id'] . '"]'); ?>
+                            <?php echo do_shortcode('[vmp_price id="' . (int) $item['id'] . '"]'); ?>
                             <div class="small text-muted mb-3">
                                 <?php
                                 if ($item['stock'] === null || $item['stock'] === '') {
@@ -36,8 +36,8 @@ get_header();
                                 ?>
                             </div>
                             <div class="mt-auto d-flex gap-2">
-                                <?php echo do_shortcode('[vm_add_to_cart id="' . (int) $item['id'] . '" class="btn btn-sm btn-dark flex-grow-1"]'); ?>
-                                <?php echo do_shortcode('[vm_add_to_wishlist id="' . (int) $item['id'] . '" class="btn btn-sm btn-outline-secondary"]'); ?>
+                                <?php echo do_shortcode('[vmp_add_to_cart id="' . (int) $item['id'] . '" class="btn btn-sm btn-dark flex-grow-1"]'); ?>
+                                <?php echo do_shortcode('[vmp_add_to_wishlist id="' . (int) $item['id'] . '" class="btn btn-sm btn-outline-secondary"]'); ?>
                             </div>
                         </div>
                     </div>

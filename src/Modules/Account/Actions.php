@@ -23,7 +23,7 @@ class Actions
             return;
         }
 
-        if (isset($_GET['vmp_delete_product']) && Account::is_seller()) {
+        if (isset($_GET['vmp_delete_product']) && Account::can_sell()) {
             $this->handle_delete_product();
             return;
         }
@@ -54,6 +54,11 @@ class Actions
             return;
         }
 
+        if ($action === 'save_customer_profile') {
+            $this->handle_save_customer_profile();
+            return;
+        }
+
         if ($action === 'wishlist_remove') {
             $this->handle_wishlist_remove();
             return;
@@ -78,16 +83,12 @@ class Actions
             $this->handle_message_send();
             return;
         }
-
-        if ($action === 'message_mark_read') {
-            $this->handle_message_mark_read();
-        }
     }
 
     private function handle_save_product()
     {
-        if (!Account::is_seller()) {
-            $this->redirect_with(['vmp_error' => 'Hanya seller yang bisa menyimpan produk.', 'tab' => 'seller_products']);
+        if (!Account::can_sell()) {
+            $this->redirect_with(['vmp_error' => 'Hanya member marketplace yang bisa menyimpan produk.', 'tab' => 'seller_products']);
         }
 
         if (!isset($_POST['vmp_seller_product_nonce']) || !wp_verify_nonce($_POST['vmp_seller_product_nonce'], 'vmp_seller_product')) {
@@ -105,8 +106,8 @@ class Actions
         }
 
         $user_id = get_current_user_id();
-        $store_name = (string) get_user_meta($user_id, 'vmp_store_name', true);
-        $store_address = (string) get_user_meta($user_id, 'vmp_store_address', true);
+        $store_name = (string) get_user_meta($user_id, 'vmp_name', true);
+        $store_address = (string) get_user_meta($user_id, 'vmp_address', true);
         if ($store_name === '' || $store_address === '') {
             $this->redirect_with([
                 'vmp_error' => 'Lengkapi profil toko dulu sebelum menambah produk.',
@@ -170,7 +171,7 @@ class Actions
 
         if (array_key_exists('featured_image_id', $_POST)) {
             $featured_image_id = isset($_POST['featured_image_id']) ? (int) wp_unslash($_POST['featured_image_id']) : 0;
-            if ($featured_image_id > 0 && get_post_type($featured_image_id) === 'attachment') {
+            if ($this->attachment_allowed_for_current_user($featured_image_id)) {
                 set_post_thumbnail($saved_id, $featured_image_id);
             } else {
                 delete_post_thumbnail($saved_id);
@@ -249,8 +250,8 @@ class Actions
 
     private function handle_seller_update_order()
     {
-        if (!Account::is_seller()) {
-            $this->redirect_with(['vmp_error' => 'Hanya seller yang bisa mengubah order.', 'tab' => 'seller_home']);
+        if (!Account::can_sell()) {
+            $this->redirect_with(['vmp_error' => 'Hanya member marketplace yang bisa mengubah order.', 'tab' => 'seller_home']);
         }
 
         $order_id = isset($_POST['order_id']) ? (int) $_POST['order_id'] : 0;
@@ -411,52 +412,106 @@ class Actions
 
     private function handle_save_store_profile()
     {
-        if (!Account::is_seller()) {
-            $this->redirect_with(['vmp_error' => 'Fitur ini hanya untuk seller.', 'tab' => 'orders']);
+        if (!Account::can_sell()) {
+            $this->stay_with(['vmp_error' => 'Fitur ini hanya untuk member marketplace.', 'tab' => 'orders']);
+            return;
         }
 
         $nonce = isset($_POST['vmp_store_profile_nonce']) ? (string) wp_unslash($_POST['vmp_store_profile_nonce']) : '';
         if ($nonce === '' || !wp_verify_nonce($nonce, 'vmp_store_profile')) {
-            $this->redirect_with(['vmp_error' => 'Nonce profil toko tidak valid.', 'tab' => 'seller_profile']);
+            $this->stay_with(['vmp_error' => 'Nonce profil toko tidak valid.', 'tab' => 'seller_profile']);
+            return;
         }
 
         $user_id = get_current_user_id();
+        $name = sanitize_text_field((string) ($_POST['store_name'] ?? ''));
         $map = [
-            'vmp_store_name' => sanitize_text_field((string) ($_POST['store_name'] ?? '')),
-            'vmp_store_phone' => sanitize_text_field((string) ($_POST['store_phone'] ?? '')),
-            'vmp_store_whatsapp' => sanitize_text_field((string) ($_POST['store_whatsapp'] ?? '')),
-            'vmp_store_address' => sanitize_textarea_field((string) ($_POST['store_address'] ?? '')),
-            'vmp_store_subdistrict_id' => sanitize_text_field((string) ($_POST['store_subdistrict_id'] ?? '')),
-            'vmp_store_subdistrict' => sanitize_text_field((string) ($_POST['store_subdistrict_name'] ?? '')),
-            'vmp_store_city_id' => sanitize_text_field((string) ($_POST['store_city_id'] ?? '')),
-            'vmp_store_city' => sanitize_text_field((string) ($_POST['store_city_name'] ?? '')),
-            'vmp_store_province_id' => sanitize_text_field((string) ($_POST['store_province_id'] ?? '')),
-            'vmp_store_province' => sanitize_text_field((string) ($_POST['store_province_name'] ?? '')),
-            'vmp_store_postcode' => sanitize_text_field((string) ($_POST['store_postcode'] ?? '')),
-            'vmp_store_description' => sanitize_textarea_field((string) ($_POST['store_description'] ?? '')),
+            'vmp_name' => $name,
+            'vmp_phone' => sanitize_text_field((string) ($_POST['store_phone'] ?? '')),
+            'vmp_whatsapp' => sanitize_text_field((string) ($_POST['store_whatsapp'] ?? '')),
+            'vmp_address' => sanitize_textarea_field((string) ($_POST['store_address'] ?? '')),
+            'vmp_subdistrict_id' => sanitize_text_field((string) ($_POST['store_subdistrict_id'] ?? '')),
+            'vmp_subdistrict' => sanitize_text_field((string) ($_POST['store_subdistrict_name'] ?? '')),
+            'vmp_city_id' => sanitize_text_field((string) ($_POST['store_city_id'] ?? '')),
+            'vmp_city' => sanitize_text_field((string) ($_POST['store_city_name'] ?? '')),
+            'vmp_province_id' => sanitize_text_field((string) ($_POST['store_province_id'] ?? '')),
+            'vmp_province' => sanitize_text_field((string) ($_POST['store_province_name'] ?? '')),
+            'vmp_postcode' => sanitize_text_field((string) ($_POST['store_postcode'] ?? '')),
+            'vmp_description' => sanitize_textarea_field((string) ($_POST['store_description'] ?? '')),
         ];
         foreach ($map as $meta_key => $value) {
             update_user_meta($user_id, $meta_key, $value);
+        }
+
+        if ($name !== '') {
+            update_user_meta($user_id, 'first_name', $name);
+            wp_update_user([
+                'ID' => $user_id,
+                'display_name' => $name,
+            ]);
         }
 
         $couriers = isset($_POST['store_couriers']) && is_array($_POST['store_couriers']) ? $_POST['store_couriers'] : [];
         $couriers = array_values(array_unique(array_filter(array_map('sanitize_key', $couriers), function ($code) {
             return $code !== '';
         })));
-        update_user_meta($user_id, 'vmp_store_couriers', $couriers);
+        update_user_meta($user_id, 'vmp_couriers', $couriers);
 
         if (array_key_exists('store_avatar_id', $_POST)) {
             $avatar_id = isset($_POST['store_avatar_id']) ? (int) wp_unslash($_POST['store_avatar_id']) : 0;
-            if ($avatar_id > 0 && get_post_type($avatar_id) === 'attachment') {
-                update_user_meta($user_id, 'vmp_store_avatar_id', $avatar_id);
+            if ($this->attachment_allowed_for_current_user($avatar_id)) {
+                update_user_meta($user_id, 'vmp_avatar_id', $avatar_id);
             } else {
-                delete_user_meta($user_id, 'vmp_store_avatar_id');
+                delete_user_meta($user_id, 'vmp_avatar_id');
             }
         }
 
-        $this->redirect_with([
+        $this->stay_with([
             'vmp_notice' => 'Profil toko berhasil diperbarui.',
             'tab' => 'seller_profile',
+        ]);
+    }
+
+    private function handle_save_customer_profile()
+    {
+        $nonce = isset($_POST['vmp_customer_profile_nonce']) ? (string) wp_unslash($_POST['vmp_customer_profile_nonce']) : '';
+        if ($nonce === '' || !wp_verify_nonce($nonce, 'vmp_customer_profile')) {
+            $this->stay_with(['vmp_error' => 'Nonce profil customer tidak valid.', 'tab' => 'account_profile']);
+            return;
+        }
+
+        $user_id = get_current_user_id();
+        $name = sanitize_text_field((string) ($_POST['customer_name'] ?? ''));
+        $phone = sanitize_text_field((string) ($_POST['customer_phone'] ?? ''));
+
+        $map = [
+            'vmp_name' => $name,
+            'vmp_phone' => $phone,
+            'vmp_address' => sanitize_textarea_field((string) ($_POST['customer_address'] ?? '')),
+            'vmp_subdistrict_id' => sanitize_text_field((string) ($_POST['customer_subdistrict_id'] ?? '')),
+            'vmp_subdistrict' => sanitize_text_field((string) ($_POST['customer_subdistrict_name'] ?? '')),
+            'vmp_city_id' => sanitize_text_field((string) ($_POST['customer_city_id'] ?? '')),
+            'vmp_city' => sanitize_text_field((string) ($_POST['customer_city_name'] ?? '')),
+            'vmp_province_id' => sanitize_text_field((string) ($_POST['customer_province_id'] ?? '')),
+            'vmp_province' => sanitize_text_field((string) ($_POST['customer_province_name'] ?? '')),
+            'vmp_postcode' => sanitize_text_field((string) ($_POST['customer_postcode'] ?? '')),
+        ];
+
+        foreach ($map as $meta_key => $value) {
+            update_user_meta($user_id, $meta_key, $value);
+        }
+
+        if ($name !== '') {
+            update_user_meta($user_id, 'first_name', $name);
+            wp_update_user([
+                'ID' => $user_id,
+                'display_name' => $name,
+            ]);
+        }
+
+        $this->stay_with([
+            'vmp_notice' => 'Profil customer berhasil diperbarui.',
+            'tab' => 'account_profile',
         ]);
     }
 
@@ -555,17 +610,6 @@ class Actions
             ]);
         }
 
-        $sender = get_userdata($sender_id);
-        $sender_name = $sender && $sender->display_name !== '' ? $sender->display_name : 'User';
-        $notif = new NotificationRepository();
-        $notif->add(
-            $recipient_id,
-            'message',
-            'Pesan Baru',
-            $sender_name . ' mengirim pesan baru untukmu.',
-            add_query_arg(['tab' => 'messages'], Settings::profile_url())
-        );
-
         $params = [
             'vmp_notice' => 'Pesan berhasil dikirim.',
             'tab' => 'messages',
@@ -580,23 +624,6 @@ class Actions
         $this->redirect_with($params);
     }
 
-    private function handle_message_mark_read()
-    {
-        $nonce = isset($_POST['vmp_message_nonce']) ? (string) wp_unslash($_POST['vmp_message_nonce']) : '';
-        $message_id = isset($_POST['message_id']) ? (int) $_POST['message_id'] : 0;
-        if ($message_id <= 0 || $nonce === '' || !wp_verify_nonce($nonce, 'vmp_message_mark_read_' . $message_id)) {
-            $this->redirect_with(['vmp_error' => 'Aksi pesan tidak valid.', 'tab' => 'messages']);
-        }
-
-        $repo = new MessageRepository();
-        $repo->mark_read($message_id, get_current_user_id());
-
-        $this->redirect_with([
-            'vmp_notice' => 'Pesan ditandai sudah dibaca.',
-            'tab' => 'messages',
-        ]);
-    }
-
     private function redirect_with($params = [])
     {
         $target = wp_get_referer();
@@ -604,9 +631,43 @@ class Actions
             $target = Settings::profile_url();
         }
 
+        $target = remove_query_arg([
+            'vmp_notice',
+            'vmp_error',
+            'invoice',
+            'message_to',
+            'message_order',
+        ], $target);
+
         $url = add_query_arg($params, $target);
         wp_safe_redirect($url);
         exit;
+    }
+
+    private function stay_with($params = [])
+    {
+        foreach (['vmp_notice', 'vmp_error', 'invoice', 'message_to', 'message_order'] as $key) {
+            unset($_GET[$key], $_POST[$key], $_REQUEST[$key]);
+        }
+
+        foreach ((array) $params as $key => $value) {
+            $_GET[$key] = $value;
+            $_REQUEST[$key] = $value;
+        }
+    }
+
+    private function attachment_allowed_for_current_user($attachment_id)
+    {
+        $attachment_id = (int) $attachment_id;
+        if ($attachment_id <= 0 || get_post_type($attachment_id) !== 'attachment') {
+            return false;
+        }
+
+        if (current_user_can('manage_options')) {
+            return true;
+        }
+
+        return (int) get_post_field('post_author', $attachment_id) === get_current_user_id();
     }
 }
 

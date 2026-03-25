@@ -16,27 +16,31 @@ class Installer
         $pages = [
             'katalog' => [
                 'title' => 'Katalog',
-                'content' => '[velocity_marketplace_catalog]',
+                'content' => '[vmp_catalog]',
             ],
             'keranjang' => [
                 'title' => 'Keranjang',
-                'content' => '[velocity_marketplace_cart]',
+                'content' => '[vmp_cart]',
             ],
             'checkout' => [
                 'title' => 'Checkout',
-                'content' => '[velocity_marketplace_checkout]',
+                'content' => '[vmp_checkout]',
             ],
             'myaccount' => [
                 'title' => 'My Account',
-                'content' => '[velocity_marketplace_profile]',
+                'content' => '[vmp_profile]',
             ],
             'tracking' => [
                 'title' => 'Tracking Pesanan',
-                'content' => '[velocity_marketplace_tracking]',
+                'content' => '[vmp_tracking]',
+            ],
+            'toko' => [
+                'title' => 'Profil Toko',
+                'content' => '[vmp_store_profile]',
             ],
         ];
 
-        $stored = get_option('velocity_marketplace_pages', []);
+        $stored = get_option(VMP_PAGES_OPTION, []);
         if (!is_array($stored)) {
             $stored = [];
         }
@@ -63,12 +67,12 @@ class Installer
             }
         }
 
-        update_option('velocity_marketplace_pages', $stored);
+        update_option(VMP_PAGES_OPTION, $stored);
     }
 
     private function seed_default_settings()
     {
-        $current = get_option('velocity_marketplace_settings', []);
+        $current = get_option(VMP_SETTINGS_OPTION, []);
         if (!is_array($current)) {
             $current = [];
         }
@@ -81,13 +85,15 @@ class Installer
             'seller_product_status' => 'publish',
         ];
 
-        update_option('velocity_marketplace_settings', array_merge($defaults, $current));
+        update_option(VMP_SETTINGS_OPTION, array_merge($defaults, $current));
     }
 
     private function ensure_roles()
     {
-        add_role('vmp_customer', 'Marketplace Customer', ['read' => true]);
-        add_role('vmp_seller', 'Marketplace Seller', [
+        remove_role('vmp_customer');
+        remove_role('vmp_seller');
+
+        add_role('vmp_member', 'Marketplace Member', [
             'read' => true,
             'upload_files' => true,
         ]);

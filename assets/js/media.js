@@ -1,4 +1,8 @@
 (() => {
+  const cfg = window.vmpSettings || {};
+  const currentUserId = Number(cfg.currentUserId || 0);
+  const canManageOptions = !!cfg.canManageOptions;
+
   const renderMediaPreview = (preview, items, multiple, emptyText) => {
     if (!preview) return;
 
@@ -58,7 +62,20 @@
           multiple: multiple ? "add" : false,
           library: {
             type: "image",
+            ...(currentUserId > 0 && !canManageOptions ? { author: currentUserId } : {}),
           },
+        });
+
+        frame.on("open", () => {
+          if (currentUserId > 0 && !canManageOptions) {
+            const library = frame.state().get("library");
+            if (library && library.props) {
+              library.props.set({
+                author: currentUserId,
+                type: "image",
+              });
+            }
+          }
         });
 
         frame.on("select", () => {

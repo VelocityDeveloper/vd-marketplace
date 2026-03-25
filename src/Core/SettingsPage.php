@@ -26,7 +26,7 @@ class SettingsPage
     {
         register_setting(
             'vmp_settings_group',
-            'velocity_marketplace_settings',
+            VMP_SETTINGS_OPTION,
             [$this, 'sanitize_settings']
         );
     }
@@ -89,7 +89,7 @@ class SettingsPage
             return;
         }
 
-        $settings = get_option('velocity_marketplace_settings', []);
+        $settings = get_option(VMP_SETTINGS_OPTION, []);
         if (!is_array($settings)) {
             $settings = [];
         }
@@ -109,7 +109,7 @@ class SettingsPage
                         <tr>
                             <th scope="row"><label for="vmp_currency">Mata Uang</label></th>
                             <td>
-                                <select id="vmp_currency" name="velocity_marketplace_settings[currency]">
+                                <select id="vmp_currency" name="vmp_settings[currency]">
                                     <option value="IDR" <?php selected($currency, 'IDR'); ?>>IDR</option>
                                     <option value="USD" <?php selected($currency, 'USD'); ?>>USD</option>
                                 </select>
@@ -118,14 +118,14 @@ class SettingsPage
                         <tr>
                             <th scope="row"><label for="vmp_currency_symbol">Simbol Mata Uang</label></th>
                             <td>
-                                <input id="vmp_currency_symbol" type="text" class="regular-text" name="velocity_marketplace_settings[currency_symbol]" value="<?php echo esc_attr($currency_symbol); ?>">
+                                <input id="vmp_currency_symbol" type="text" class="regular-text" name="vmp_settings[currency_symbol]" value="<?php echo esc_attr($currency_symbol); ?>">
                                 <p class="description">Contoh: Rp, $, USD.</p>
                             </td>
                         </tr>
                         <tr>
                             <th scope="row"><label for="vmp_default_order_status">Status Order Default</label></th>
                             <td>
-                                <select id="vmp_default_order_status" name="velocity_marketplace_settings[default_order_status]">
+                                <select id="vmp_default_order_status" name="vmp_settings[default_order_status]">
                                     <option value="pending_payment" <?php selected($default_order_status, 'pending_payment'); ?>>Pending Payment</option>
                                     <option value="pending_verification" <?php selected($default_order_status, 'pending_verification'); ?>>Pending Verification</option>
                                     <option value="processing" <?php selected($default_order_status, 'processing'); ?>>Processing</option>
@@ -139,16 +139,16 @@ class SettingsPage
                         <tr>
                             <th scope="row">Metode Pembayaran Aktif</th>
                             <td>
-                                <label><input type="checkbox" name="velocity_marketplace_settings[payment_methods][]" value="bank" <?php checked(in_array('bank', $payment_methods, true)); ?>> Transfer Bank</label><br>
-                                <label><input type="checkbox" name="velocity_marketplace_settings[payment_methods][]" value="duitku" <?php checked(in_array('duitku', $payment_methods, true)); ?>> Duitku</label><br>
-                                <label><input type="checkbox" name="velocity_marketplace_settings[payment_methods][]" value="paypal" <?php checked(in_array('paypal', $payment_methods, true)); ?>> PayPal</label><br>
-                                <label><input type="checkbox" name="velocity_marketplace_settings[payment_methods][]" value="cod" <?php checked(in_array('cod', $payment_methods, true)); ?>> COD</label>
+                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="bank" <?php checked(in_array('bank', $payment_methods, true)); ?>> Transfer Bank</label><br>
+                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="duitku" <?php checked(in_array('duitku', $payment_methods, true)); ?>> Duitku</label><br>
+                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="paypal" <?php checked(in_array('paypal', $payment_methods, true)); ?>> PayPal</label><br>
+                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="cod" <?php checked(in_array('cod', $payment_methods, true)); ?>> COD</label>
                             </td>
                         </tr>
                         <tr>
-                            <th scope="row"><label for="vmp_seller_product_status">Status Iklan Seller Baru</label></th>
+                            <th scope="row"><label for="vmp_seller_product_status">Status Produk Member Baru</label></th>
                             <td>
-                                <select id="vmp_seller_product_status" name="velocity_marketplace_settings[seller_product_status]">
+                                <select id="vmp_seller_product_status" name="vmp_settings[seller_product_status]">
                                     <option value="pending" <?php selected($seller_product_status, 'pending'); ?>>Pending Review</option>
                                     <option value="publish" <?php selected($seller_product_status, 'publish'); ?>>Langsung Publish</option>
                                 </select>
@@ -157,7 +157,7 @@ class SettingsPage
                         <tr>
                             <th scope="row"><label for="vmp_shipping_api_key">API Key Ongkir</label></th>
                             <td>
-                                <input id="vmp_shipping_api_key" type="text" class="regular-text" name="velocity_marketplace_settings[shipping_api_key]" value="<?php echo esc_attr($shipping_api_key); ?>">
+                                <input id="vmp_shipping_api_key" type="text" class="regular-text" name="vmp_settings[shipping_api_key]" value="<?php echo esc_attr($shipping_api_key); ?>">
                                 <p class="description">Dipakai untuk load provinsi, kota, kecamatan, dan cek ongkir otomatis dengan metode yang sama seperti `wp-store`.</p>
                             </td>
                         </tr>

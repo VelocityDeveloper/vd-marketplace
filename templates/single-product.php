@@ -1,5 +1,6 @@
 <?php
 use VelocityMarketplace\Modules\Product\ProductData;
+use VelocityMarketplace\Support\Settings;
 
 $product_id = get_the_ID();
 $item = ProductData::map_post($product_id);
@@ -22,6 +23,13 @@ if ($main_image !== '' && !in_array($main_image, $gallery, true)) {
 if (empty($gallery) && $main_image !== '') {
     $gallery[] = $main_image;
 }
+$seller_id = (int) get_post_field('post_author', $product_id);
+$seller_user = $seller_id > 0 ? get_userdata($seller_id) : false;
+$seller_name = $seller_user && $seller_user->display_name !== '' ? $seller_user->display_name : ($seller_user ? $seller_user->user_login : 'Seller');
+$store_profile_url = Settings::store_profile_url($seller_id);
+$message_url = is_user_logged_in()
+    ? add_query_arg(['tab' => 'messages', 'message_to' => $seller_id], Settings::profile_url())
+    : wp_login_url(add_query_arg(['tab' => 'messages', 'message_to' => $seller_id], Settings::profile_url()));
 
 get_header();
 ?>
@@ -93,7 +101,7 @@ get_header();
             <?php if (!empty($item['label'])) : ?>
                 <div class="text-muted mb-2"><?php echo esc_html($item['label']); ?></div>
             <?php endif; ?>
-            <div class="mb-3"><?php echo do_shortcode('[vm_price id="' . (int) $item['id'] . '" class="h5"]'); ?></div>
+            <div class="mb-3"><?php echo do_shortcode('[vmp_price id="' . (int) $item['id'] . '" class="h5"]'); ?></div>
 
             <div class="row g-2 small mb-3">
                 <div class="col-sm-6"><strong>SKU:</strong> <?php echo esc_html($item['sku'] !== '' ? $item['sku'] : '-'); ?></div>
@@ -138,10 +146,23 @@ get_header();
             <?php endif; ?>
 
             <div class="d-flex flex-wrap gap-2 mb-4">
-                <?php echo do_shortcode('[vm_add_to_cart id="' . (int) $item['id'] . '" text="Tambah Keranjang" class="btn btn-dark"]'); ?>
-                <?php echo do_shortcode('[vm_add_to_wishlist id="' . (int) $item['id'] . '" text="Wishlist" class="btn btn-outline-secondary"]'); ?>
+                <?php echo do_shortcode('[vmp_add_to_cart id="' . (int) $item['id'] . '" text="Tambah Keranjang" class="btn btn-dark"]'); ?>
+                <?php echo do_shortcode('[vmp_add_to_wishlist id="' . (int) $item['id'] . '" text="Wishlist" class="btn btn-outline-secondary"]'); ?>
                 <a href="<?php echo esc_url(site_url('/keranjang/')); ?>" class="btn btn-outline-dark">Lihat Keranjang</a>
             </div>
+
+            <?php if ($seller_id > 0) : ?>
+                <div class="card border-0 shadow-sm">
+                    <div class="card-body">
+                    <div class="small text-muted mb-1">Penjual</div>
+                        <div class="fw-semibold mb-3"><?php echo esc_html($seller_name); ?></div>
+                        <div class="d-flex flex-wrap gap-2">
+                            <a href="<?php echo esc_url($store_profile_url); ?>" class="btn btn-outline-dark btn-sm">Lihat Profil Toko</a>
+                            <a href="<?php echo esc_url($message_url); ?>" class="btn btn-dark btn-sm">Pesan Penjual</a>
+                        </div>
+                    </div>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 

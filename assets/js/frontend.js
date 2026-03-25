@@ -11,6 +11,10 @@
   const paymentMethods = Array.isArray(cfg.paymentMethods)
     ? cfg.paymentMethods
     : ["bank"];
+  const customerProfile =
+    cfg.customerProfile && typeof cfg.customerProfile === "object"
+      ? cfg.customerProfile
+      : {};
   const placeholder =
     typeof cfg.noImageUrl === "string" && cfg.noImageUrl.trim() !== ""
       ? cfg.noImageUrl.trim()
@@ -352,9 +356,104 @@
       shipping_cost: 0,
     },
     async init() {
+      this.applyCustomerProfileDefaults();
       await this.fetchCart();
       await this.loadProvinces();
+      this.syncProvinceSelection();
+      if (this.form.destination_province_id) {
+        await this.loadCities(this.form.destination_province_id);
+        this.syncCitySelection();
+      }
+      if (this.form.destination_city_id) {
+        await this.loadSubdistricts(this.form.destination_city_id);
+        this.syncSubdistrictSelection();
+      }
       await this.loadCheckoutContext();
+      if (this.form.destination_subdistrict_id) {
+        await Promise.all(this.shippingGroups.map((group) => this.loadShippingOptions(group)));
+      }
+    },
+    applyCustomerProfileDefaults() {
+      const pick = (key, fallback = "") =>
+        typeof customerProfile[key] === "string" ? customerProfile[key] : fallback;
+
+      if (!this.form.name) this.form.name = pick("name");
+      if (!this.form.email) this.form.email = pick("email");
+      if (!this.form.phone) this.form.phone = pick("phone");
+      if (!this.form.address) this.form.address = pick("address");
+      if (!this.form.postal_code) this.form.postal_code = pick("postal_code");
+      if (!this.form.destination_province_id) {
+        this.form.destination_province_id = pick("destination_province_id");
+      }
+      if (!this.form.destination_province_name) {
+        this.form.destination_province_name = pick("destination_province_name");
+      }
+      if (!this.form.destination_city_id) {
+        this.form.destination_city_id = pick("destination_city_id");
+      }
+      if (!this.form.destination_city_name) {
+        this.form.destination_city_name = pick("destination_city_name");
+      }
+      if (!this.form.destination_subdistrict_id) {
+        this.form.destination_subdistrict_id = pick("destination_subdistrict_id");
+      }
+      if (!this.form.destination_subdistrict_name) {
+        this.form.destination_subdistrict_name = pick("destination_subdistrict_name");
+      }
+    },
+    applySelectValue(refName, value) {
+      this.$nextTick(() => {
+        const field = this.$refs && this.$refs[refName] ? this.$refs[refName] : null;
+        if (!field) return;
+        field.value = String(value || "");
+      });
+    },
+    syncProvinceSelection() {
+      if (!Array.isArray(this.provinces) || this.provinces.length === 0) return;
+      const selected = this.provinces.find(
+        (row) => row.province_id === String(this.form.destination_province_id || ""),
+      );
+      this.form.destination_province_id = selected ? selected.province_id : "";
+      this.form.destination_province_name = selected ? selected.province : "";
+      this.applySelectValue("provinceSelect", this.form.destination_province_id);
+      if (!selected) {
+        this.form.destination_city_id = "";
+        this.form.destination_city_name = "";
+        this.form.destination_subdistrict_id = "";
+        this.form.destination_subdistrict_name = "";
+        this.applySelectValue("citySelect", "");
+        this.applySelectValue("subdistrictSelect", "");
+      }
+    },
+    syncCitySelection() {
+      if (!Array.isArray(this.cities) || this.cities.length === 0) return;
+      const selected = this.cities.find(
+        (row) => row.city_id === String(this.form.destination_city_id || ""),
+      );
+      this.form.destination_city_id = selected ? selected.city_id : "";
+      this.form.destination_city_name = selected
+        ? `${selected.type ? `${selected.type} ` : ""}${selected.city_name}`
+        : "";
+      if (!this.form.postal_code) {
+        this.form.postal_code = selected ? selected.postal_code || "" : "";
+      }
+      this.applySelectValue("citySelect", this.form.destination_city_id);
+      if (!selected) {
+        this.form.destination_subdistrict_id = "";
+        this.form.destination_subdistrict_name = "";
+        this.applySelectValue("subdistrictSelect", "");
+      }
+    },
+    syncSubdistrictSelection() {
+      if (!Array.isArray(this.subdistricts) || this.subdistricts.length === 0) return;
+      const selected = this.subdistricts.find(
+        (row) => row.subdistrict_id === String(this.form.destination_subdistrict_id || ""),
+      );
+      this.form.destination_subdistrict_id = selected ? selected.subdistrict_id : "";
+      this.form.destination_subdistrict_name = selected
+        ? selected.subdistrict_name
+        : "";
+      this.applySelectValue("subdistrictSelect", this.form.destination_subdistrict_id);
     },
     async fetchCart() {
       this.loading = true;
@@ -378,6 +477,7 @@
       try {
         const rows = await fetchShippingList("shipping/provinces");
         this.provinces = rows.map(mapProvince);
+        this.syncProvinceSelection();
       } catch (e) {
         this.shippingContextMessage = e.message || "Gagal memuat provinsi.";
       } finally {
@@ -395,6 +495,7 @@
           `shipping/cities?province=${encodeURIComponent(provinceId)}`,
         );
         this.cities = rows.map(mapCity);
+        this.syncCitySelection();
       } catch (e) {
         this.cities = [];
         this.shippingContextMessage = e.message || "Gagal memuat kota.";
@@ -413,6 +514,7 @@
           `shipping/subdistricts?city=${encodeURIComponent(cityId)}`,
         );
         this.subdistricts = rows.map(mapSubdistrict);
+        this.syncSubdistrictSelection();
       } catch (e) {
         this.subdistricts = [];
         this.shippingContextMessage = e.message || "Gagal memuat kecamatan.";
@@ -618,18 +720,72 @@
     },
     async init() {
       await this.loadProvinces();
+      this.syncProvinceSelection();
       if (this.form.province_id) {
         await this.loadCities(this.form.province_id);
+        this.syncCitySelection();
       }
       if (this.form.city_id) {
         await this.loadSubdistricts(this.form.city_id);
+        this.syncSubdistrictSelection();
       }
+    },
+    applySelectValue(refName, value) {
+      this.$nextTick(() => {
+        const field = this.$refs && this.$refs[refName] ? this.$refs[refName] : null;
+        if (!field) return;
+        field.value = String(value || "");
+      });
+    },
+    syncProvinceSelection() {
+      if (!Array.isArray(this.provinces) || this.provinces.length === 0) return;
+      const selected = this.provinces.find(
+        (row) => row.province_id === String(this.form.province_id || ""),
+      );
+      this.form.province_id = selected ? selected.province_id : "";
+      this.form.province_name = selected ? selected.province : "";
+      this.applySelectValue("provinceSelect", this.form.province_id);
+      if (!selected) {
+        this.form.city_id = "";
+        this.form.city_name = "";
+        this.form.subdistrict_id = "";
+        this.form.subdistrict_name = "";
+        this.applySelectValue("citySelect", "");
+        this.applySelectValue("subdistrictSelect", "");
+      }
+    },
+    syncCitySelection() {
+      if (!Array.isArray(this.cities) || this.cities.length === 0) return;
+      const selected = this.cities.find(
+        (row) => row.city_id === String(this.form.city_id || ""),
+      );
+      this.form.city_id = selected ? selected.city_id : "";
+      this.form.city_name = selected
+        ? `${selected.type ? `${selected.type} ` : ""}${selected.city_name}`
+        : "";
+      this.form.postcode = selected ? selected.postal_code || this.form.postcode : this.form.postcode;
+      this.applySelectValue("citySelect", this.form.city_id);
+      if (!selected) {
+        this.form.subdistrict_id = "";
+        this.form.subdistrict_name = "";
+        this.applySelectValue("subdistrictSelect", "");
+      }
+    },
+    syncSubdistrictSelection() {
+      if (!Array.isArray(this.subdistricts) || this.subdistricts.length === 0) return;
+      const selected = this.subdistricts.find(
+        (row) => row.subdistrict_id === String(this.form.subdistrict_id || ""),
+      );
+      this.form.subdistrict_id = selected ? selected.subdistrict_id : "";
+      this.form.subdistrict_name = selected ? selected.subdistrict_name : "";
+      this.applySelectValue("subdistrictSelect", this.form.subdistrict_id);
     },
     async loadProvinces() {
       this.isLoadingProvinces = true;
       try {
         const rows = await fetchShippingList("shipping/provinces");
         this.provinces = rows.map(mapProvince);
+        this.syncProvinceSelection();
       } catch (e) {
         this.locationMessage = e.message || "Gagal memuat provinsi.";
       } finally {
@@ -641,12 +797,13 @@
         this.cities = [];
         return;
       }
-      this.isLoadingCities = true;
-      try {
-        const rows = await fetchShippingList(
-          `shipping/cities?province=${encodeURIComponent(provinceId)}`,
-        );
+        this.isLoadingCities = true;
+        try {
+          const rows = await fetchShippingList(
+            `shipping/cities?province=${encodeURIComponent(provinceId)}`,
+          );
         this.cities = rows.map(mapCity);
+        this.syncCitySelection();
       } catch (e) {
         this.cities = [];
         this.locationMessage = e.message || "Gagal memuat kota/kabupaten.";
@@ -659,12 +816,13 @@
         this.subdistricts = [];
         return;
       }
-      this.isLoadingSubdistricts = true;
-      try {
-        const rows = await fetchShippingList(
-          `shipping/subdistricts?city=${encodeURIComponent(cityId)}`,
-        );
+        this.isLoadingSubdistricts = true;
+        try {
+          const rows = await fetchShippingList(
+            `shipping/subdistricts?city=${encodeURIComponent(cityId)}`,
+          );
         this.subdistricts = rows.map(mapSubdistrict);
+        this.syncSubdistrictSelection();
       } catch (e) {
         this.subdistricts = [];
         this.locationMessage = e.message || "Gagal memuat kecamatan.";

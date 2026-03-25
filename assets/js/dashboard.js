@@ -20,5 +20,24 @@
     }, 120);
   };
 
-  document.addEventListener("DOMContentLoaded", focusMessageComposer);
+  const scrollMessageThreadToBottom = () => {
+    const params = new URLSearchParams(window.location.search || "");
+    if (params.get("tab") !== "messages" || !params.get("message_to")) {
+      return;
+    }
+
+    const thread = document.querySelector("[data-message-thread]");
+    if (!thread) {
+      return;
+    }
+
+    window.setTimeout(() => {
+      thread.scrollTop = thread.scrollHeight;
+    }, 120);
+  };
+
+  document.addEventListener("DOMContentLoaded", () => {
+    scrollMessageThreadToBottom();
+    focusMessageComposer();
+  });
 })();

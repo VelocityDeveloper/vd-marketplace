@@ -74,7 +74,7 @@ class Assets
             }
         }
 
-        $pages = get_option('velocity_marketplace_pages', []);
+        $pages = get_option(VMP_PAGES_OPTION, []);
         $catalog_url = $this->resolve_page_url($pages, 'katalog', '/katalog/');
         $cart_url = $this->resolve_page_url($pages, 'keranjang', '/keranjang/');
         $checkout_url = $this->resolve_page_url($pages, 'checkout', '/checkout/');
@@ -82,6 +82,7 @@ class Assets
         $currency = Settings::currency();
         $currency_symbol = Settings::currency_symbol();
         $payment_methods = Settings::payment_methods();
+        $customer_profile = $this->customer_profile_payload();
 
         wp_localize_script('velocity-marketplace-frontend-js', 'vmpSettings', [
             'restUrl' => esc_url_raw(rest_url('velocity-marketplace/v1/')),
@@ -94,8 +95,47 @@ class Assets
             'currencySymbol' => $currency_symbol,
             'paymentMethods' => $payment_methods,
             'isLoggedIn' => is_user_logged_in(),
+            'currentUserId' => get_current_user_id(),
+            'canManageOptions' => current_user_can('manage_options'),
             'noImageUrl' => esc_url_raw(ProductData::no_image_url()),
+            'customerProfile' => $customer_profile,
         ]);
+    }
+
+    private function customer_profile_payload()
+    {
+        if (!is_user_logged_in()) {
+            return [
+                'name' => '',
+                'email' => '',
+                'phone' => '',
+                'address' => '',
+                'postal_code' => '',
+                'destination_province_id' => '',
+                'destination_province_name' => '',
+                'destination_city_id' => '',
+                'destination_city_name' => '',
+                'destination_subdistrict_id' => '',
+                'destination_subdistrict_name' => '',
+            ];
+        }
+
+        $user_id = get_current_user_id();
+        $user = get_userdata($user_id);
+
+        return [
+            'name' => (string) get_user_meta($user_id, 'vmp_name', true) ?: ($user && $user->display_name !== '' ? (string) $user->display_name : ''),
+            'email' => $user ? (string) $user->user_email : '',
+            'phone' => (string) get_user_meta($user_id, 'vmp_phone', true),
+            'address' => (string) get_user_meta($user_id, 'vmp_address', true),
+            'postal_code' => (string) get_user_meta($user_id, 'vmp_postcode', true),
+            'destination_province_id' => (string) get_user_meta($user_id, 'vmp_province_id', true),
+            'destination_province_name' => (string) get_user_meta($user_id, 'vmp_province', true),
+            'destination_city_id' => (string) get_user_meta($user_id, 'vmp_city_id', true),
+            'destination_city_name' => (string) get_user_meta($user_id, 'vmp_city', true),
+            'destination_subdistrict_id' => (string) get_user_meta($user_id, 'vmp_subdistrict_id', true),
+            'destination_subdistrict_name' => (string) get_user_meta($user_id, 'vmp_subdistrict', true),
+        ];
     }
 
     private function get_enqueue_context()
@@ -119,32 +159,21 @@ class Assets
             if ($post && isset($post->post_content)) {
                 $content = (string) $post->post_content;
                 $enabled = $this->content_has_any_shortcode($content, [
-                    'velocity_marketplace_catalog',
-                    'velocity_marketplace_products',
-                    'velocity_marketplace_product_card',
-                    'velocity_marketplace_thumbnail',
-                    'velocity_marketplace_price',
-                    'velocity_marketplace_add_to_cart',
-                    'velocity_marketplace_add_to_wishlist',
-                    'velocity_marketplace_cart',
-                    'velocity_marketplace_checkout',
-                    'velocity_marketplace_profile',
-                    'velocity_marketplace_tracking',
-                    'vm_catalog',
-                    'vm_products',
-                    'vm_product_card',
-                    'vm_thumbnail',
-                    'vm_price',
-                    'vm_add_to_cart',
-                    'vm_add_to_wishlist',
-                    'vm_cart',
-                    'vm_checkout',
-                    'vm_profile',
-                    'vm_tracking',
+                    'vmp_catalog',
+                    'vmp_products',
+                    'vmp_product_card',
+                    'vmp_thumbnail',
+                    'vmp_price',
+                    'vmp_add_to_cart',
+                    'vmp_add_to_wishlist',
+                    'vmp_cart',
+                    'vmp_checkout',
+                    'vmp_profile',
+                    'vmp_tracking',
+                    'vmp_store_profile',
                 ]);
                 $profile = $this->content_has_any_shortcode($content, [
-                    'velocity_marketplace_profile',
-                    'vm_profile',
+                    'vmp_profile',
                 ]);
 
                 return [

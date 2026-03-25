@@ -428,10 +428,11 @@ class ProductFields
 
         if ($type === 'file') {
             if (!empty($field['multiple'])) {
-                return self::normalize_attachment_ids($raw);
+                return self::filter_attachment_ids_for_current_user(self::normalize_attachment_ids($raw));
             }
 
-            return is_numeric($raw) ? (int) $raw : 0;
+            $attachment_id = is_numeric($raw) ? (int) $raw : 0;
+            return self::attachment_allowed_for_current_user($attachment_id) ? $attachment_id : 0;
         }
 
         if ($type === 'date') {
@@ -511,6 +512,26 @@ class ProductFields
         }
 
         return array_values(array_filter(array_map('intval', $raw)));
+    }
+
+    private static function filter_attachment_ids_for_current_user($ids)
+    {
+        $ids = is_array($ids) ? $ids : [];
+        return array_values(array_filter($ids, [self::class, 'attachment_allowed_for_current_user']));
+    }
+
+    private static function attachment_allowed_for_current_user($attachment_id)
+    {
+        $attachment_id = (int) $attachment_id;
+        if ($attachment_id <= 0 || get_post_type($attachment_id) !== 'attachment') {
+            return false;
+        }
+
+        if (current_user_can('manage_options')) {
+            return true;
+        }
+
+        return (int) get_post_field('post_author', $attachment_id) === get_current_user_id();
     }
 
     private static function build_media_preview_items($value, $multiple = false)

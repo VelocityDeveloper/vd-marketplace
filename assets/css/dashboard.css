@@ -62,3 +62,12 @@
   border-radius: 0.75rem;
   background: #f8f9fa;
 }
+
+.vmp-shipping-card {
+  background: linear-gradient(180deg, rgba(248, 249, 250, 0.95), #fff);
+}
+
+.vmp-tracking-box__item:first-child {
+  border-top: 0 !important;
+  padding-top: 0 !important;
+}

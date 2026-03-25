@@ -6,7 +6,7 @@ use VelocityMarketplace\Modules\Message\MessageTable;
 
 class Upgrade
 {
-    const DB_VERSION = '1.4.0';
+    const DB_VERSION = '1.6.0';
 
     public function register()
     {
@@ -20,14 +20,13 @@ class Upgrade
 
         $messages = new MessageTable();
         $messages->create_table();
-        $messages->migrate_legacy_posts();
 
-        update_option('velocity_marketplace_db_version', self::DB_VERSION);
+        update_option(VMP_DB_VERSION_OPTION, self::DB_VERSION);
     }
 
     public function maybe_upgrade()
     {
-        $version = (string) get_option('velocity_marketplace_db_version', '');
+        $version = (string) get_option(VMP_DB_VERSION_OPTION, '');
         if ($version === self::DB_VERSION) {
             return;
         }

@@ -6,7 +6,7 @@ class Settings
 {
     public static function all()
     {
-        $settings = get_option('velocity_marketplace_settings', []);
+        $settings = get_option(VMP_SETTINGS_OPTION, []);
         if (!is_array($settings)) {
             $settings = [];
         }
@@ -84,7 +84,7 @@ class Settings
 
     public static function profile_url()
     {
-        $pages = get_option('velocity_marketplace_pages', []);
+        $pages = get_option(VMP_PAGES_OPTION, []);
         if (is_array($pages) && !empty($pages['myaccount'])) {
             $url = get_permalink((int) $pages['myaccount']);
             if ($url) {
@@ -92,6 +92,25 @@ class Settings
             }
         }
         return site_url('/myaccount/');
+    }
+
+    public static function store_profile_url($seller_id = 0)
+    {
+        $pages = get_option(VMP_PAGES_OPTION, []);
+        $base = '';
+        if (is_array($pages) && !empty($pages['toko'])) {
+            $base = get_permalink((int) $pages['toko']);
+        }
+        if (!$base) {
+            $base = site_url('/toko/');
+        }
+
+        $seller_id = (int) $seller_id;
+        if ($seller_id > 0) {
+            return add_query_arg(['seller' => $seller_id], $base);
+        }
+
+        return $base;
     }
 
     public static function shipping_api_key()

@@ -79,34 +79,7 @@ class OrderData
             return array_values($groups);
         }
 
-        $legacy = get_post_meta((int) $order_id, 'vmp_shipping', true);
-        if (!is_array($legacy) || empty($legacy)) {
-            return [];
-        }
-
-        return [[
-            'seller_id' => 0,
-            'seller_name' => 'Pengiriman',
-            'origin' => [],
-            'courier' => (string) ($legacy['courier'] ?? ''),
-            'courier_name' => (string) ($legacy['courier'] ?? ''),
-            'service' => (string) ($legacy['service'] ?? ''),
-            'description' => '',
-            'cost' => (float) ($legacy['cost'] ?? 0),
-            'etd' => '',
-            'destination' => [
-                'province_destination_id' => (string) ($legacy['province_destination_id'] ?? ''),
-                'province_destination_name' => (string) ($legacy['province_destination_name'] ?? ''),
-                'city_destination_id' => (string) ($legacy['city_destination_id'] ?? ''),
-                'city_destination_name' => (string) ($legacy['city_destination_name'] ?? ''),
-                'subdistrict_destination_id' => (string) ($legacy['subdistrict_destination_id'] ?? ''),
-                'subdistrict_destination_name' => (string) ($legacy['subdistrict_destination_name'] ?? ''),
-            ],
-            'receipt_no' => (string) get_post_meta((int) $order_id, 'vmp_receipt_no', true),
-            'receipt_courier' => (string) get_post_meta((int) $order_id, 'vmp_receipt_courier', true),
-            'seller_note' => (string) get_post_meta((int) $order_id, 'vmp_seller_note', true),
-            'items' => self::get_items($order_id),
-        ]];
+        return [];
     }
 
     public static function seller_shipping_group($order_id, $seller_id)

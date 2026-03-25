@@ -171,7 +171,7 @@ class CheckoutController
         $order_id = wp_insert_post([
             'post_type' => 'vmp_order',
             'post_status' => 'publish',
-            'post_title' => 'Order ' . $invoice . ' - ' . $customer['name'],
+            'post_title' => $invoice . ' - ' . $customer['name'],
         ]);
 
         if (is_wp_error($order_id) || !$order_id) {
@@ -269,7 +269,7 @@ class CheckoutController
 
     private function resolve_profile_url($invoice)
     {
-        $pages = get_option('velocity_marketplace_pages', []);
+        $pages = get_option(VMP_PAGES_OPTION, []);
         $pid = isset($pages['myaccount']) ? (int) $pages['myaccount'] : 0;
         if ($pid > 0) {
             $url = get_permalink($pid);

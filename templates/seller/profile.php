@@ -1,19 +1,19 @@
     <?php
-    $store_phone = (string) get_user_meta($current_user_id, 'vmp_store_phone', true);
-    $store_whatsapp = (string) get_user_meta($current_user_id, 'vmp_store_whatsapp', true);
-    $store_description = (string) get_user_meta($current_user_id, 'vmp_store_description', true);
-    $store_subdistrict = (string) get_user_meta($current_user_id, 'vmp_store_subdistrict', true);
-    $store_city = (string) get_user_meta($current_user_id, 'vmp_store_city', true);
-    $store_province = (string) get_user_meta($current_user_id, 'vmp_store_province', true);
-    $store_subdistrict_id = (string) get_user_meta($current_user_id, 'vmp_store_subdistrict_id', true);
-    $store_city_id = (string) get_user_meta($current_user_id, 'vmp_store_city_id', true);
-    $store_province_id = (string) get_user_meta($current_user_id, 'vmp_store_province_id', true);
-    $store_postcode = (string) get_user_meta($current_user_id, 'vmp_store_postcode', true);
-    $store_couriers = get_user_meta($current_user_id, 'vmp_store_couriers', true);
+    $store_phone = (string) get_user_meta($current_user_id, 'vmp_phone', true);
+    $store_whatsapp = (string) get_user_meta($current_user_id, 'vmp_whatsapp', true);
+    $store_description = (string) get_user_meta($current_user_id, 'vmp_description', true);
+    $store_subdistrict = (string) get_user_meta($current_user_id, 'vmp_subdistrict', true);
+    $store_city = (string) get_user_meta($current_user_id, 'vmp_city', true);
+    $store_province = (string) get_user_meta($current_user_id, 'vmp_province', true);
+    $store_subdistrict_id = (string) get_user_meta($current_user_id, 'vmp_subdistrict_id', true);
+    $store_city_id = (string) get_user_meta($current_user_id, 'vmp_city_id', true);
+    $store_province_id = (string) get_user_meta($current_user_id, 'vmp_province_id', true);
+    $store_postcode = (string) get_user_meta($current_user_id, 'vmp_postcode', true);
+    $store_couriers = get_user_meta($current_user_id, 'vmp_couriers', true);
     if (!is_array($store_couriers)) {
         $store_couriers = [];
     }
-    $avatar_id = (int) get_user_meta($current_user_id, 'vmp_store_avatar_id', true);
+    $avatar_id = (int) get_user_meta($current_user_id, 'vmp_avatar_id', true);
     $avatar_url = $avatar_id > 0 ? wp_get_attachment_image_url($avatar_id, 'thumbnail') : '';
     $courier_options = [
         'jne' => 'JNE',
@@ -36,9 +36,11 @@
     ];
     ?>
     <div class="card border-0 shadow-sm" x-data='vmpStoreProfileLocation(<?php echo wp_json_encode($location_state); ?>)' x-init="init()"><div class="card-body">
-        <h3 class="h6 mb-3">Edit Profil Toko</h3>
+        <h3 class="h6 mb-3">Pengaturan Toko</h3>
+        <p class="text-muted small mb-3">Data toko memakai profil akun yang sama. Bagian khusus toko di halaman ini hanya pengaturan tampilan toko dan kurir.</p>
         <form method="post" class="row g-3">
             <input type="hidden" name="vmp_action" value="save_store_profile">
+            <input type="hidden" name="tab" value="seller_profile">
             <?php wp_nonce_field('vmp_store_profile', 'vmp_store_profile_nonce'); ?>
             <div class="col-md-6"><label class="form-label">Nama Toko</label><input type="text" name="store_name" class="form-control" value="<?php echo esc_attr($store_name); ?>" required></div>
             <div class="col-md-6">
@@ -69,7 +71,7 @@
             <div class="col-12"><label class="form-label">Alamat Toko</label><textarea name="store_address" class="form-control" rows="3" required><?php echo esc_textarea($store_address); ?></textarea></div>
             <div class="col-md-4">
                 <label class="form-label">Provinsi</label>
-                <select name="store_province_id" class="form-select" x-model="form.province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
+                <select name="store_province_id" class="form-select" x-ref="provinceSelect" x-model="form.province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
                     <option value="">- Pilih Provinsi -</option>
                     <template x-for="prov in provinces" :key="prov.province_id">
                         <option :value="prov.province_id" x-text="prov.province"></option>
@@ -79,7 +81,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Kota/Kabupaten</label>
-                <select name="store_city_id" class="form-select" x-model="form.city_id" @change="onCityChange()" :disabled="!form.province_id || isLoadingCities">
+                <select name="store_city_id" class="form-select" x-ref="citySelect" x-model="form.city_id" @change="onCityChange()" :disabled="!form.province_id || isLoadingCities">
                     <option value="">- Pilih Kota/Kabupaten -</option>
                     <template x-for="city in cities" :key="city.city_id">
                         <option :value="city.city_id" x-text="(city.type ? city.type + ' ' : '') + city.city_name"></option>
@@ -89,7 +91,7 @@
             </div>
             <div class="col-md-4">
                 <label class="form-label">Kecamatan</label>
-                <select name="store_subdistrict_id" class="form-select" x-model="form.subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.city_id || isLoadingSubdistricts">
+                <select name="store_subdistrict_id" class="form-select" x-ref="subdistrictSelect" x-model="form.subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.city_id || isLoadingSubdistricts">
                     <option value="">- Pilih Kecamatan -</option>
                     <template x-for="subdistrict in subdistricts" :key="subdistrict.subdistrict_id">
                         <option :value="subdistrict.subdistrict_id" x-text="subdistrict.subdistrict_name"></option>

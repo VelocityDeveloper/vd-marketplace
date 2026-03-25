@@ -3,11 +3,29 @@ use VelocityMarketplace\Modules\Order\OrderData;
 use VelocityMarketplace\Modules\Shipping\ShippingController;
 ?>
 <?php $seller_order_ids = OrderData::seller_orders_query($current_user_id, 120); ?>
+<?php
+$status_badge_class = static function ($status) {
+    $status = (string) $status;
+    if ($status === 'completed') {
+        return 'bg-success';
+    }
+    if ($status === 'shipped') {
+        return 'bg-primary';
+    }
+    if ($status === 'processing' || $status === 'pending_verification') {
+        return 'bg-warning text-dark';
+    }
+    if ($status === 'cancelled' || $status === 'refunded') {
+        return 'bg-danger';
+    }
+    return 'bg-secondary';
+};
+?>
     <div class="row g-3">
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
-                <h3 class="h6 mb-2">Status Seller</h3>
-                <div class="mb-2">Label: <?php echo $is_star_seller ? '<span class="badge bg-warning text-dark">Star Seller</span>' : '<span class="badge bg-secondary">Seller Biasa</span>'; ?></div>
+                <h3 class="h6 mb-2">Status Toko</h3>
+                <div class="mb-2">Label: <?php echo $is_star_seller ? '<span class="badge bg-warning text-dark">Star Seller</span>' : '<span class="badge bg-secondary">Toko Aktif</span>'; ?></div>
                 <div class="small text-muted">Order masuk: <strong><?php echo esc_html(count($seller_order_ids)); ?></strong></div>
                 <?php if (!$profile_complete) : ?><div class="alert alert-warning py-2 mt-2 mb-0">Lengkapi profil toko dulu sebelum tambah produk baru.</div><?php endif; ?>
             </div></div>
@@ -30,6 +48,13 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                             $transfer_proof_url = $transfer_proof_id > 0 ? wp_get_attachment_url($transfer_proof_id) : '';
                             $receipt_no = (string) (($seller_shipping['receipt_no'] ?? '') ?: get_post_meta($order_id, 'vmp_receipt_no', true));
                             $receipt_courier = (string) (($seller_shipping['receipt_courier'] ?? '') ?: ($seller_shipping['courier'] ?? get_post_meta($order_id, 'vmp_receipt_courier', true)));
+                            $seller_note = (string) (($seller_shipping['seller_note'] ?? '') ?: get_post_meta($order_id, 'vmp_seller_note', true));
+                            $seller_destination = isset($seller_shipping['destination']) && is_array($seller_shipping['destination']) ? $seller_shipping['destination'] : [];
+                            $seller_destination_text = trim(implode(', ', array_filter([
+                                (string) ($seller_destination['subdistrict_destination_name'] ?? ''),
+                                (string) ($seller_destination['city_destination_name'] ?? ''),
+                                (string) ($seller_destination['province_destination_name'] ?? ''),
+                            ])));
                             $waybill_data = null;
                             if ($receipt_no !== '' && $receipt_courier !== '') {
                                 $maybe_waybill = ShippingController::fetch_waybill($receipt_no, $receipt_courier);
@@ -44,7 +69,11 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                             <div class="accordion-item">
                                 <h2 class="accordion-header" id="vmpOrderHeading<?php echo esc_attr($order_id); ?>">
                                     <button class="accordion-button <?php echo $idx > 0 ? 'collapsed' : ''; ?>" type="button" data-bs-toggle="collapse" data-bs-target="#vmpOrderCollapse<?php echo esc_attr($order_id); ?>" aria-expanded="<?php echo $idx === 0 ? 'true' : 'false'; ?>">
-                                        <?php echo esc_html($invoice_meta); ?> | <?php echo esc_html(OrderData::status_label($status)); ?> | <?php echo esc_html($money($seller_total)); ?>
+                                        <span class="d-flex flex-wrap align-items-center gap-2">
+                                            <span class="fw-semibold"><?php echo esc_html($invoice_meta); ?></span>
+                                            <span class="badge <?php echo esc_attr($status_badge_class($status)); ?>"><?php echo esc_html(OrderData::status_label($status)); ?></span>
+                                            <span class="text-muted small"><?php echo esc_html($money($seller_total)); ?></span>
+                                        </span>
                                     </button>
                                 </h2>
                                 <div id="vmpOrderCollapse<?php echo esc_attr($order_id); ?>" class="accordion-collapse collapse <?php echo $idx === 0 ? 'show' : ''; ?>" data-bs-parent="#vmpSellerOrders">
@@ -81,10 +110,10 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                                         }
                                         ?>
                                         <?php if (!empty($tracking_rows)) : ?>
-                                            <div class="border rounded p-3 mb-3">
+                                            <div class="border rounded p-3 mb-3 vmp-tracking-box">
                                                 <div class="fw-semibold mb-2">Tracking Resi</div>
                                                 <?php foreach ($tracking_rows as $tracking_row) : ?>
-                                                    <div class="border-top py-2">
+                                                    <div class="border-top py-2 vmp-tracking-box__item">
                                                         <div class="fw-semibold"><?php echo esc_html((string) ($tracking_row['manifest_description'] ?? $tracking_row['description'] ?? '-')); ?></div>
                                                         <div class="small text-muted"><?php echo esc_html(trim((string) (($tracking_row['manifest_date'] ?? '') . ' ' . ($tracking_row['manifest_time'] ?? $tracking_row['date'] ?? '')))); ?></div>
                                                     </div>
@@ -97,16 +126,49 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                                         <?php endforeach; ?>
                                         </tbody></table></div>
 
-                                        <form method="post" class="row g-2">
-                                            <input type="hidden" name="vmp_action" value="seller_update_order">
-                                            <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
-                                            <?php wp_nonce_field('vmp_seller_order_' . $order_id, 'vmp_seller_order_nonce'); ?>
-                                            <div class="col-md-3"><label class="form-label">Status</label><select name="order_status" class="form-select form-select-sm"><?php foreach ($status_labels as $status_key => $status_text) : ?><option value="<?php echo esc_attr($status_key); ?>" <?php selected($status, $status_key); ?>><?php echo esc_html($status_text); ?></option><?php endforeach; ?></select></div>
-                                            <div class="col-md-3"><label class="form-label">Kurir</label><input type="text" name="receipt_courier" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_courier); ?>" placeholder="JNE/SICEPAT/JNT"></div>
-                                            <div class="col-md-3"><label class="form-label">No Resi</label><input type="text" name="receipt_no" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_no); ?>" placeholder="Nomor resi"></div>
-                                            <div class="col-md-3"><label class="form-label">Catatan</label><input type="text" name="seller_note" class="form-control form-control-sm" placeholder="Catatan untuk pembeli"></div>
-                                            <div class="col-12 text-end"><button type="submit" class="btn btn-sm btn-dark">Simpan Update Order</button></div>
-                                        </form>
+                                        <div class="border rounded p-3 bg-light-subtle vmp-shipping-card">
+                                            <div class="fw-semibold mb-3">Pengiriman Toko Ini</div>
+                                            <form method="post" class="row g-3">
+                                                <input type="hidden" name="vmp_action" value="seller_update_order">
+                                                <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
+                                                <?php wp_nonce_field('vmp_seller_order_' . $order_id, 'vmp_seller_order_nonce'); ?>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Status Order</label>
+                                                    <select name="order_status" class="form-select form-select-sm">
+                                                        <?php foreach ($status_labels as $status_key => $status_text) : ?>
+                                                            <option value="<?php echo esc_attr($status_key); ?>" <?php selected($status, $status_key); ?>><?php echo esc_html($status_text); ?></option>
+                                                        <?php endforeach; ?>
+                                                    </select>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Kurir</label>
+                                                    <input type="text" name="receipt_courier" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_courier); ?>" placeholder="JNE/SICEPAT/JNT">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">No Resi</label>
+                                                    <input type="text" name="receipt_no" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_no); ?>" placeholder="Nomor resi">
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Layanan</label>
+                                                    <input type="text" class="form-control form-control-sm" value="<?php echo esc_attr((string) ($seller_shipping['service'] ?? '-')); ?>" readonly>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Ongkir</label>
+                                                    <input type="text" class="form-control form-control-sm" value="<?php echo esc_attr($money((float) ($seller_shipping['cost'] ?? 0))); ?>" readonly>
+                                                </div>
+                                                <div class="col-md-4">
+                                                    <label class="form-label">Tujuan</label>
+                                                    <input type="text" class="form-control form-control-sm" value="<?php echo esc_attr($seller_destination_text !== '' ? $seller_destination_text : '-'); ?>" readonly>
+                                                </div>
+                                                <div class="col-12">
+                                                    <label class="form-label">Catatan Seller</label>
+                                                    <textarea name="seller_note" class="form-control form-control-sm" rows="2" placeholder="Catatan untuk pembeli"><?php echo esc_textarea($seller_note); ?></textarea>
+                                                </div>
+                                                <div class="col-12 text-end">
+                                                    <button type="submit" class="btn btn-sm btn-dark">Simpan Update Order</button>
+                                                </div>
+                                            </form>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

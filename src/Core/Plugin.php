@@ -26,6 +26,9 @@ class Plugin
             $meta_box = new \VelocityMarketplace\Modules\Product\ProductMetaBox();
             $meta_box->register();
 
+            $order_admin = new \VelocityMarketplace\Modules\Order\OrderAdmin();
+            $order_admin->register();
+
             $settings_page = new SettingsPage();
             $settings_page->register();
         }

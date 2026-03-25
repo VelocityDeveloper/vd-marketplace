@@ -1,6 +1,6 @@
 <?php
 $captcha_html = \VelocityMarketplace\Modules\Captcha\CaptchaBridge::render('#vmp-checkout-form');
-$settings = get_option('velocity_marketplace_settings', []);
+$settings = get_option(VMP_SETTINGS_OPTION, []);
 if (!is_array($settings)) {
     $settings = [];
 }
@@ -57,7 +57,7 @@ $payment_labels = [
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Provinsi</label>
-                                <select class="form-select" x-model="form.destination_province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
+                                <select class="form-select" x-ref="provinceSelect" x-model="form.destination_province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
                                     <option value="">- Pilih Provinsi -</option>
                                     <template x-for="prov in provinces" :key="prov.province_id">
                                         <option :value="prov.province_id" x-text="prov.province"></option>
@@ -66,7 +66,7 @@ $payment_labels = [
                             </div>
                             <div class="col-md-4">
                                 <label class="form-label">Kota/Kabupaten</label>
-                                <select class="form-select" x-model="form.destination_city_id" @change="onCityChange()" :disabled="!form.destination_province_id || isLoadingCities">
+                                <select class="form-select" x-ref="citySelect" x-model="form.destination_city_id" @change="onCityChange()" :disabled="!form.destination_province_id || isLoadingCities">
                                     <option value="">- Pilih Kota/Kabupaten -</option>
                                     <template x-for="city in cities" :key="city.city_id">
                                         <option :value="city.city_id" x-text="(city.type ? city.type + ' ' : '') + city.city_name"></option>
@@ -85,7 +85,7 @@ $payment_labels = [
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Kecamatan</label>
-                                <select class="form-select" x-model="form.destination_subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.destination_city_id || isLoadingSubdistricts">
+                                <select class="form-select" x-ref="subdistrictSelect" x-model="form.destination_subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.destination_city_id || isLoadingSubdistricts">
                                     <option value="">- Pilih Kecamatan -</option>
                                     <template x-for="subdistrict in subdistricts" :key="subdistrict.subdistrict_id">
                                         <option :value="subdistrict.subdistrict_id" x-text="subdistrict.subdistrict_name"></option>

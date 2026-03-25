@@ -6,15 +6,14 @@ use VelocityMarketplace\Modules\Order\OrderData;
 use VelocityMarketplace\Modules\Wishlist\WishlistRepository;
 use VelocityMarketplace\Frontend\Template;
 
-$notice = isset($_GET['vmp_notice']) ? sanitize_text_field((string) wp_unslash($_GET['vmp_notice'])) : '';
-$error = isset($_GET['vmp_error']) ? sanitize_text_field((string) wp_unslash($_GET['vmp_error'])) : '';
-$tab = isset($_GET['tab']) ? sanitize_key((string) wp_unslash($_GET['tab'])) : '';
+$notice = isset($_REQUEST['vmp_notice']) ? sanitize_text_field((string) wp_unslash($_REQUEST['vmp_notice'])) : '';
+$error = isset($_REQUEST['vmp_error']) ? sanitize_text_field((string) wp_unslash($_REQUEST['vmp_error'])) : '';
+$tab = isset($_REQUEST['tab']) ? sanitize_key((string) wp_unslash($_REQUEST['tab'])) : '';
 
 if (!is_user_logged_in()) {
     $profile_redirect = \VelocityMarketplace\Support\Settings::profile_url();
     $login_url = wp_login_url($profile_redirect);
-    $register_customer_url = add_query_arg('vmp_role_type', 'customer', wp_registration_url());
-    $register_seller_url = add_query_arg('vmp_role_type', 'seller', wp_registration_url());
+    $register_url = wp_registration_url();
     ?>
     <div class="container py-4 vmp-wrap">
         <?php if ($notice !== '') : ?><div class="alert alert-success py-2"><?php echo esc_html($notice); ?></div><?php endif; ?>
@@ -22,12 +21,11 @@ if (!is_user_logged_in()) {
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <h3 class="h5 mb-2">Akses Akun Marketplace</h3>
-                <p class="text-muted mb-3">Login dan registrasi sekarang memakai halaman bawaan WordPress. Captcha akan mengikuti integrasi dari plugin Velocity Addons di halaman tersebut.</p>
+                <p class="text-muted mb-3">Login dan registrasi memakai form bawaan WordPress tanpa field tambahan dari plugin ini. Captcha akan mengikuti integrasi dari plugin Velocity Addons di halaman tersebut.</p>
                 <div class="d-flex flex-wrap gap-2">
                     <a href="<?php echo esc_url($login_url); ?>" class="btn btn-dark">Login</a>
                     <?php if (get_option('users_can_register')) : ?>
-                        <a href="<?php echo esc_url($register_customer_url); ?>" class="btn btn-outline-dark">Daftar Customer</a>
-                        <a href="<?php echo esc_url($register_seller_url); ?>" class="btn btn-primary">Daftar Seller</a>
+                        <a href="<?php echo esc_url($register_url); ?>" class="btn btn-primary">Daftar Member</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -38,9 +36,9 @@ if (!is_user_logged_in()) {
 }
 
 $current_user_id = get_current_user_id();
-$is_seller = Account::is_seller($current_user_id);
+$can_sell = Account::can_sell($current_user_id);
 if ($tab === '') {
-    $tab = $is_seller ? 'seller_home' : 'orders';
+    $tab = 'orders';
 }
 if ($tab === 'seller') {
     $tab = 'seller_products';
@@ -51,12 +49,11 @@ $notification_repo = new NotificationRepository();
 $notifications = $notification_repo->all($current_user_id);
 $unread_count = $notification_repo->unread_count($current_user_id);
 $message_repo = new MessageRepository();
-$messages = $message_repo->all($current_user_id, 120);
-$message_unread_count = $message_repo->unread_count($current_user_id);
-$message_contacts = $message_repo->contacts($current_user_id);
 $selected_message_to = isset($_GET['message_to']) ? (int) wp_unslash($_GET['message_to']) : 0;
 $selected_message_order = isset($_GET['message_order']) ? (int) wp_unslash($_GET['message_order']) : 0;
 $selected_message_invoice = $selected_message_order > 0 ? (string) get_post_meta($selected_message_order, 'vmp_invoice', true) : '';
+$message_contacts = $message_repo->contacts($current_user_id);
+$message_unread_count = $message_repo->unread_count($current_user_id);
 $selected_contact_exists = false;
 foreach ($message_contacts as $contact_row) {
     if ((int) ($contact_row['id'] ?? 0) === $selected_message_to) {
@@ -70,8 +67,36 @@ if ($selected_message_to > 0 && !$selected_contact_exists) {
         $message_contacts[] = [
             'id' => $selected_message_to,
             'name' => $selected_user->display_name !== '' ? $selected_user->display_name : $selected_user->user_login,
-            'role' => in_array('vmp_seller', (array) $selected_user->roles, true) ? 'Seller' : (in_array('administrator', (array) $selected_user->roles, true) ? 'Admin' : 'Customer'),
+            'role' => Account::user_role_label($selected_message_to),
         ];
+    }
+}
+if ($selected_message_to > 0) {
+    $message_repo->mark_thread_read($selected_message_to, $current_user_id);
+}
+$message_contacts = $message_repo->contacts($current_user_id);
+$message_thread = $selected_message_to > 0 ? $message_repo->thread($selected_message_to, $current_user_id, 200) : [];
+$selected_message_contact = null;
+foreach ($message_contacts as $contact_row) {
+    if ((int) ($contact_row['id'] ?? 0) === $selected_message_to) {
+        $selected_message_contact = $contact_row;
+        break;
+    }
+}
+if (!$selected_message_contact && $selected_message_to > 0) {
+    $selected_user = get_userdata($selected_message_to);
+    if ($selected_user && (current_user_can('manage_options') || $message_repo->can_contact($current_user_id, $selected_message_to))) {
+        $selected_message_contact = [
+            'id' => $selected_message_to,
+            'name' => $selected_user->display_name !== '' ? $selected_user->display_name : $selected_user->user_login,
+            'role' => Account::user_role_label($selected_message_to),
+            'last_message' => '',
+            'last_created_at' => '',
+            'last_order_id' => 0,
+            'last_order_invoice' => '',
+            'unread_count' => 0,
+        ];
+        array_unshift($message_contacts, $selected_message_contact);
     }
 }
 $wishlist_repo = new WishlistRepository();
@@ -81,24 +106,34 @@ $money = static function ($value) {
     return 'Rp ' . number_format((float) $value, 0, ',', '.');
 };
 
+$nav_base_url = remove_query_arg([
+    'vmp_notice',
+    'vmp_error',
+    'invoice',
+    'message_to',
+    'message_order',
+    'tab',
+]);
+
 $logout_url = add_query_arg([
     'vmp_logout' => 1,
     'vmp_nonce' => wp_create_nonce('vmp_logout'),
-]);
+], $nav_base_url);
 
-$store_name = (string) get_user_meta($current_user_id, 'vmp_store_name', true);
-$store_address = (string) get_user_meta($current_user_id, 'vmp_store_address', true);
-$profile_complete = !$is_seller || ($store_name !== '' && $store_address !== '');
+$store_name = (string) get_user_meta($current_user_id, 'vmp_name', true);
+$store_address = (string) get_user_meta($current_user_id, 'vmp_address', true);
+$profile_complete = !$can_sell || ($store_name !== '' && $store_address !== '');
 $is_star_seller = !empty(get_user_meta($current_user_id, 'vmp_is_star_seller', true));
 
 $tabs = [
     ['key' => 'orders', 'label' => 'Riwayat Belanja'],
+    ['key' => 'account_profile', 'label' => 'Profil Saya'],
     ['key' => 'wishlist', 'label' => 'Wishlist'],
     ['key' => 'tracking', 'label' => 'Tracking'],
-    ['key' => 'messages', 'label' => 'Pesan (' . $message_unread_count . ')'],
+    ['key' => 'messages', 'label' => 'Pesan' . ($message_unread_count > 0 ? ' (' . $message_unread_count . ')' : '')],
     ['key' => 'notifications', 'label' => 'Notifikasi (' . $unread_count . ')'],
 ];
-if ($is_seller) {
+if ($can_sell) {
     $tabs[] = ['key' => 'seller_home', 'label' => 'Beranda Toko'];
     $tabs[] = ['key' => 'seller_report', 'label' => 'Laporan'];
     $tabs[] = ['key' => 'seller_products', 'label' => 'Produk'];
@@ -119,13 +154,15 @@ if ($is_seller) {
 
     <div class="d-flex flex-wrap gap-2 mb-3">
         <?php foreach ($tabs as $it) : ?>
-            <a class="btn btn-sm <?php echo $tab === $it['key'] ? 'btn-dark' : 'btn-outline-dark'; ?>" href="<?php echo esc_url(add_query_arg(['tab' => $it['key']])); ?>"><?php echo esc_html($it['label']); ?></a>
+            <a class="btn btn-sm <?php echo $tab === $it['key'] ? 'btn-dark' : 'btn-outline-dark'; ?>" href="<?php echo esc_url(add_query_arg(['tab' => $it['key']], $nav_base_url)); ?>"><?php echo esc_html($it['label']); ?></a>
         <?php endforeach; ?>
     </div>
     <?php
     $view_data = get_defined_vars();
     if ($tab === 'orders') {
         echo Template::render('account/orders', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
+    } elseif ($tab === 'account_profile') {
+        echo Template::render('account/profile', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     } elseif ($tab === 'wishlist') {
         echo Template::render('account/wishlist', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     } elseif ($tab === 'tracking') {
@@ -134,13 +171,13 @@ if ($is_seller) {
         echo Template::render('account/messages', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     } elseif ($tab === 'notifications') {
         echo Template::render('account/notifications', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    } elseif ($tab === 'seller_home' && $is_seller) {
+    } elseif ($tab === 'seller_home' && $can_sell) {
         echo Template::render('seller/home', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    } elseif ($tab === 'seller_report' && $is_seller) {
+    } elseif ($tab === 'seller_report' && $can_sell) {
         echo Template::render('seller/report', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    } elseif ($tab === 'seller_products' && $is_seller) {
+    } elseif ($tab === 'seller_products' && $can_sell) {
         echo Template::render('seller/products', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
-    } elseif ($tab === 'seller_profile' && $is_seller) {
+    } elseif ($tab === 'seller_profile' && $can_sell) {
         echo Template::render('seller/profile', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     } else {
         echo '<div class="alert alert-warning mb-0">Menu tidak tersedia.</div>';

@@ -303,6 +303,29 @@ class ShippingController
 
         $services = $this->map_services($data);
         if (empty($services)) {
+            $codes = preg_split('/[:,]+/', (string) $courier);
+            $codes = array_values(array_filter(array_map('trim', (array) $codes)));
+
+            foreach ($codes as $single_code) {
+                $single = $this->remote_post('/calculate/domestic-cost', $api_key, [
+                    'origin' => $origin_subdistrict,
+                    'destination' => $destination_subdistrict,
+                    'weight' => $weight,
+                    'courier' => $single_code,
+                    'price' => 'lowest',
+                ]);
+
+                if (is_wp_error($single)) {
+                    continue;
+                }
+
+                $services = array_merge($services, $this->map_services($single));
+            }
+        }
+
+        $services = array_values(array_unique(array_map('serialize', $services)));
+        $services = array_map('unserialize', $services);
+        if (empty($services)) {
             return new WP_REST_Response([
                 'success' => false,
                 'message' => 'Tidak ada layanan pengiriman yang tersedia.',
@@ -420,13 +443,13 @@ class ShippingController
         $resolved_groups = [];
         foreach ($groups as $seller_id => $group) {
             $origin = [
-                'province_id' => (string) get_user_meta($seller_id, 'vmp_store_province_id', true),
-                'province_name' => (string) get_user_meta($seller_id, 'vmp_store_province', true),
-                'city_id' => (string) get_user_meta($seller_id, 'vmp_store_city_id', true),
-                'city_name' => (string) get_user_meta($seller_id, 'vmp_store_city', true),
-                'subdistrict_id' => (string) get_user_meta($seller_id, 'vmp_store_subdistrict_id', true),
-                'subdistrict_name' => (string) get_user_meta($seller_id, 'vmp_store_subdistrict', true),
-                'postcode' => (string) get_user_meta($seller_id, 'vmp_store_postcode', true),
+                'province_id' => (string) get_user_meta($seller_id, 'vmp_province_id', true),
+                'province_name' => (string) get_user_meta($seller_id, 'vmp_province', true),
+                'city_id' => (string) get_user_meta($seller_id, 'vmp_city_id', true),
+                'city_name' => (string) get_user_meta($seller_id, 'vmp_city', true),
+                'subdistrict_id' => (string) get_user_meta($seller_id, 'vmp_subdistrict_id', true),
+                'subdistrict_name' => (string) get_user_meta($seller_id, 'vmp_subdistrict', true),
+                'postcode' => (string) get_user_meta($seller_id, 'vmp_postcode', true),
             ];
 
             if ($origin['province_id'] === '' || $origin['city_id'] === '' || $origin['subdistrict_id'] === '') {
@@ -438,7 +461,7 @@ class ShippingController
                 ];
             }
 
-            $couriers = get_user_meta($seller_id, 'vmp_store_couriers', true);
+            $couriers = get_user_meta($seller_id, 'vmp_couriers', true);
             if (!is_array($couriers)) {
                 $couriers = [];
             }
@@ -600,7 +623,7 @@ class ShippingController
                 $rows = isset($courier_group['services']) && is_array($courier_group['services']) ? $courier_group['services'] : [];
                 foreach ($rows as $row) {
                     $services[] = [
-                        'code' => $code,
+                        'code' => (string) ($row['code'] ?? $code),
                         'name' => $name,
                         'service' => (string) ($row['service'] ?? ($row['service_code'] ?? '')),
                         'description' => (string) ($row['description'] ?? ($row['service_name'] ?? '')),
@@ -616,20 +639,30 @@ class ShippingController
                     $name = (string) ($row['name'] ?? ($labels[$code] ?? strtoupper($code)));
                     foreach ($row['services'] as $service_row) {
                         $services[] = [
-                            'code' => $code,
-                            'name' => $name,
+                            'code' => (string) ($service_row['code'] ?? $code),
+                            'name' => (string) ($service_row['name'] ?? $name),
                             'service' => (string) ($service_row['service'] ?? ($service_row['service_code'] ?? '')),
                             'description' => (string) ($service_row['description'] ?? ($service_row['service_name'] ?? '')),
                             'cost' => (float) ($service_row['cost'] ?? ($service_row['value'] ?? 0)),
                             'etd' => (string) ($service_row['etd'] ?? ($service_row['etd_days'] ?? '')),
                         ];
                     }
+                } else {
+                    $code = (string) ($row['courier'] ?? ($row['code'] ?? ''));
+                    $services[] = [
+                        'code' => $code,
+                        'name' => (string) ($row['name'] ?? ($labels[$code] ?? strtoupper($code))),
+                        'service' => (string) ($row['service'] ?? ($row['service_code'] ?? '')),
+                        'description' => (string) ($row['description'] ?? ($row['service_name'] ?? '')),
+                        'cost' => (float) ($row['cost'] ?? ($row['value'] ?? 0)),
+                        'etd' => (string) ($row['etd'] ?? ($row['etd_days'] ?? '')),
+                    ];
                 }
             }
         }
 
         return array_values(array_filter($services, static function ($row) {
-            return !empty($row['code']) && !empty($row['service']);
+            return !empty($row['code']) && ((string) ($row['service'] ?? '') !== '');
         }));
     }
 
