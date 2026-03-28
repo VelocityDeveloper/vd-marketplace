@@ -209,6 +209,16 @@ class Shortcode
 
     public function render_cart($atts = [])
     {
+        $atts = shortcode_atts([
+            'display' => 'page',
+        ], $atts);
+
+        $display = sanitize_key((string) $atts['display']);
+
+        if ($display === 'drawer' || $display === 'mini') {
+            return Template::render('cart-drawer', []);
+        }
+
         return Template::render('cart', []);
     }
 
@@ -391,7 +401,7 @@ class Shortcode
         if ($image !== '') {
             $html .= '<img src="' . esc_url((string) $image) . '" class="card-img-top vmp-thumb" alt="' . esc_attr($title) . '">';
         } else {
-            $html .= '<div class="vmp-thumb vmp-thumb--empty d-flex align-items-center justify-content-center text-muted">No Image</div>';
+            $html .= '<div class="vmp-thumb vmp-thumb--empty d-flex align-items-center justify-content-center text-muted">Tidak ada gambar</div>';
         }
         $html .= '</a>';
 

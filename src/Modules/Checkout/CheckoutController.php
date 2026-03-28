@@ -4,6 +4,7 @@ namespace VelocityMarketplace\Modules\Checkout;
 
 use VelocityMarketplace\Modules\Captcha\CaptchaBridge;
 use VelocityMarketplace\Modules\Cart\CartRepository;
+use VelocityMarketplace\Modules\Coupon\CouponService;
 use VelocityMarketplace\Modules\Notification\NotificationRepository;
 use VelocityMarketplace\Modules\Order\OrderData;
 use VelocityMarketplace\Modules\Shipping\ShippingController;
@@ -71,10 +72,14 @@ class CheckoutController
         if (!in_array($payment_method, $active_payment_methods, true)) {
             return new WP_REST_Response(['message' => 'Metode pembayaran tidak tersedia.'], 400);
         }
+        if ($payment_method === 'bank' && empty(Settings::bank_accounts())) {
+            return new WP_REST_Response(['message' => 'Rekening tujuan transfer belum tersedia. Silakan hubungi admin marketplace.'], 400);
+        }
 
         $default_order_status = OrderData::normalize_status(Settings::default_order_status());
 
         $notes = sanitize_textarea_field($payload['notes'] ?? '');
+        $coupon_code = sanitize_text_field((string) ($payload['coupon_code'] ?? ''));
 
         if ($customer['name'] === '' || $customer['phone'] === '' || $customer['address'] === '') {
             return new WP_REST_Response(['message' => 'Nama, telepon, dan alamat wajib diisi.'], 400);
@@ -136,7 +141,7 @@ class CheckoutController
             ], 400);
         }
 
-        $shipping_groups = $this->build_shipping_groups($submitted_shipping_groups, $shipping_destination, $shipping_context_data, $order_items);
+        $shipping_groups = $this->build_shipping_groups($submitted_shipping_groups, $shipping_destination, $shipping_context_data, $order_items, $payment_method);
         if (is_wp_error($shipping_groups)) {
             return new WP_REST_Response([
                 'message' => $shipping_groups->get_error_message(),
@@ -146,6 +151,28 @@ class CheckoutController
         $shipping_total = 0;
         foreach ($shipping_groups as $shipping_group) {
             $shipping_total += (float) ($shipping_group['cost'] ?? 0);
+        }
+
+        $coupon_discount = 0.0;
+        $coupon_scope = '';
+        $coupon_product_discount = 0.0;
+        $coupon_shipping_discount = 0.0;
+        $coupon_id = 0;
+        $coupon_data = null;
+        if ($coupon_code !== '') {
+            $coupon_preview = (new CouponService())->preview($coupon_code, $subtotal, $shipping_total);
+            if (is_wp_error($coupon_preview)) {
+                return new WP_REST_Response([
+                    'message' => $coupon_preview->get_error_message(),
+                ], 400);
+            }
+            $coupon_data = $coupon_preview;
+            $coupon_id = (int) ($coupon_preview['id'] ?? 0);
+            $coupon_code = (string) ($coupon_preview['code'] ?? $coupon_code);
+            $coupon_scope = (string) ($coupon_preview['scope'] ?? '');
+            $coupon_product_discount = (float) ($coupon_preview['product_discount'] ?? 0);
+            $coupon_shipping_discount = (float) ($coupon_preview['shipping_discount'] ?? 0);
+            $coupon_discount = (float) ($coupon_preview['discount'] ?? 0);
         }
 
         $shipping = [
@@ -164,7 +191,7 @@ class CheckoutController
             $shipping['service'] = (string) ($shipping_groups[0]['service'] ?? '');
         }
 
-        $total = $subtotal + $shipping_total;
+        $total = max(0, ($subtotal - $coupon_product_discount) + ($shipping_total - $coupon_shipping_discount));
         $invoice = $this->generate_invoice();
         $user_id = is_user_logged_in() ? get_current_user_id() : 0;
 
@@ -189,9 +216,16 @@ class CheckoutController
         update_post_meta($order_id, 'vmp_total', (float) $total);
         update_post_meta($order_id, 'vmp_total_weight', (float) $total_weight);
         update_post_meta($order_id, 'vmp_payment_method', $payment_method);
-        update_post_meta($order_id, 'vmp_status', $default_order_status);
+        update_post_meta($order_id, 'vmp_bank_accounts', $payment_method === 'bank' ? Settings::bank_accounts() : []);
+        update_post_meta($order_id, 'vmp_status', $payment_method === 'cod' ? 'processing' : $default_order_status);
         update_post_meta($order_id, 'vmp_notes', $notes);
         update_post_meta($order_id, 'vmp_created_at', current_time('mysql'));
+        update_post_meta($order_id, 'vmp_coupon_id', $coupon_id);
+        update_post_meta($order_id, 'vmp_coupon_code', $coupon_code);
+        update_post_meta($order_id, 'vmp_coupon_scope', $coupon_scope);
+        update_post_meta($order_id, 'vmp_coupon_product_discount', (float) $coupon_product_discount);
+        update_post_meta($order_id, 'vmp_coupon_shipping_discount', (float) $coupon_shipping_discount);
+        update_post_meta($order_id, 'vmp_coupon_discount', (float) $coupon_discount);
 
         foreach ($order_items as $line) {
             $product_id = (int) $line['product_id'];
@@ -235,7 +269,7 @@ class CheckoutController
             $notif->add(
                 $seller_id,
                 'order',
-                'Order Masuk',
+                'Pesanan Baru',
                 'Ada order baru ' . $invoice . ' yang perlu diproses.',
                 add_query_arg(['tab' => 'seller_home'], $profile_url)
             );
@@ -250,6 +284,10 @@ class CheckoutController
             }
         }
 
+        if ($coupon_data && $coupon_id > 0) {
+            (new CouponService())->increment_usage($coupon_id);
+        }
+
         $repo->clear();
 
         return new WP_REST_Response([
@@ -258,6 +296,10 @@ class CheckoutController
             'order_id' => (int) $order_id,
             'invoice' => $invoice,
             'total' => (float) $total,
+            'coupon_discount' => (float) $coupon_discount,
+            'coupon_scope' => (string) $coupon_scope,
+            'coupon_product_discount' => (float) $coupon_product_discount,
+            'coupon_shipping_discount' => (float) $coupon_shipping_discount,
             'redirect' => $this->resolve_profile_url($invoice),
         ], 201);
     }
@@ -281,8 +323,9 @@ class CheckoutController
         return add_query_arg(['invoice' => $invoice], site_url('/myaccount/'));
     }
 
-    private function build_shipping_groups($submitted_groups, $destination, $context_data, $order_items)
+    private function build_shipping_groups($submitted_groups, $destination, $context_data, $order_items, $payment_method)
     {
+        $payment_method = sanitize_key((string) $payment_method);
         $context_groups = isset($context_data['data']['groups']) && is_array($context_data['data']['groups'])
             ? $context_data['data']['groups']
             : [];
@@ -329,11 +372,35 @@ class CheckoutController
                 continue;
             }
             if (empty($submitted_map[$seller_id])) {
-                return new \WP_Error('missing_shipping_selection', 'Pilihan ongkir untuk salah satu toko belum dipilih.');
+                if ($payment_method !== 'cod') {
+                    return new \WP_Error('missing_shipping_selection', 'Pilihan ongkir untuk salah satu toko belum dipilih.');
+                }
             }
 
-            $selection = $submitted_map[$seller_id];
-            if ($selection['courier'] === '' || $selection['service'] === '') {
+            $selection = $submitted_map[$seller_id] ?? [];
+            $cod_city_ids = isset($context_group['cod_city_ids']) && is_array($context_group['cod_city_ids'])
+                ? array_values(array_filter(array_map('strval', $context_group['cod_city_ids'])))
+                : [];
+            $is_cod_available = !empty($context_group['cod_enabled'])
+                && !empty($destination['city_destination_id'])
+                && in_array((string) $destination['city_destination_id'], $cod_city_ids, true);
+
+            if ($payment_method === 'cod') {
+                if (!$is_cod_available) {
+                    return new \WP_Error('cod_not_available', 'COD tidak tersedia untuk salah satu toko di kota tujuan yang dipilih.');
+                }
+                $selection = [
+                    'seller_id' => $seller_id,
+                    'courier' => 'cod',
+                    'courier_name' => 'COD',
+                    'service' => 'COD',
+                    'description' => 'Bayar di tempat / temu langsung',
+                    'cost' => 0,
+                    'etd' => 'Sesuai kesepakatan',
+                ];
+            }
+
+            if ($payment_method !== 'cod' && (($selection['courier'] ?? '') === '' || ($selection['service'] ?? '') === '')) {
                 return new \WP_Error('invalid_shipping_selection', 'Pilihan ongkir per toko belum lengkap.');
             }
 
@@ -352,6 +419,9 @@ class CheckoutController
                 'items_count' => isset($context_group['items_count']) ? (int) $context_group['items_count'] : 0,
                 'items' => array_values($items_by_seller[$seller_id] ?? []),
                 'destination' => $destination,
+                'cod_enabled' => !empty($context_group['cod_enabled']),
+                'cod_city_ids' => $cod_city_ids,
+                'cod_city_names' => isset($context_group['cod_city_names']) && is_array($context_group['cod_city_names']) ? array_values($context_group['cod_city_names']) : [],
                 'receipt_no' => '',
                 'receipt_courier' => '',
                 'seller_note' => '',

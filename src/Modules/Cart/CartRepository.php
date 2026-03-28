@@ -3,6 +3,7 @@
 namespace VelocityMarketplace\Modules\Cart;
 
 use VelocityMarketplace\Modules\Product\ProductData;
+use VelocityMarketplace\Support\Settings;
 
 class CartRepository
 {
@@ -126,7 +127,9 @@ class CartRepository
 
     private function hydrate_items($rows)
     {
-        $items = [];
+        $seller_groups = [];
+        $seller_order = [];
+
         foreach ($rows as $row) {
             if (!is_array($row)) {
                 continue;
@@ -145,13 +148,17 @@ class CartRepository
                 continue;
             }
 
+            $seller_id = isset($product['author_id']) ? (int) $product['author_id'] : 0;
+            $seller_name = $this->seller_name($seller_id);
+            $seller_url = $seller_id > 0 ? Settings::store_profile_url($seller_id) : '';
+
             $options = ProductData::normalize_options($product_id, $options);
             $adv_label = isset($options['advanced']) ? (string) $options['advanced'] : '';
             $price_override = ProductData::resolve_advanced_price($product_id, $adv_label);
             $price = $price_override !== null ? $price_override : (float) $product['price'];
             $subtotal = $price * $qty;
 
-            $items[] = [
+            $item = [
                 'id' => $product_id,
                 'title' => $product['title'],
                 'link' => $product['link'],
@@ -160,13 +167,50 @@ class CartRepository
                 'price' => (float) $price,
                 'subtotal' => (float) $subtotal,
                 'options' => $options,
-                'penjual' => (int) $product['author_id'],
+                'penjual' => $seller_id,
+                'seller_id' => $seller_id,
+                'seller_name' => $seller_name,
+                'seller_url' => $seller_url,
                 'stock' => $product['stock'],
                 'weight' => isset($product['weight']) ? (float) $product['weight'] : 0,
             ];
+
+            if (!isset($seller_groups[$seller_id])) {
+                $seller_groups[$seller_id] = [];
+                $seller_order[] = $seller_id;
+            }
+
+            $seller_groups[$seller_id][] = $item;
+        }
+
+        $items = [];
+        foreach ($seller_order as $seller_id) {
+            foreach ($seller_groups[$seller_id] as $item) {
+                $items[] = $item;
+            }
         }
 
         return $items;
+    }
+
+    private function seller_name($seller_id)
+    {
+        $seller_id = (int) $seller_id;
+        if ($seller_id <= 0) {
+            return 'Toko';
+        }
+
+        $store_name = (string) get_user_meta($seller_id, 'vmp_store_name', true);
+        if ($store_name !== '') {
+            return $store_name;
+        }
+
+        $seller = get_userdata($seller_id);
+        if ($seller && $seller->display_name !== '') {
+            return (string) $seller->display_name;
+        }
+
+        return 'Toko #' . $seller_id;
     }
 
     private function read_cookie_cart()

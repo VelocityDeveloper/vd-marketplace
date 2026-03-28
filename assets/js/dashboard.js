@@ -1,4 +1,6 @@
+/* Helper dashboard untuk pengalaman tab pesan. */
 (() => {
+  // Memfokuskan textarea chat saat thread pesan dibuka.
   const focusMessageComposer = () => {
     const params = new URLSearchParams(window.location.search || "");
     if (params.get("tab") !== "messages") {
@@ -20,6 +22,7 @@
     }, 120);
   };
 
+  // Menggulung thread pesan ke bagian paling bawah saat thread aktif dibuka.
   const scrollMessageThreadToBottom = () => {
     const params = new URLSearchParams(window.location.search || "");
     if (params.get("tab") !== "messages" || !params.get("message_to")) {

@@ -21,32 +21,49 @@ Dokumen ini adalah catatan kerja untuk developer. Kalau ada perubahan struktur, 
 - Option pages: `vmp_pages`
 - Option db version: `vmp_db_version`
 - Penyimpanan pesan: custom table `wp_vmp_messages`
+- Penyimpanan ulasan: custom table `wp_vmp_reviews`
 - Storage utama:
   - produk: CPT + post meta
   - order: CPT + post meta
+  - kupon: CPT + post meta
   - pesan: custom table
+  - ulasan: custom table
   - cart: cookie / user meta
   - wishlist: user meta
   - profil user umum: user meta
   - pengaturan kurir toko: user meta
   - role marketplace: `vmp_member`
+  - badge star seller: user meta hasil evaluasi otomatis
 
-- Skema profil user umum:
-  - `vmp_name`
-  - `vmp_phone`
-  - `vmp_whatsapp`
-  - `vmp_address`
-  - `vmp_province_id`
-  - `vmp_province`
-  - `vmp_city_id`
-  - `vmp_city`
-  - `vmp_subdistrict_id`
-  - `vmp_subdistrict`
-  - `vmp_postcode`
-  - `vmp_description`
-  - `vmp_avatar_id`
+- Skema profil member:
+  - `first_name` / `display_name` / `nickname` (WordPress core)
+  - `vmp_member_phone`
+  - `vmp_member_address`
+  - `vmp_member_province_id`
+  - `vmp_member_province`
+  - `vmp_member_city_id`
+  - `vmp_member_city`
+  - `vmp_member_subdistrict_id`
+  - `vmp_member_subdistrict`
+  - `vmp_member_postcode`
 - Meta khusus seller:
+  - `vmp_store_name`
+  - `vmp_store_phone`
+  - `vmp_store_whatsapp`
+  - `vmp_store_address`
+  - `vmp_store_province_id`
+  - `vmp_store_province`
+  - `vmp_store_city_id`
+  - `vmp_store_city`
+  - `vmp_store_subdistrict_id`
+  - `vmp_store_subdistrict`
+  - `vmp_store_postcode`
+  - `vmp_store_description`
+  - `vmp_store_avatar_id`
   - `vmp_couriers`
+  - `vmp_cod_enabled`
+  - `vmp_cod_city_ids`
+  - `vmp_cod_city_names`
 
 ## Shortcode resmi
 
@@ -90,6 +107,10 @@ Installer akan membuat page ini jika belum ada:
   - catatan struktur, shortcode, dan alur plugin
   - wajib ikut diupdate kalau struktur berubah
 
+- `README-FRONTEND.md`
+  - peta file JavaScript frontend dan custom admin page
+  - titik awal kalau ingin memahami asset `Alpine.js + REST API`
+
 ### `assets/`
 
 - `assets/css/frontend.css`
@@ -99,14 +120,30 @@ Installer akan membuat page ini jika belum ada:
 - `assets/css/dashboard.css`
   - styling dashboard account / seller
 
+- `assets/js/frontend-shared.js`
+  - helper shared frontend
+  - request REST, formatter, helper wilayah, helper cart
+
+- `assets/js/frontend-catalog.js`
+  - logic katalog dan advance filter
+
+- `assets/js/frontend-cart.js`
+  - logic halaman keranjang
+
+- `assets/js/frontend-checkout.js`
+  - logic checkout, shipping, coupon, dan submit order
+
+- `assets/js/frontend-profile.js`
+  - logic profil member dan profil toko
+
+- `assets/js/frontend-ui.js`
+  - helper UI lintas halaman
+  - add to cart/wishlist global
+  - galeri produk
+
 - `assets/js/frontend.js`
-  - logic Alpine frontend:
-  - katalog
-  - cart
-  - checkout
-  - lokasi seller/customer
-  - gallery product
-  - tombol add to cart / wishlist
+  - placeholder legacy internal
+  - tidak dipakai sebagai asset aktif
 
 - `assets/js/dashboard.js`
   - behavior ringan dashboard
@@ -146,6 +183,7 @@ Installer akan membuat page ini jika belum ada:
   - version gate upgrade
   - jalankan installer
   - create message table
+  - create review table
 
 ### `src/Frontend/`
 
@@ -172,14 +210,27 @@ Installer akan membuat page ini jika belum ada:
   - logout frontend
 
 - `Actions.php`
-  - semua action form frontend yang berbasis `POST`/`GET`
-  - simpan produk member
-  - update order toko
-  - upload bukti transfer
-  - simpan profil user umum dari form akun/toko
-  - wishlist remove
-  - notification action
-  - kirim pesan
+  - router tipis untuk action frontend berbasis `POST`/`GET`
+  - delegasi ke handler per domain
+
+- `Handlers/`
+  - `BaseActionHandler.php`
+    - helper common redirect, notice, sanitasi dasar
+  - `ProductActionHandler.php`
+    - simpan/hapus produk member
+  - `OrderActionHandler.php`
+    - update order toko
+    - upload bukti transfer
+  - `ProfileActionHandler.php`
+    - fallback submit profil via form klasik
+  - `WishlistActionHandler.php`
+    - hapus item wishlist
+  - `NotificationActionHandler.php`
+    - aksi notifikasi
+  - `MessageActionHandler.php`
+    - kirim pesan
+  - `ReviewActionHandler.php`
+    - submit ulasan dan upload foto review
 
 ### `src/Modules/Captcha/`
 
@@ -205,6 +256,22 @@ Installer akan membuat page ini jika belum ada:
   - REST API checkout
   - validasi payload
   - buat order `vmp_order`
+  - validasi kupon
+  - validasi COD per kota per toko
+
+### `src/Modules/Coupon/`
+
+- `CouponAdmin.php`
+  - metabox dan kolom admin untuk kupon/voucher
+  - kupon disimpan sebagai CPT `vmp_coupon`
+
+- `CouponController.php`
+  - REST preview kupon saat checkout
+
+- `CouponService.php`
+  - cari kupon berdasarkan kode
+  - validasi minimal belanja, periode aktif, dan batas penggunaan
+  - hitung diskon nominal / persen
   - simpan shipping groups
   - reduce stock
   - notifikasi order
@@ -231,6 +298,33 @@ Installer akan membuat page ini jika belum ada:
 Catatan:
 - pesan baru sengaja tidak lagi masuk notification repository untuk meringankan sistem
 
+### `src/Modules/Review/`
+
+- `ReviewAdmin.php`
+  - halaman wp-admin untuk moderasi ulasan
+  - setujui, sembunyikan, hapus ulasan
+
+- `ReviewRepository.php`
+  - simpan ulasan produk
+  - validasi verified purchase
+  - agregat rating produk
+  - agregat rating seller
+  - simpan foto review
+
+- `ReviewTable.php`
+  - create table `wp_vmp_reviews`
+
+- `StarSellerAdmin.php`
+  - override manual star seller di edit user wp-admin
+  - mode: otomatis / paksa aktif / paksa nonaktif
+
+- `StarSellerService.php`
+  - hitung badge star seller dari:
+  - order selesai
+  - rating rata-rata
+  - jumlah ulasan minimum
+  - cancel rate
+
 ### `src/Modules/Order/`
 
 - `OrderAdmin.php`
@@ -250,6 +344,13 @@ Catatan:
 
 - `ProductController.php`
   - REST API daftar / detail produk
+  - filter produk:
+  - nama
+  - kategori
+  - label
+  - rentang harga
+  - jenis toko
+  - urutan harga / nama / populer
 
 - `ProductData.php`
   - mapper data produk untuk frontend/API
@@ -274,6 +375,8 @@ Catatan:
   - hitung ongkir
   - waybill / tracking resi
   - shipping context multi seller
+  - integrasi layanan wilayah, ongkir, dan pelacakan pengiriman
+  - expose data COD per kota dari toko
 
 ### `src/Modules/Wishlist/`
 
@@ -296,6 +399,7 @@ Catatan:
 
 - `catalog.php`
   - halaman katalog utama
+  - advance filter produk
 
 - `cart.php`
   - halaman keranjang
@@ -304,6 +408,8 @@ Catatan:
   - halaman checkout
   - shipping multi toko
   - prefill dari profil akun
+  - kupon / voucher
+  - COD per kota per toko
 
 - `profile.php`
   - router dashboard account
@@ -320,10 +426,19 @@ Catatan:
   - gallery product
   - tombol add to cart / wishlist
   - tombol profil toko / pesan seller
+  - ringkasan rating produk
+  - daftar ulasan produk
 
 - `store-profile.php`
   - profil toko publik
   - tombol pesan
+  - info toko:
+  - alamat pengiriman
+  - kota COD
+  - ulasan toko
+  - terakhir aktif
+  - total produk
+  - tanggal bergabung
   - daftar produk member
 
 ### `templates/account/`
@@ -333,6 +448,8 @@ Catatan:
   - detail invoice
   - upload bukti transfer
   - tracking per toko
+  - form ulasan produk setelah order selesai
+  - upload foto review
 
 - `profile.php`
   - profil akun umum
@@ -343,6 +460,8 @@ Catatan:
 
 - `tracking.php`
   - tracking di dashboard login
+  - detail pembayaran
+  - upload bukti transfer dari menu tracking
 
 - `messages.php`
   - inbox pesan per kontak/thread
@@ -387,8 +506,9 @@ Catatan:
 1. User buka checkout
 2. `frontend.js` load cart + shipping context
 3. alamat default diisi dari profil customer
-4. user pilih service ongkir per seller
-5. `CheckoutController.php` buat `vmp_order`
+4. user bisa pakai kupon bila valid
+5. user pilih service ongkir per seller atau COD jika tersedia di kota tujuan
+6. `CheckoutController.php` buat `vmp_order`
 
 ### Pesan
 
@@ -397,6 +517,18 @@ Catatan:
 3. `MessageRepository.php` ambil thread
 4. unread thread di-clear saat thread dibuka
 5. kirim pesan diproses oleh `Actions.php`
+
+### Review dan Star Seller
+
+1. Member hanya bisa memberi ulasan dari order miliknya yang statusnya `completed`
+2. Satu produk hanya punya satu ulasan per user per order
+3. Ulasan masuk ke table `wp_vmp_reviews`
+4. Setelah ulasan masuk, meta agregat produk diperbarui:
+   - `vmp_review_count`
+   - `vmp_rating_average`
+5. Ulasan bisa menyimpan sampai 3 foto review
+6. Setelah ulasan masuk atau status order berubah, `StarSellerService` hitung ulang badge seller
+7. Admin bisa override hasil star seller tanpa mematikan hitung otomatis
 
 ## Catatan maintenance
 

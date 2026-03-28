@@ -31,7 +31,7 @@ class Installer
                 'content' => '[vmp_profile]',
             ],
             'tracking' => [
-                'title' => 'Tracking Pesanan',
+                'title' => 'Lacak Pesanan',
                 'content' => '[vmp_tracking]',
             ],
             'toko' => [
@@ -83,6 +83,7 @@ class Installer
             'default_order_status' => 'pending_payment',
             'payment_methods' => ['bank', 'duitku', 'paypal'],
             'seller_product_status' => 'publish',
+            'bank_accounts' => [],
         ];
 
         update_option(VMP_SETTINGS_OPTION, array_merge($defaults, $current));

@@ -10,6 +10,8 @@ class Account
     {
         add_action('init', [$this, 'handle_actions']);
         add_action('user_register', [$this, 'apply_register_fields']);
+        add_filter('show_admin_bar', [$this, 'filter_admin_bar']);
+        add_filter('login_redirect', [$this, 'filter_login_redirect'], 10, 3);
     }
 
     public static function is_member($user_id = 0)
@@ -58,6 +60,10 @@ class Account
 
     public function handle_actions()
     {
+        if (is_user_logged_in()) {
+            update_user_meta(get_current_user_id(), 'vmp_last_active_at', current_time('mysql'));
+        }
+
         if (isset($_GET['vmp_logout']) && $_GET['vmp_logout'] === '1') {
             $this->handle_logout();
             return;
@@ -68,6 +74,32 @@ class Account
     {
         $user = new \WP_User($user_id);
         $user->set_role('vmp_member');
+    }
+
+    public function filter_admin_bar($show)
+    {
+        if (current_user_can('manage_options')) {
+            return $show;
+        }
+
+        return false;
+    }
+
+    public function filter_login_redirect($redirect_to, $requested_redirect_to, $user)
+    {
+        if (!($user instanceof \WP_User)) {
+            return $redirect_to;
+        }
+
+        if (in_array('administrator', (array) $user->roles, true)) {
+            return $requested_redirect_to !== '' ? $requested_redirect_to : $redirect_to;
+        }
+
+        if (self::is_member((int) $user->ID)) {
+            return add_query_arg(['tab' => 'account_profile'], Settings::profile_url());
+        }
+
+        return $redirect_to;
     }
 
     private function handle_logout()

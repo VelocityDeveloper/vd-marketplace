@@ -1,14 +1,14 @@
 <?php
-$customer_name = (string) get_user_meta($current_user_id, 'vmp_name', true);
-$customer_phone = (string) get_user_meta($current_user_id, 'vmp_phone', true);
-$customer_address = (string) get_user_meta($current_user_id, 'vmp_address', true);
-$customer_subdistrict = (string) get_user_meta($current_user_id, 'vmp_subdistrict', true);
-$customer_city = (string) get_user_meta($current_user_id, 'vmp_city', true);
-$customer_province = (string) get_user_meta($current_user_id, 'vmp_province', true);
-$customer_subdistrict_id = (string) get_user_meta($current_user_id, 'vmp_subdistrict_id', true);
-$customer_city_id = (string) get_user_meta($current_user_id, 'vmp_city_id', true);
-$customer_province_id = (string) get_user_meta($current_user_id, 'vmp_province_id', true);
-$customer_postcode = (string) get_user_meta($current_user_id, 'vmp_postcode', true);
+$customer_name = (string) get_user_meta($current_user_id, 'first_name', true);
+$customer_phone = (string) get_user_meta($current_user_id, 'vmp_member_phone', true);
+$customer_address = (string) get_user_meta($current_user_id, 'vmp_member_address', true);
+$customer_subdistrict = (string) get_user_meta($current_user_id, 'vmp_member_subdistrict', true);
+$customer_city = (string) get_user_meta($current_user_id, 'vmp_member_city', true);
+$customer_province = (string) get_user_meta($current_user_id, 'vmp_member_province', true);
+$customer_subdistrict_id = (string) get_user_meta($current_user_id, 'vmp_member_subdistrict_id', true);
+$customer_city_id = (string) get_user_meta($current_user_id, 'vmp_member_city_id', true);
+$customer_province_id = (string) get_user_meta($current_user_id, 'vmp_member_province_id', true);
+$customer_postcode = (string) get_user_meta($current_user_id, 'vmp_member_postcode', true);
 $customer_email = '';
 $customer_user = get_userdata($current_user_id);
 if ($customer_user) {
@@ -27,11 +27,13 @@ $location_state = [
     'postcode' => $customer_postcode,
 ];
 ?>
-<div class="card border-0 shadow-sm" x-data='vmpStoreProfileLocation(<?php echo wp_json_encode($location_state); ?>)' x-init="init()">
+<div class="card border-0 shadow-sm" x-data='vmpMemberProfileForm(<?php echo wp_json_encode($location_state); ?>)' x-init="init()">
     <div class="card-body">
-        <h3 class="h6 mb-3">Profil Akun</h3>
-        <p class="text-muted small mb-3">Simpan data profil utama supaya checkout berikutnya terisi otomatis dan profil toko memakai data yang sama.</p>
-        <form method="post" class="row g-3">
+        <h3 class="h6 mb-3">Profil Saya</h3>
+        <p class="text-muted small mb-3">Simpan data akun dan alamat utama agar proses checkout berikutnya terisi lebih cepat.</p>
+        <div class="alert alert-success py-2" x-show="saveMessage" x-text="saveMessage" style="display:none;"></div>
+        <div class="alert alert-danger py-2" x-show="saveError" x-text="saveError" style="display:none;"></div>
+        <form method="post" class="row g-3" @submit.prevent="submit($event)">
             <input type="hidden" name="vmp_action" value="save_customer_profile">
             <input type="hidden" name="tab" value="account_profile">
             <?php wp_nonce_field('vmp_customer_profile', 'vmp_customer_profile_nonce'); ?>
@@ -46,7 +48,7 @@ $location_state = [
             <div class="col-md-6">
                 <label class="form-label">Email</label>
                 <input type="email" class="form-control" value="<?php echo esc_attr($customer_email); ?>" readonly>
-                <div class="form-text">Email checkout akan mengikuti akun WordPress.</div>
+                <div class="form-text">Perubahan email akun dilakukan melalui pengaturan akun WordPress.</div>
             </div>
             <div class="col-md-6">
                 <label class="form-label">Kode Pos</label>
@@ -59,7 +61,7 @@ $location_state = [
             <div class="col-md-4">
                 <label class="form-label">Provinsi</label>
                 <select name="customer_province_id" class="form-select" x-ref="provinceSelect" x-model="form.province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
-                    <option value="">- Pilih Provinsi -</option>
+                    <option value="">Pilih provinsi</option>
                     <template x-for="prov in provinces" :key="prov.province_id">
                         <option :value="prov.province_id" x-text="prov.province"></option>
                     </template>
@@ -69,7 +71,7 @@ $location_state = [
             <div class="col-md-4">
                 <label class="form-label">Kota/Kabupaten</label>
                 <select name="customer_city_id" class="form-select" x-ref="citySelect" x-model="form.city_id" @change="onCityChange()" :disabled="!form.province_id || isLoadingCities">
-                    <option value="">- Pilih Kota/Kabupaten -</option>
+                    <option value="">Pilih kota atau kabupaten</option>
                     <template x-for="city in cities" :key="city.city_id">
                         <option :value="city.city_id" x-text="(city.type ? city.type + ' ' : '') + city.city_name"></option>
                     </template>
@@ -79,7 +81,7 @@ $location_state = [
             <div class="col-md-4">
                 <label class="form-label">Kecamatan</label>
                 <select name="customer_subdistrict_id" class="form-select" x-ref="subdistrictSelect" x-model="form.subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.city_id || isLoadingSubdistricts">
-                    <option value="">- Pilih Kecamatan -</option>
+                    <option value="">Pilih kecamatan</option>
                     <template x-for="subdistrict in subdistricts" :key="subdistrict.subdistrict_id">
                         <option :value="subdistrict.subdistrict_id" x-text="subdistrict.subdistrict_name"></option>
                     </template>
@@ -90,7 +92,7 @@ $location_state = [
                 <div class="small text-muted" x-show="locationMessage" x-text="locationMessage"></div>
             </div>
             <div class="col-12">
-                <button type="submit" class="btn btn-dark">Simpan Profil Akun</button>
+                <button type="submit" class="btn btn-dark" :disabled="saving" x-text="saving ? 'Menyimpan...' : 'Simpan Profil'">Simpan Profil</button>
             </div>
         </form>
     </div>

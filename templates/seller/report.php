@@ -1,5 +1,6 @@
 <?php
 use VelocityMarketplace\Modules\Order\OrderData;
+use VelocityMarketplace\Modules\Review\StarSellerService;
     $published_products_query = new \WP_Query([
         'post_type' => 'vmp_product',
         'post_status' => 'publish',
@@ -57,19 +58,26 @@ use VelocityMarketplace\Modules\Order\OrderData;
             $max_omzet = (float) $row['omzet'];
         }
     }
+    $seller_summary = (new StarSellerService())->summary($current_user_id);
     ?>
     <div class="row g-3 mb-3">
-        <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Produk Publish</div><div class="h5 mb-0"><?php echo esc_html($published_products); ?></div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Produk Aktif</div><div class="h5 mb-0"><?php echo esc_html($published_products); ?></div></div></div></div>
         <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Produk Terjual</div><div class="h5 mb-0"><?php echo esc_html($products_sold_qty); ?></div></div></div></div>
-        <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Produk Dibayar</div><div class="h5 mb-0"><?php echo esc_html($products_paid_qty); ?></div></div></div></div>
-        <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Pembelian Dibatalkan</div><div class="h5 mb-0"><?php echo esc_html($cancelled_count); ?></div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Produk Terbayar</div><div class="h5 mb-0"><?php echo esc_html($products_paid_qty); ?></div></div></div></div>
+        <div class="col-6 col-lg-3"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Pesanan Dibatalkan</div><div class="h5 mb-0"><?php echo esc_html($cancelled_count); ?></div></div></div></div>
+    </div>
+
+    <div class="row g-3 mb-3">
+        <div class="col-6 col-lg-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Rating Toko</div><div class="h5 mb-0"><?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5'); ?></div></div></div></div>
+        <div class="col-6 col-lg-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Jumlah Ulasan</div><div class="h5 mb-0"><?php echo esc_html((string) (int) ($seller_summary['rating_count'] ?? 0)); ?></div></div></div></div>
+        <div class="col-12 col-lg-4"><div class="card border-0 shadow-sm h-100"><div class="card-body"><div class="small text-muted">Rasio Pembatalan</div><div class="h5 mb-0"><?php echo esc_html(number_format((float) ($seller_summary['cancel_rate'] ?? 0), 2, ',', '.') . '%'); ?></div></div></div></div>
     </div>
 
     <div class="card border-0 shadow-sm mb-3"><div class="card-body"><h3 class="h6 mb-2">Omzet Total</h3><div class="h5 text-danger mb-0"><?php echo esc_html($money($omzet_total)); ?></div></div></div>
 
-    <div class="card border-0 shadow-sm"><div class="card-body"><h3 class="h6 mb-3">Grafik Harian (14 Hari Terakhir)</h3>
+    <div class="card border-0 shadow-sm"><div class="card-body"><h3 class="h6 mb-3">Ringkasan Harian 14 Hari Terakhir</h3>
         <?php if (empty($daily)) : ?>
-            <div class="small text-muted">Belum ada data order untuk ditampilkan.</div>
+            <div class="small text-muted">Belum ada data pesanan untuk ditampilkan.</div>
         <?php else : ?>
             <div class="table-responsive"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Tanggal</th><th class="text-center">Order</th><th>Omzet</th><th>Status</th></tr></thead><tbody>
             <?php foreach ($daily as $day => $row) : $percent = $max_omzet > 0 ? (int) round((((float) $row['omzet']) / $max_omzet) * 100) : 0; $status_parts = []; foreach ((array) $row['statuses'] as $skey => $svalue) { $status_parts[] = OrderData::status_label($skey) . ': ' . (int) $svalue; } ?>

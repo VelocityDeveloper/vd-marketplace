@@ -1,8 +1,10 @@
 <?php
 use VelocityMarketplace\Modules\Order\OrderData;
+use VelocityMarketplace\Modules\Review\StarSellerService;
 use VelocityMarketplace\Modules\Shipping\ShippingController;
 ?>
 <?php $seller_order_ids = OrderData::seller_orders_query($current_user_id, 120); ?>
+<?php $seller_summary = (new StarSellerService())->summary($current_user_id); ?>
 <?php
 $status_badge_class = static function ($status) {
     $status = (string) $status;
@@ -24,17 +26,19 @@ $status_badge_class = static function ($status) {
     <div class="row g-3">
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
-                <h3 class="h6 mb-2">Status Toko</h3>
-                <div class="mb-2">Label: <?php echo $is_star_seller ? '<span class="badge bg-warning text-dark">Star Seller</span>' : '<span class="badge bg-secondary">Toko Aktif</span>'; ?></div>
-                <div class="small text-muted">Order masuk: <strong><?php echo esc_html(count($seller_order_ids)); ?></strong></div>
-                <?php if (!$profile_complete) : ?><div class="alert alert-warning py-2 mt-2 mb-0">Lengkapi profil toko dulu sebelum tambah produk baru.</div><?php endif; ?>
+                <h3 class="h6 mb-2">Ringkasan Toko</h3>
+                <div class="mb-2">Label: <?php echo !empty($seller_summary['is_star_seller']) ? '<span class="badge bg-warning text-dark">Star Seller</span>' : '<span class="badge bg-secondary">Toko Aktif</span>'; ?></div>
+                <div class="small text-muted">Pesanan masuk: <strong><?php echo esc_html(count($seller_order_ids)); ?></strong></div>
+                <div class="small text-muted">Rating toko: <strong><?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5'); ?></strong> dari <?php echo esc_html((string) (int) ($seller_summary['rating_count'] ?? 0)); ?> ulasan</div>
+                <div class="small text-muted">Pesanan selesai: <strong><?php echo esc_html((string) (int) ($seller_summary['completed_orders'] ?? 0)); ?></strong></div>
+                <?php if (!$profile_complete) : ?><div class="alert alert-warning py-2 mt-2 mb-0">Lengkapi profil toko sebelum menambahkan produk baru.</div><?php endif; ?>
             </div></div>
         </div>
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
-                <h3 class="h6 mb-2">Order Masuk</h3>
+                <h3 class="h6 mb-2">Pesanan Masuk</h3>
                 <?php if (empty($seller_order_ids)) : ?>
-                    <div class="small text-muted">Belum ada order masuk.</div>
+                    <div class="small text-muted">Belum ada pesanan yang masuk.</div>
                 <?php else : ?>
                     <div class="accordion" id="vmpSellerOrders">
                         <?php foreach ($seller_order_ids as $idx => $order_id) :
@@ -89,9 +93,9 @@ $status_badge_class = static function ($status) {
                                                 <div><strong>No Resi:</strong> <?php echo esc_html($receipt_no !== '' ? $receipt_no : '-'); ?></div>
                                                 <div><strong>Ongkir Toko Ini:</strong> <?php echo esc_html($money((float) ($seller_shipping['cost'] ?? 0))); ?></div>
                                                 <?php if ($transfer_proof_url) : ?>
-                                                    <a href="<?php echo esc_url($transfer_proof_url); ?>" class="btn btn-sm btn-outline-primary mt-2" target="_blank">Lihat Bukti Transfer</a>
+                                                    <a href="<?php echo esc_url($transfer_proof_url); ?>" class="btn btn-sm btn-outline-primary mt-2" target="_blank">Lihat Bukti Pembayaran</a>
                                                 <?php else : ?>
-                                                    <div class="small text-muted mt-1">Bukti transfer belum diupload.</div>
+                                                    <div class="small text-muted mt-1">Bukti pembayaran belum diunggah.</div>
                                                 <?php endif; ?>
                                                 <?php $buyer_contact_id = isset($customer['user_id']) ? (int) $customer['user_id'] : (int) get_post_meta($order_id, 'vmp_user_id', true); ?>
                                                 <?php if ($buyer_contact_id > 0) : ?>
@@ -133,7 +137,7 @@ $status_badge_class = static function ($status) {
                                                 <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
                                                 <?php wp_nonce_field('vmp_seller_order_' . $order_id, 'vmp_seller_order_nonce'); ?>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Status Order</label>
+                                                    <label class="form-label">Status Pesanan</label>
                                                     <select name="order_status" class="form-select form-select-sm">
                                                         <?php foreach ($status_labels as $status_key => $status_text) : ?>
                                                             <option value="<?php echo esc_attr($status_key); ?>" <?php selected($status, $status_key); ?>><?php echo esc_html($status_text); ?></option>
@@ -146,7 +150,7 @@ $status_badge_class = static function ($status) {
                                                 </div>
                                                 <div class="col-md-4">
                                                     <label class="form-label">No Resi</label>
-                                                    <input type="text" name="receipt_no" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_no); ?>" placeholder="Nomor resi">
+                                                    <input type="text" name="receipt_no" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_no); ?>" placeholder="Masukkan nomor resi">
                                                 </div>
                                                 <div class="col-md-4">
                                                     <label class="form-label">Layanan</label>
@@ -162,10 +166,10 @@ $status_badge_class = static function ($status) {
                                                 </div>
                                                 <div class="col-12">
                                                     <label class="form-label">Catatan Seller</label>
-                                                    <textarea name="seller_note" class="form-control form-control-sm" rows="2" placeholder="Catatan untuk pembeli"><?php echo esc_textarea($seller_note); ?></textarea>
+                                                    <textarea name="seller_note" class="form-control form-control-sm" rows="2" placeholder="Tambahkan catatan untuk pembeli"><?php echo esc_textarea($seller_note); ?></textarea>
                                                 </div>
                                                 <div class="col-12 text-end">
-                                                    <button type="submit" class="btn btn-sm btn-dark">Simpan Update Order</button>
+                                                    <button type="submit" class="btn btn-sm btn-dark">Simpan Perubahan Pesanan</button>
                                                 </div>
                                             </form>
                                         </div>

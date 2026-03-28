@@ -29,6 +29,15 @@ class Plugin
             $order_admin = new \VelocityMarketplace\Modules\Order\OrderAdmin();
             $order_admin->register();
 
+            $review_admin = new \VelocityMarketplace\Modules\Review\ReviewAdmin();
+            $review_admin->register();
+
+            $star_seller_admin = new \VelocityMarketplace\Modules\Review\StarSellerAdmin();
+            $star_seller_admin->register();
+
+            $coupon_admin = new \VelocityMarketplace\Modules\Coupon\CouponAdmin();
+            $coupon_admin->register();
+
             $settings_page = new SettingsPage();
             $settings_page->register();
         }
@@ -53,6 +62,15 @@ class Plugin
 
         $shipping = new \VelocityMarketplace\Modules\Shipping\ShippingController();
         add_action('rest_api_init', [$shipping, 'register_routes']);
+
+        $coupon = new \VelocityMarketplace\Modules\Coupon\CouponController();
+        add_action('rest_api_init', [$coupon, 'register_routes']);
+
+        $profile = new \VelocityMarketplace\Modules\Profile\ProfileController();
+        add_action('rest_api_init', [$profile, 'register_routes']);
+
+        $settings = new \VelocityMarketplace\Core\SettingsController();
+        add_action('rest_api_init', [$settings, 'register_routes']);
     }
 
     private function load_frontend()

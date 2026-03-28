@@ -1,5 +1,5 @@
     <?php if (empty($wishlist_ids)) : ?>
-        <div class="alert alert-info mb-0">Wishlist masih kosong. Klik ikon hati di katalog untuk menambah produk.</div>
+        <div class="alert alert-info mb-0">Belum ada produk dalam daftar favorit. Tambahkan produk dari katalog untuk menyimpannya di sini.</div>
     <?php else : ?>
         <?php $wishlist_query = new \WP_Query(['post_type' => 'vmp_product','post_status' => 'publish','posts_per_page' => 100,'post__in' => $wishlist_ids,'orderby' => 'post__in']); ?>
         <div class="table-responsive border rounded"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Produk</th><th class="text-end">Harga</th><th class="text-end">Aksi</th></tr></thead><tbody>

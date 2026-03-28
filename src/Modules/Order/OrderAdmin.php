@@ -2,6 +2,7 @@
 
 namespace VelocityMarketplace\Modules\Order;
 
+use VelocityMarketplace\Modules\Review\StarSellerService;
 use VelocityMarketplace\Modules\Shipping\ShippingController;
 
 class OrderAdmin
@@ -137,6 +138,8 @@ class OrderAdmin
         $subtotal = (float) get_post_meta($order_id, 'vmp_subtotal', true);
         $shipping_total = (float) get_post_meta($order_id, 'vmp_shipping_total', true);
         $total = (float) get_post_meta($order_id, 'vmp_total', true);
+        $coupon_code = (string) get_post_meta($order_id, 'vmp_coupon_code', true);
+        $coupon_discount = (float) get_post_meta($order_id, 'vmp_coupon_discount', true);
         $weight = (float) get_post_meta($order_id, 'vmp_total_weight', true);
         $created_at = (string) get_post_meta($order_id, 'vmp_created_at', true);
         $notes = (string) get_post_meta($order_id, 'vmp_notes', true);
@@ -188,6 +191,16 @@ class OrderAdmin
                     <th scope="row">Total</th>
                     <td><strong><?php echo esc_html($this->money($total)); ?></strong></td>
                 </tr>
+                <tr>
+                    <th scope="row">Kupon</th>
+                    <td><?php echo esc_html($coupon_code !== '' ? $coupon_code : '-'); ?></td>
+                </tr>
+                <?php if ($coupon_discount > 0) : ?>
+                    <tr>
+                        <th scope="row">Diskon Kupon</th>
+                        <td>-<?php echo esc_html($this->money($coupon_discount)); ?></td>
+                    </tr>
+                <?php endif; ?>
                 <tr>
                     <th scope="row">Berat Total</th>
                     <td><?php echo esc_html(number_format($weight, 2, ',', '.') . ' kg'); ?></td>
@@ -416,6 +429,18 @@ class OrderAdmin
             delete_post_meta($post_id, 'vmp_receipt_no');
             delete_post_meta($post_id, 'vmp_receipt_courier');
             delete_post_meta($post_id, 'vmp_seller_note');
+        }
+
+        $service = new StarSellerService();
+        $seller_ids = [];
+        foreach (OrderData::get_items((int) $post_id) as $item) {
+            $seller_id = isset($item['seller_id']) ? (int) $item['seller_id'] : 0;
+            if ($seller_id > 0) {
+                $seller_ids[$seller_id] = $seller_id;
+            }
+        }
+        foreach ($seller_ids as $seller_id) {
+            $service->recalculate($seller_id);
         }
     }
 

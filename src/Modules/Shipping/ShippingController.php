@@ -443,13 +443,13 @@ class ShippingController
         $resolved_groups = [];
         foreach ($groups as $seller_id => $group) {
             $origin = [
-                'province_id' => (string) get_user_meta($seller_id, 'vmp_province_id', true),
-                'province_name' => (string) get_user_meta($seller_id, 'vmp_province', true),
-                'city_id' => (string) get_user_meta($seller_id, 'vmp_city_id', true),
-                'city_name' => (string) get_user_meta($seller_id, 'vmp_city', true),
-                'subdistrict_id' => (string) get_user_meta($seller_id, 'vmp_subdistrict_id', true),
-                'subdistrict_name' => (string) get_user_meta($seller_id, 'vmp_subdistrict', true),
-                'postcode' => (string) get_user_meta($seller_id, 'vmp_postcode', true),
+                'province_id' => (string) get_user_meta($seller_id, 'vmp_store_province_id', true),
+                'province_name' => (string) get_user_meta($seller_id, 'vmp_store_province', true),
+                'city_id' => (string) get_user_meta($seller_id, 'vmp_store_city_id', true),
+                'city_name' => (string) get_user_meta($seller_id, 'vmp_store_city', true),
+                'subdistrict_id' => (string) get_user_meta($seller_id, 'vmp_store_subdistrict_id', true),
+                'subdistrict_name' => (string) get_user_meta($seller_id, 'vmp_store_subdistrict', true),
+                'postcode' => (string) get_user_meta($seller_id, 'vmp_store_postcode', true),
             ];
 
             if ($origin['province_id'] === '' || $origin['city_id'] === '' || $origin['subdistrict_id'] === '') {
@@ -464,6 +464,15 @@ class ShippingController
             $couriers = get_user_meta($seller_id, 'vmp_couriers', true);
             if (!is_array($couriers)) {
                 $couriers = [];
+            }
+            $cod_enabled = !empty(get_user_meta($seller_id, 'vmp_cod_enabled', true));
+            $cod_city_ids = get_user_meta($seller_id, 'vmp_cod_city_ids', true);
+            $cod_city_names = get_user_meta($seller_id, 'vmp_cod_city_names', true);
+            if (!is_array($cod_city_ids)) {
+                $cod_city_ids = [];
+            }
+            if (!is_array($cod_city_names)) {
+                $cod_city_names = [];
             }
 
             $mapped_couriers = [];
@@ -491,6 +500,9 @@ class ShippingController
             $group['seller_name'] = $seller && $seller->display_name !== '' ? $seller->display_name : ('Seller #' . $seller_id);
             $group['origin'] = $origin;
             $group['couriers'] = $mapped_couriers;
+            $group['cod_enabled'] = $cod_enabled;
+            $group['cod_city_ids'] = array_values(array_filter(array_map('strval', $cod_city_ids)));
+            $group['cod_city_names'] = array_values(array_filter(array_map('strval', $cod_city_names)));
             $group['weight_grams'] = max(1, (int) $group['weight_grams']);
             $resolved_groups[] = $group;
         }

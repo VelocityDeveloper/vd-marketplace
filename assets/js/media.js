@@ -1,8 +1,10 @@
+/* Helper media library untuk field gambar custom di dashboard. */
 (() => {
   const cfg = window.vmpSettings || {};
   const currentUserId = Number(cfg.currentUserId || 0);
   const canManageOptions = !!cfg.canManageOptions;
 
+  // Merender ulang preview media berdasarkan attachment yang dipilih user.
   const renderMediaPreview = (preview, items, multiple, emptyText) => {
     if (!preview) return;
 
@@ -31,6 +33,7 @@
     `;
   };
 
+  // Menghubungkan field custom dengan modal media library WordPress.
   const initMediaFields = () => {
     if (!window.wp || !wp.media) return;
 
@@ -47,6 +50,7 @@
 
       if (!input || !preview || !openBtn || !clearBtn) return;
 
+      // Menyinkronkan status tombol hapus dengan isi field media saat ini.
       const syncButtons = () => {
         clearBtn.disabled = String(input.value || "").trim() === "";
       };
@@ -151,3 +155,4 @@
 
   document.addEventListener("DOMContentLoaded", initMediaFields);
 })();
+

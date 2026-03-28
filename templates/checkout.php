@@ -16,12 +16,13 @@ $payment_labels = [
     'paypal' => 'PayPal',
     'cod' => 'COD',
 ];
+$bank_accounts = \VelocityMarketplace\Support\Settings::bank_accounts();
 ?>
 <div class="container py-4 vmp-wrap" x-data="vmpCheckout()" x-init="init()">
     <div class="d-flex justify-content-between align-items-center mb-3">
         <div>
             <h2 class="h4 mb-0">Checkout</h2>
-            <small class="text-muted">Captcha dari plugin Velocity Addons</small>
+            <small class="text-muted">Lengkapi data pengiriman dan pembayaran untuk menyelesaikan pesanan.</small>
         </div>
         <a class="btn btn-sm btn-outline-dark" :href="cartUrl">Kembali ke Keranjang</a>
     </div>
@@ -36,16 +37,16 @@ $payment_labels = [
                     <form id="vmp-checkout-form" @submit.prevent="submitOrder()">
                         <div class="row g-3">
                             <div class="col-md-6">
-                                <label class="form-label">Nama</label>
+                                <label class="form-label">Nama Penerima</label>
                                 <input type="text" class="form-control" x-model.trim="form.name" required>
                             </div>
                             <div class="col-md-6">
-                                <label class="form-label">Telepon</label>
+                                <label class="form-label">Nomor Telepon</label>
                                 <input type="text" class="form-control" x-model.trim="form.phone" required>
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Email</label>
-                                <input type="email" class="form-control" x-model.trim="form.email" placeholder="opsional">
+                                <input type="email" class="form-control" x-model.trim="form.email" placeholder="Opsional">
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Kode Pos</label>
@@ -58,7 +59,7 @@ $payment_labels = [
                             <div class="col-md-4">
                                 <label class="form-label">Provinsi</label>
                                 <select class="form-select" x-ref="provinceSelect" x-model="form.destination_province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
-                                    <option value="">- Pilih Provinsi -</option>
+                                    <option value="">Pilih provinsi</option>
                                     <template x-for="prov in provinces" :key="prov.province_id">
                                         <option :value="prov.province_id" x-text="prov.province"></option>
                                     </template>
@@ -67,7 +68,7 @@ $payment_labels = [
                             <div class="col-md-4">
                                 <label class="form-label">Kota/Kabupaten</label>
                                 <select class="form-select" x-ref="citySelect" x-model="form.destination_city_id" @change="onCityChange()" :disabled="!form.destination_province_id || isLoadingCities">
-                                    <option value="">- Pilih Kota/Kabupaten -</option>
+                                    <option value="">Pilih kota atau kabupaten</option>
                                     <template x-for="city in cities" :key="city.city_id">
                                         <option :value="city.city_id" x-text="(city.type ? city.type + ' ' : '') + city.city_name"></option>
                                     </template>
@@ -75,7 +76,7 @@ $payment_labels = [
                             </div>
                             <div class="col-md-6">
                                 <label class="form-label">Pembayaran</label>
-                                <select class="form-select" x-model="form.payment_method">
+                                <select class="form-select" x-model="form.payment_method" @change="onPaymentMethodChange()">
                                     <?php foreach ($active_payment_methods as $method) :
                                         $label = isset($payment_labels[$method]) ? $payment_labels[$method] : strtoupper($method);
                                         ?>
@@ -83,10 +84,35 @@ $payment_labels = [
                                     <?php endforeach; ?>
                                 </select>
                             </div>
+                            <div class="col-12" x-show="form.payment_method === 'bank'">
+                                <?php if (empty($bank_accounts)) : ?>
+                                    <div class="alert alert-warning mb-0">
+                                        Rekening tujuan transfer belum tersedia. Silakan hubungi admin marketplace atau pilih metode pembayaran lain.
+                                    </div>
+                                <?php else : ?>
+                                    <div class="border rounded p-3 bg-light-subtle">
+                                        <div class="fw-semibold mb-2">Rekening Tujuan Transfer</div>
+                                        <div class="small text-muted mb-3">Silakan transfer ke salah satu rekening berikut, lalu unggah bukti pembayaran setelah pesanan dibuat.</div>
+                                        <div class="row g-3">
+                                            <?php foreach ($bank_accounts as $bank_account) : ?>
+                                                <div class="col-md-6">
+                                                    <div class="border rounded p-3 h-100 bg-white">
+                                                        <div class="fw-semibold"><?php echo esc_html((string) ($bank_account['bank_name'] ?? '-')); ?></div>
+                                                        <div class="small text-muted mt-2">Nomor Rekening</div>
+                                                        <div class="fw-semibold"><?php echo esc_html((string) ($bank_account['account_number'] ?? '-')); ?></div>
+                                                        <div class="small text-muted mt-2">Atas Nama</div>
+                                                        <div><?php echo esc_html((string) ($bank_account['account_holder'] ?? '-')); ?></div>
+                                                    </div>
+                                                </div>
+                                            <?php endforeach; ?>
+                                        </div>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
                             <div class="col-md-6">
                                 <label class="form-label">Kecamatan</label>
                                 <select class="form-select" x-ref="subdistrictSelect" x-model="form.destination_subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.destination_city_id || isLoadingSubdistricts">
-                                    <option value="">- Pilih Kecamatan -</option>
+                                    <option value="">Pilih kecamatan</option>
                                     <template x-for="subdistrict in subdistricts" :key="subdistrict.subdistrict_id">
                                         <option :value="subdistrict.subdistrict_id" x-text="subdistrict.subdistrict_name"></option>
                                     </template>
@@ -96,7 +122,7 @@ $payment_labels = [
                                 <div class="alert alert-warning py-2 mb-0" x-text="shippingContextMessage"></div>
                             </div>
                             <div class="col-12" x-show="shippingGroups.length > 0">
-                                <label class="form-label">Pilih Ongkir per Toko</label>
+                                <label class="form-label">Pilih Layanan Pengiriman per Toko</label>
                                 <div class="row g-3">
                                     <template x-for="group in shippingGroups" :key="group.seller_id">
                                         <div class="col-12">
@@ -118,8 +144,12 @@ $payment_labels = [
                                                         </template>
                                                     </div>
                                                 </div>
-                                                <div class="small text-muted mb-2" x-show="group.loading">Memuat opsi ongkir...</div>
+                                                <div class="small text-muted mb-2" x-show="group.loading">Memuat pilihan pengiriman...</div>
                                                 <div class="small text-danger mb-2" x-show="group.message" x-text="group.message"></div>
+                                                <div class="small text-muted mb-2" x-show="form.payment_method === 'cod' && group.cod_enabled">
+                                                    COD tersedia untuk tujuan:
+                                                    <span x-text="group.cod_city_names.length ? group.cod_city_names.join(', ') : '-'"></span>
+                                                </div>
                                                 <div class="row g-2" x-show="group.services.length > 0">
                                                     <template x-for="opt in group.services" :key="group.seller_id + ':' + opt.code + ':' + opt.service">
                                                         <div class="col-md-6">
@@ -138,7 +168,19 @@ $payment_labels = [
                                 </div>
                             </div>
                             <div class="col-12">
-                                <label class="form-label">Catatan</label>
+                                <label class="form-label">Kupon atau Voucher</label>
+                                <div class="d-flex gap-2">
+                                    <input type="text" class="form-control" x-model.trim="coupon.code" placeholder="Masukkan kode promo">
+                                    <button class="btn btn-outline-dark" type="button" @click="applyCoupon()" :disabled="coupon.loading">
+                                        <span x-show="!coupon.loading">Terapkan</span>
+                                        <span x-show="coupon.loading">Periksa...</span>
+                                    </button>
+                                    <button class="btn btn-outline-secondary" type="button" @click="removeCoupon()" x-show="coupon.applied">Hapus</button>
+                                </div>
+                                <div class="small mt-2" :class="coupon.applied ? 'text-success' : 'text-muted'" x-show="coupon.message" x-text="coupon.message"></div>
+                            </div>
+                            <div class="col-12">
+                                <label class="form-label">Catatan Pesanan</label>
                                 <textarea class="form-control" rows="2" x-model.trim="form.notes"></textarea>
                             </div>
                         </div>
@@ -150,8 +192,8 @@ $payment_labels = [
                         <?php endif; ?>
 
                         <button class="btn btn-primary mt-4" type="submit" :disabled="submitting || items.length === 0">
-                            <span x-show="!submitting">Konfirmasi Pesanan</span>
-                            <span x-show="submitting">Memproses...</span>
+                            <span x-show="!submitting">Buat Pesanan</span>
+                            <span x-show="submitting">Memproses Pesanan...</span>
                         </button>
                     </form>
                 </div>
@@ -161,7 +203,7 @@ $payment_labels = [
         <div class="col-lg-5">
             <div class="card border-0 shadow-sm">
                 <div class="card-body">
-                    <h3 class="h6">Ringkasan Pesanan</h3>
+                    <h3 class="h6">Ringkasan Belanja</h3>
                     <div class="small text-muted mb-3" x-text="items.length + ' produk di keranjang'"></div>
                     <template x-for="item in items" :key="item.id + '-' + optionKey(item)">
                         <div class="d-flex justify-content-between border-bottom py-2">
@@ -173,11 +215,19 @@ $payment_labels = [
                         </div>
                     </template>
                     <div class="d-flex justify-content-between pt-3">
+                        <span>Subtotal Produk</span>
+                        <strong x-text="formatPrice(subtotal)"></strong>
+                    </div>
+                    <div class="d-flex justify-content-between pt-3">
                         <span>Ongkir</span>
                         <strong x-text="formatPrice(form.shipping_cost || 0)"></strong>
                     </div>
+                    <div class="d-flex justify-content-between pt-2" x-show="coupon.applied">
+                        <span x-text="couponLabel()"></span>
+                        <strong class="text-success" x-text="'- ' + formatPrice(coupon.applied ? coupon.applied.discount : 0)"></strong>
+                    </div>
                     <div class="d-flex justify-content-between pt-2">
-                        <span>Total</span>
+                        <span>Total Pembayaran</span>
                         <strong class="text-danger" x-text="formatPrice(total)"></strong>
                     </div>
                 </div>

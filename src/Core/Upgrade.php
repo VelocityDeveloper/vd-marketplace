@@ -3,10 +3,11 @@
 namespace VelocityMarketplace\Core;
 
 use VelocityMarketplace\Modules\Message\MessageTable;
+use VelocityMarketplace\Modules\Review\ReviewTable;
 
 class Upgrade
 {
-    const DB_VERSION = '1.6.0';
+    const DB_VERSION = '1.8.0';
 
     public function register()
     {
@@ -20,6 +21,9 @@ class Upgrade
 
         $messages = new MessageTable();
         $messages->create_table();
+
+        $reviews = new ReviewTable();
+        $reviews->create_table();
 
         update_option(VMP_DB_VERSION_OPTION, self::DB_VERSION);
     }

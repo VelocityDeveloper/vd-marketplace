@@ -48,7 +48,7 @@ class ProductFields
                         'options' => [
                             '' => '-',
                             'new' => 'New',
-                            'limited' => 'Limited',
+                            'limited' => 'Terbatas',
                             'best' => 'Best Seller',
                         ],
                     ],

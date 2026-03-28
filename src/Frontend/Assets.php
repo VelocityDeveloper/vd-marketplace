@@ -35,9 +35,49 @@ class Assets
         );
 
         wp_enqueue_script(
-            'velocity-marketplace-frontend-js',
-            VMP_URL . 'assets/js/frontend.js',
+            'velocity-marketplace-frontend-shared-js',
+            VMP_URL . 'assets/js/frontend-shared.js',
             [],
+            VMP_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'velocity-marketplace-frontend-catalog-js',
+            VMP_URL . 'assets/js/frontend-catalog.js',
+            ['velocity-marketplace-frontend-shared-js'],
+            VMP_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'velocity-marketplace-frontend-cart-js',
+            VMP_URL . 'assets/js/frontend-cart.js',
+            ['velocity-marketplace-frontend-shared-js'],
+            VMP_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'velocity-marketplace-frontend-checkout-js',
+            VMP_URL . 'assets/js/frontend-checkout.js',
+            ['velocity-marketplace-frontend-shared-js'],
+            VMP_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'velocity-marketplace-frontend-profile-js',
+            VMP_URL . 'assets/js/frontend-profile.js',
+            ['velocity-marketplace-frontend-shared-js'],
+            VMP_VERSION,
+            true
+        );
+
+        wp_enqueue_script(
+            'velocity-marketplace-frontend-ui-js',
+            VMP_URL . 'assets/js/frontend-ui.js',
+            ['velocity-marketplace-frontend-shared-js'],
             VMP_VERSION,
             true
         );
@@ -84,7 +124,7 @@ class Assets
         $payment_methods = Settings::payment_methods();
         $customer_profile = $this->customer_profile_payload();
 
-        wp_localize_script('velocity-marketplace-frontend-js', 'vmpSettings', [
+        wp_localize_script('velocity-marketplace-frontend-shared-js', 'vmpSettings', [
             'restUrl' => esc_url_raw(rest_url('velocity-marketplace/v1/')),
             'nonce' => wp_create_nonce('wp_rest'),
             'catalogUrl' => esc_url_raw($catalog_url),
@@ -124,17 +164,17 @@ class Assets
         $user = get_userdata($user_id);
 
         return [
-            'name' => (string) get_user_meta($user_id, 'vmp_name', true) ?: ($user && $user->display_name !== '' ? (string) $user->display_name : ''),
+            'name' => (string) get_user_meta($user_id, 'first_name', true) ?: ($user && $user->display_name !== '' ? (string) $user->display_name : ''),
             'email' => $user ? (string) $user->user_email : '',
-            'phone' => (string) get_user_meta($user_id, 'vmp_phone', true),
-            'address' => (string) get_user_meta($user_id, 'vmp_address', true),
-            'postal_code' => (string) get_user_meta($user_id, 'vmp_postcode', true),
-            'destination_province_id' => (string) get_user_meta($user_id, 'vmp_province_id', true),
-            'destination_province_name' => (string) get_user_meta($user_id, 'vmp_province', true),
-            'destination_city_id' => (string) get_user_meta($user_id, 'vmp_city_id', true),
-            'destination_city_name' => (string) get_user_meta($user_id, 'vmp_city', true),
-            'destination_subdistrict_id' => (string) get_user_meta($user_id, 'vmp_subdistrict_id', true),
-            'destination_subdistrict_name' => (string) get_user_meta($user_id, 'vmp_subdistrict', true),
+            'phone' => (string) get_user_meta($user_id, 'vmp_member_phone', true),
+            'address' => (string) get_user_meta($user_id, 'vmp_member_address', true),
+            'postal_code' => (string) get_user_meta($user_id, 'vmp_member_postcode', true),
+            'destination_province_id' => (string) get_user_meta($user_id, 'vmp_member_province_id', true),
+            'destination_province_name' => (string) get_user_meta($user_id, 'vmp_member_province', true),
+            'destination_city_id' => (string) get_user_meta($user_id, 'vmp_member_city_id', true),
+            'destination_city_name' => (string) get_user_meta($user_id, 'vmp_member_city', true),
+            'destination_subdistrict_id' => (string) get_user_meta($user_id, 'vmp_member_subdistrict_id', true),
+            'destination_subdistrict_name' => (string) get_user_meta($user_id, 'vmp_member_subdistrict', true),
         ];
     }
 

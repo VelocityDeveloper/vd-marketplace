@@ -2,17 +2,22 @@
 
 namespace VelocityMarketplace\Core;
 
+use VelocityMarketplace\Support\Settings;
+
 class SettingsPage
 {
+    private $page_hook = '';
+
     public function register()
     {
         add_action('admin_menu', [$this, 'add_menu']);
         add_action('admin_init', [$this, 'register_setting']);
+        add_action('admin_enqueue_scripts', [$this, 'enqueue_assets']);
     }
 
     public function add_menu()
     {
-        add_submenu_page(
+        $this->page_hook = add_submenu_page(
             'edit.php?post_type=vmp_product',
             'Pengaturan Marketplace',
             'Pengaturan',
@@ -33,54 +38,41 @@ class SettingsPage
 
     public function sanitize_settings($input)
     {
-        $input = is_array($input) ? $input : [];
+        $service = new SettingsService();
+        return $service->sanitize($input);
+    }
 
-        $currency = isset($input['currency']) ? sanitize_text_field((string) $input['currency']) : 'IDR';
-        $supported_currency = ['IDR', 'USD'];
-        if (!in_array($currency, $supported_currency, true)) {
-            $currency = 'IDR';
+    public function enqueue_assets($hook)
+    {
+        if ($hook !== $this->page_hook) {
+            return;
         }
 
-        $currency_symbol = isset($input['currency_symbol']) ? sanitize_text_field((string) $input['currency_symbol']) : 'Rp';
-        if ($currency_symbol === '') {
-            $currency_symbol = $currency === 'USD' ? '$' : 'Rp';
-        }
+        wp_register_script(
+            'alpinejs',
+            'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js',
+            [],
+            null,
+            true
+        );
 
-        $default_order_status = isset($input['default_order_status']) ? sanitize_key((string) $input['default_order_status']) : 'pending_payment';
-        $allowed_status = ['pending_payment', 'pending_verification', 'processing', 'shipped', 'completed', 'cancelled', 'refunded'];
-        if (!in_array($default_order_status, $allowed_status, true)) {
-            $default_order_status = 'pending_payment';
-        }
+        wp_enqueue_script(
+            'velocity-marketplace-admin-settings-js',
+            VMP_URL . 'assets/js/admin-settings.js',
+            [],
+            VMP_VERSION,
+            true
+        );
 
-        $seller_product_status = isset($input['seller_product_status']) ? sanitize_key((string) $input['seller_product_status']) : 'publish';
-        if (!in_array($seller_product_status, ['pending', 'publish'], true)) {
-            $seller_product_status = 'publish';
-        }
+        wp_enqueue_script('alpinejs');
 
-        $raw_methods = isset($input['payment_methods']) && is_array($input['payment_methods']) ? $input['payment_methods'] : [];
-        $allowed_methods = ['bank', 'duitku', 'paypal', 'cod'];
-        $payment_methods = [];
-        foreach ($raw_methods as $method) {
-            $m = sanitize_key((string) $method);
-            if (in_array($m, $allowed_methods, true)) {
-                $payment_methods[] = $m;
-            }
-        }
-        $payment_methods = array_values(array_unique($payment_methods));
-        if (empty($payment_methods)) {
-            $payment_methods = ['bank'];
-        }
-
-        $shipping_api_key = isset($input['shipping_api_key']) ? sanitize_text_field((string) $input['shipping_api_key']) : '';
-
-        return [
-            'currency' => $currency,
-            'currency_symbol' => $currency_symbol,
-            'default_order_status' => $default_order_status,
-            'payment_methods' => $payment_methods,
-            'seller_product_status' => $seller_product_status,
-            'shipping_api_key' => $shipping_api_key,
-        ];
+        $service = new SettingsService();
+        wp_localize_script('velocity-marketplace-admin-settings-js', 'vmpAdminSettings', [
+            'restUrl' => esc_url_raw(rest_url('velocity-marketplace/v1/settings')),
+            'nonce' => wp_create_nonce('wp_rest'),
+            'initialSettings' => $service->get_settings_payload(),
+            'popularBanks' => Settings::popular_bank_labels(),
+        ]);
     }
 
     public function render_page()
@@ -88,83 +80,284 @@ class SettingsPage
         if (!current_user_can('manage_options')) {
             return;
         }
-
-        $settings = get_option(VMP_SETTINGS_OPTION, []);
-        if (!is_array($settings)) {
-            $settings = [];
-        }
-        $currency = isset($settings['currency']) ? (string) $settings['currency'] : 'IDR';
-        $currency_symbol = isset($settings['currency_symbol']) ? (string) $settings['currency_symbol'] : 'Rp';
-        $default_order_status = isset($settings['default_order_status']) ? (string) $settings['default_order_status'] : 'pending_payment';
-        $payment_methods = isset($settings['payment_methods']) && is_array($settings['payment_methods']) ? $settings['payment_methods'] : ['bank'];
-        $seller_product_status = isset($settings['seller_product_status']) ? (string) $settings['seller_product_status'] : 'publish';
-        $shipping_api_key = isset($settings['shipping_api_key']) ? (string) $settings['shipping_api_key'] : '';
         ?>
         <div class="wrap">
             <h1>Pengaturan Velocity Marketplace</h1>
-            <form method="post" action="options.php">
-                <?php settings_fields('vmp_settings_group'); ?>
-                <table class="form-table" role="presentation">
-                    <tbody>
-                        <tr>
-                            <th scope="row"><label for="vmp_currency">Mata Uang</label></th>
-                            <td>
-                                <select id="vmp_currency" name="vmp_settings[currency]">
-                                    <option value="IDR" <?php selected($currency, 'IDR'); ?>>IDR</option>
-                                    <option value="USD" <?php selected($currency, 'USD'); ?>>USD</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="vmp_currency_symbol">Simbol Mata Uang</label></th>
-                            <td>
-                                <input id="vmp_currency_symbol" type="text" class="regular-text" name="vmp_settings[currency_symbol]" value="<?php echo esc_attr($currency_symbol); ?>">
-                                <p class="description">Contoh: Rp, $, USD.</p>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="vmp_default_order_status">Status Order Default</label></th>
-                            <td>
-                                <select id="vmp_default_order_status" name="vmp_settings[default_order_status]">
-                                    <option value="pending_payment" <?php selected($default_order_status, 'pending_payment'); ?>>Pending Payment</option>
-                                    <option value="pending_verification" <?php selected($default_order_status, 'pending_verification'); ?>>Pending Verification</option>
-                                    <option value="processing" <?php selected($default_order_status, 'processing'); ?>>Processing</option>
-                                    <option value="shipped" <?php selected($default_order_status, 'shipped'); ?>>Shipped</option>
-                                    <option value="completed" <?php selected($default_order_status, 'completed'); ?>>Completed</option>
-                                    <option value="cancelled" <?php selected($default_order_status, 'cancelled'); ?>>Cancelled</option>
-                                    <option value="refunded" <?php selected($default_order_status, 'refunded'); ?>>Refunded</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row">Metode Pembayaran Aktif</th>
-                            <td>
-                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="bank" <?php checked(in_array('bank', $payment_methods, true)); ?>> Transfer Bank</label><br>
-                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="duitku" <?php checked(in_array('duitku', $payment_methods, true)); ?>> Duitku</label><br>
-                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="paypal" <?php checked(in_array('paypal', $payment_methods, true)); ?>> PayPal</label><br>
-                                <label><input type="checkbox" name="vmp_settings[payment_methods][]" value="cod" <?php checked(in_array('cod', $payment_methods, true)); ?>> COD</label>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="vmp_seller_product_status">Status Produk Member Baru</label></th>
-                            <td>
-                                <select id="vmp_seller_product_status" name="vmp_settings[seller_product_status]">
-                                    <option value="pending" <?php selected($seller_product_status, 'pending'); ?>>Pending Review</option>
-                                    <option value="publish" <?php selected($seller_product_status, 'publish'); ?>>Langsung Publish</option>
-                                </select>
-                            </td>
-                        </tr>
-                        <tr>
-                            <th scope="row"><label for="vmp_shipping_api_key">API Key Ongkir</label></th>
-                            <td>
-                                <input id="vmp_shipping_api_key" type="text" class="regular-text" name="vmp_settings[shipping_api_key]" value="<?php echo esc_attr($shipping_api_key); ?>">
-                                <p class="description">Dipakai untuk load provinsi, kota, kecamatan, dan cek ongkir otomatis dengan metode yang sama seperti `wp-store`.</p>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-                <?php submit_button('Simpan Pengaturan'); ?>
-            </form>
+            <style>
+                .vmp-admin-settings {
+                    max-width: 1180px;
+                    margin-top: 20px;
+                }
+                .vmp-admin-settings__notice {
+                    margin: 0 0 16px;
+                }
+                .vmp-settings-tabs {
+                    display: flex;
+                    gap: 8px;
+                    margin: 0 0 16px;
+                    flex-wrap: wrap;
+                }
+                .vmp-settings-tab {
+                    border: 1px solid #dcdcde;
+                    background: #fff;
+                    color: #1d2327;
+                    border-radius: 999px;
+                    padding: 10px 16px;
+                    font-size: 13px;
+                    font-weight: 600;
+                    line-height: 1;
+                    cursor: pointer;
+                    transition: all .18s ease;
+                }
+                .vmp-settings-tab:hover {
+                    border-color: #2271b1;
+                    color: #2271b1;
+                }
+                .vmp-settings-tab.is-active {
+                    background: #2271b1;
+                    border-color: #2271b1;
+                    color: #fff;
+                }
+                .vmp-settings-panel {
+                    display: none;
+                }
+                .vmp-settings-panel.is-active {
+                    display: block;
+                }
+                .vmp-settings-card {
+                    background: #fff;
+                    border: 1px solid #dcdcde;
+                    border-radius: 10px;
+                    padding: 20px;
+                }
+                .vmp-settings-card + .vmp-settings-card {
+                    margin-top: 16px;
+                }
+                .vmp-bank-settings__title {
+                    margin: 0 0 6px;
+                    font-size: 16px;
+                    font-weight: 600;
+                }
+                .vmp-bank-settings__desc {
+                    margin: 0 0 16px;
+                    color: #50575e;
+                }
+                .vmp-bank-settings__section + .vmp-bank-settings__section {
+                    margin-top: 24px;
+                }
+                .vmp-bank-settings__section-title {
+                    margin: 0 0 12px;
+                    font-size: 14px;
+                    font-weight: 600;
+                }
+                .vmp-bank-settings__toolbar {
+                    display: flex;
+                    justify-content: space-between;
+                    align-items: center;
+                    gap: 12px;
+                    margin-bottom: 12px;
+                    flex-wrap: wrap;
+                }
+                .vmp-bank-settings__toolbar .description {
+                    margin: 0;
+                }
+                .vmp-bank-settings__empty {
+                    margin: 0 0 12px;
+                    color: #50575e;
+                    font-style: italic;
+                }
+                .vmp-bank-settings__rows {
+                    display: flex;
+                    flex-direction: column;
+                    gap: 12px;
+                }
+                .vmp-bank-settings__row {
+                    display: grid;
+                    grid-template-columns: minmax(220px, 260px) minmax(220px, 1fr) minmax(220px, 1fr);
+                    gap: 12px;
+                    align-items: end;
+                    padding: 14px;
+                    border: 1px solid #dcdcde;
+                    border-radius: 8px;
+                    background: #fff;
+                }
+                .vmp-bank-settings__field label {
+                    display: block;
+                    margin-bottom: 6px;
+                    font-weight: 500;
+                }
+                .vmp-bank-settings__field input,
+                .vmp-bank-settings__field select {
+                    width: 100%;
+                    max-width: none;
+                }
+                .vmp-bank-settings__row-actions {
+                    display: flex;
+                    justify-content: flex-end;
+                    grid-column: 1 / -1;
+                }
+                .vmp-admin-settings__footer {
+                    margin-top: 16px;
+                }
+                @media (max-width: 1100px) {
+                    .vmp-bank-settings__row {
+                        grid-template-columns: 1fr;
+                    }
+                }
+            </style>
+            <div class="vmp-admin-settings" x-data="vmpAdminSettingsPage()" x-init="init()">
+                <div class="notice notice-success is-dismissible vmp-admin-settings__notice" x-show="saveMessage" style="display:none;">
+                    <p x-text="saveMessage"></p>
+                </div>
+                <div class="notice notice-error is-dismissible vmp-admin-settings__notice" x-show="saveError" style="display:none;">
+                    <p x-text="saveError"></p>
+                </div>
+
+                <div class="vmp-settings-tabs" role="tablist" aria-label="Pengaturan Marketplace">
+                    <button type="button" class="vmp-settings-tab" :class="{ 'is-active': activeTab === 'general' }" @click="setTab('general')">Pengaturan Umum</button>
+                    <button type="button" class="vmp-settings-tab" :class="{ 'is-active': activeTab === 'bank' }" @click="setTab('bank')">Pengaturan Bank</button>
+                </div>
+
+                <div class="vmp-settings-panel" :class="{ 'is-active': activeTab === 'general' }">
+                    <div class="vmp-settings-card">
+                        <table class="form-table" role="presentation">
+                            <tbody>
+                                <tr>
+                                    <th scope="row"><label for="vmp_currency">Mata Uang</label></th>
+                                    <td>
+                                        <select id="vmp_currency" x-model="form.currency">
+                                            <option value="IDR">IDR</option>
+                                            <option value="USD">USD</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="vmp_currency_symbol">Simbol Mata Uang</label></th>
+                                    <td>
+                                        <input id="vmp_currency_symbol" type="text" class="regular-text" x-model="form.currency_symbol">
+                                        <p class="description">Contoh: Rp, $, USD.</p>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="vmp_default_order_status">Status Order Default</label></th>
+                                    <td>
+                                        <select id="vmp_default_order_status" x-model="form.default_order_status">
+                                            <option value="pending_payment">Pending Payment</option>
+                                            <option value="pending_verification">Pending Verification</option>
+                                            <option value="processing">Processing</option>
+                                            <option value="shipped">Shipped</option>
+                                            <option value="completed">Completed</option>
+                                            <option value="cancelled">Cancelled</option>
+                                            <option value="refunded">Refunded</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row">Metode Pembayaran Aktif</th>
+                                    <td>
+                                        <label><input type="checkbox" value="bank" x-model="form.payment_methods"> Transfer Bank</label><br>
+                                        <label><input type="checkbox" value="duitku" x-model="form.payment_methods"> Duitku</label><br>
+                                        <label><input type="checkbox" value="paypal" x-model="form.payment_methods"> PayPal</label><br>
+                                        <label><input type="checkbox" value="cod" x-model="form.payment_methods"> COD</label>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="vmp_seller_product_status">Status Produk Member Baru</label></th>
+                                    <td>
+                                        <select id="vmp_seller_product_status" x-model="form.seller_product_status">
+                                            <option value="pending">Pending Review</option>
+                                            <option value="publish">Langsung Publish</option>
+                                        </select>
+                                    </td>
+                                </tr>
+                                <tr>
+                                    <th scope="row"><label for="vmp_shipping_api_key">API Key Ongkir</label></th>
+                                    <td>
+                                        <input id="vmp_shipping_api_key" type="text" class="regular-text" x-model="form.shipping_api_key">
+                                        <p class="description">Digunakan untuk memuat data wilayah, menghitung ongkir, dan mengambil informasi pelacakan pengiriman.</p>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="vmp-settings-panel" :class="{ 'is-active': activeTab === 'bank' }">
+                    <div class="vmp-settings-card">
+                        <h2 class="vmp-bank-settings__title">Rekening Transfer Bank</h2>
+                        <p class="vmp-bank-settings__desc">Rekening pada bagian ini digunakan sebagai tujuan pembayaran saat pembeli memilih metode transfer bank.</p>
+
+                        <div class="vmp-bank-settings__section">
+                            <h3 class="vmp-bank-settings__section-title">Rekening Bank Populer</h3>
+                            <div class="vmp-bank-settings__toolbar">
+                                <p class="description">Pilih bank dari daftar populer, lalu isi nomor rekening dan nama pemilik rekening.</p>
+                                <button type="button" class="button button-secondary" @click="addPopularBank()">Tambah Rekening Populer</button>
+                            </div>
+                            <p class="vmp-bank-settings__empty" x-show="!form.popular_bank_accounts.length">Belum ada rekening bank populer.</p>
+                            <div class="vmp-bank-settings__rows">
+                                <template x-for="(row, index) in form.popular_bank_accounts" :key="'popular-' + index">
+                                    <div class="vmp-bank-settings__row">
+                                        <div class="vmp-bank-settings__field">
+                                            <label>Nama Bank</label>
+                                            <select :value="row.bank_code || ''" @change="row.bank_code = $event.target.value">
+                                                <option value="">Pilih bank</option>
+                                                <template x-for="bank in popularBankEntries" :key="bank.code">
+                                                    <option :value="bank.code" :selected="(row.bank_code || '') === bank.code" x-text="bank.label"></option>
+                                                </template>
+                                            </select>
+                                        </div>
+                                        <div class="vmp-bank-settings__field">
+                                            <label>Nomor Rekening</label>
+                                            <input type="text" class="regular-text" x-model="row.account_number" placeholder="Contoh: 1234567890">
+                                        </div>
+                                        <div class="vmp-bank-settings__field">
+                                            <label>Atas Nama</label>
+                                            <input type="text" class="regular-text" x-model="row.account_holder" placeholder="Contoh: PT Velocity Marketplace">
+                                        </div>
+                                        <div class="vmp-bank-settings__row-actions">
+                                            <button type="button" class="button-link-delete" @click="removePopularBank(index)">Hapus</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+
+                        <div class="vmp-bank-settings__section">
+                            <h3 class="vmp-bank-settings__section-title">Rekening Bank Lainnya</h3>
+                            <div class="vmp-bank-settings__toolbar">
+                                <p class="description">Tambahkan rekening dari bank lain di luar daftar populer jika diperlukan.</p>
+                                <button type="button" class="button button-secondary" @click="addCustomBank()">Tambah Rekening Lainnya</button>
+                            </div>
+                            <p class="vmp-bank-settings__empty" x-show="!form.custom_bank_accounts.length">Belum ada rekening bank lainnya.</p>
+                            <div class="vmp-bank-settings__rows">
+                                <template x-for="(row, index) in form.custom_bank_accounts" :key="'custom-' + index">
+                                    <div class="vmp-bank-settings__row">
+                                        <div class="vmp-bank-settings__field">
+                                            <label>Nama Bank</label>
+                                            <input type="text" class="regular-text" x-model="row.bank_name" placeholder="Masukkan nama bank lain">
+                                        </div>
+                                        <div class="vmp-bank-settings__field">
+                                            <label>Nomor Rekening</label>
+                                            <input type="text" class="regular-text" x-model="row.account_number" placeholder="Contoh: 1234567890">
+                                        </div>
+                                        <div class="vmp-bank-settings__field">
+                                            <label>Atas Nama</label>
+                                            <input type="text" class="regular-text" x-model="row.account_holder" placeholder="Contoh: PT Velocity Marketplace">
+                                        </div>
+                                        <div class="vmp-bank-settings__row-actions">
+                                            <button type="button" class="button-link-delete" @click="removeCustomBank(index)">Hapus</button>
+                                        </div>
+                                    </div>
+                                </template>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="vmp-admin-settings__footer">
+                    <button type="button" class="button button-primary button-large" @click="save()" :disabled="saving" x-text="saving ? 'Menyimpan...' : 'Simpan Pengaturan'">Simpan Pengaturan</button>
+                </div>
+            </div>
         </div>
         <?php
     }

@@ -2,6 +2,8 @@
 
 namespace VelocityMarketplace\Modules\Product;
 
+use VelocityMarketplace\Modules\Review\ReviewRepository;
+
 class ProductData
 {
     public static function map_post($post_id)
@@ -19,6 +21,7 @@ class ProductData
         $advanced_options = self::advanced_options($post_id);
         $gallery_ids = self::gallery_ids($post_id);
         $image = self::image_url($post_id, 'large', $gallery_ids);
+        $review_summary = (new ReviewRepository())->product_summary($post_id);
 
         return [
             'id' => $post_id,
@@ -41,6 +44,8 @@ class ProductData
             'basic_options' => $basic_options,
             'advanced_name' => $advanced_name,
             'advanced_options' => $advanced_options,
+            'review_count' => isset($review_summary['review_count']) ? (int) $review_summary['review_count'] : 0,
+            'rating_average' => isset($review_summary['rating_average']) ? (float) $review_summary['rating_average'] : 0.0,
         ];
     }
 

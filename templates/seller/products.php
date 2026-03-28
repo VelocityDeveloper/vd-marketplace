@@ -30,16 +30,16 @@ use VelocityMarketplace\Modules\Product\ProductFields;
     ?>
     <div class="row g-3">
         <div class="col-lg-7">
-            <?php if (!$profile_complete) : ?><div class="alert alert-warning">Profil toko wajib diisi dulu di tab <strong>Edit Profil</strong> sebelum tambah produk.</div><?php endif; ?>
+            <?php if (!$profile_complete) : ?><div class="alert alert-warning">Lengkapi <strong>Profil Toko</strong> terlebih dahulu sebelum menambahkan produk baru.</div><?php endif; ?>
             <div class="card border-0 shadow-sm"><div class="card-body">
-                <h3 class="h6 mb-3"><?php echo $edit_product ? 'Edit Iklan Produk' : 'Pasang Iklan Produk'; ?></h3>
+                <h3 class="h6 mb-3"><?php echo $edit_product ? 'Ubah Produk' : 'Tambah Produk'; ?></h3>
                 <form method="post" enctype="multipart/form-data">
                     <input type="hidden" name="vmp_action" value="seller_save_product">
                     <input type="hidden" name="product_id" value="<?php echo esc_attr($edit_product ? $edit_product_id : 0); ?>">
                     <?php wp_nonce_field('vmp_seller_product', 'vmp_seller_product_nonce'); ?>
                     <div class="row g-2">
-                        <div class="col-md-8"><label class="form-label">Judul Iklan</label><input type="text" name="title" class="form-control" required value="<?php echo esc_attr($defaults['title']); ?>"></div>
-                        <div class="col-md-4"><label class="form-label">Kategori</label><select name="category_id" class="form-select"><option value="0">- Tanpa Kategori -</option><?php if (!is_wp_error($cats)) : foreach ($cats as $cat) : ?><option value="<?php echo esc_attr($cat->term_id); ?>" <?php selected((int) $defaults['category_id'], (int) $cat->term_id); ?>><?php echo esc_html($cat->name); ?></option><?php endforeach; endif; ?></select></div>
+                        <div class="col-md-8"><label class="form-label">Nama Produk</label><input type="text" name="title" class="form-control" required value="<?php echo esc_attr($defaults['title']); ?>"></div>
+                        <div class="col-md-4"><label class="form-label">Kategori</label><select name="category_id" class="form-select"><option value="0">Pilih kategori</option><?php if (!is_wp_error($cats)) : foreach ($cats as $cat) : ?><option value="<?php echo esc_attr($cat->term_id); ?>" <?php selected((int) $defaults['category_id'], (int) $cat->term_id); ?>><?php echo esc_html($cat->name); ?></option><?php endforeach; endif; ?></select></div>
                         <div class="col-12">
                             <label class="form-label">Deskripsi</label>
                             <div class="vmp-editor-wrap">
@@ -71,28 +71,28 @@ use VelocityMarketplace\Modules\Product\ProductFields;
                                             </div>
                                         </div>
                                     <?php else : ?>
-                                        <div class="vmp-media-field__empty text-muted small">Belum ada gambar dipilih.</div>
+                                        <div class="vmp-media-field__empty text-muted small">Belum ada gambar yang dipilih.</div>
                                     <?php endif; ?>
                                 </div>
-                                <div class="form-text">Pilih atau upload gambar utama langsung dari media library WordPress.</div>
+                                <div class="form-text">Pilih atau unggah gambar utama melalui media library WordPress.</div>
                             </div>
                         </div>
                         <?php echo ProductFields::render_sections($edit_product ? $edit_product_id : 0, 'frontend'); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                     </div>
                     <?php if ($product_captcha_html !== '') : ?><div class="mt-3"><?php echo $product_captcha_html; ?></div><?php endif; ?>
-                    <div class="mt-3 d-flex gap-2"><button class="btn btn-primary btn-sm" type="submit" <?php disabled(!$profile_complete); ?>><?php echo $edit_product ? 'Update Iklan' : 'Kirim Iklan'; ?></button><?php if ($edit_product) : ?><a href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products'], remove_query_arg('edit_product'))); ?>" class="btn btn-outline-secondary btn-sm">Batal Edit</a><?php endif; ?></div>
+                    <div class="mt-3 d-flex gap-2"><button class="btn btn-primary btn-sm" type="submit" <?php disabled(!$profile_complete); ?>><?php echo $edit_product ? 'Simpan Perubahan' : 'Simpan Produk'; ?></button><?php if ($edit_product) : ?><a href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products'], remove_query_arg('edit_product'))); ?>" class="btn btn-outline-secondary btn-sm">Batal</a><?php endif; ?></div>
                 </form>
             </div></div>
         </div>
-        <div class="col-lg-5"><div class="card border-0 shadow-sm"><div class="card-body"><h3 class="h6 mb-2">Produk Saya</h3>
+        <div class="col-lg-5"><div class="card border-0 shadow-sm"><div class="card-body"><h3 class="h6 mb-2">Daftar Produk</h3>
             <?php if ($products_query->have_posts()) : ?>
                 <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th>Judul</th><th>Status</th><th></th></tr></thead><tbody>
                 <?php while ($products_query->have_posts()) : $products_query->the_post(); $pid = get_the_ID(); $delete_url = add_query_arg(['tab' => 'seller_products','vmp_delete_product' => $pid,'vmp_nonce' => wp_create_nonce('vmp_delete_product_' . $pid)]); $premium = !empty(get_post_meta($pid, 'premium_request', true)); ?>
-                    <tr><td><a href="<?php echo esc_url(get_permalink($pid)); ?>" target="_blank"><?php the_title(); ?></a><div class="small text-muted"><?php echo esc_html($money((float) get_post_meta($pid, 'price', true))); ?></div><?php if ($premium) : ?><div class="small text-muted">Premium: Menunggu review</div><?php endif; ?></td><td><?php echo esc_html(get_post_status($pid)); ?></td><td class="text-end"><a class="btn btn-outline-dark btn-sm" href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products', 'edit_product' => $pid])); ?>">Edit</a> <a class="btn btn-outline-danger btn-sm" href="<?php echo esc_url($delete_url); ?>" onclick="return confirm('Hapus iklan ini?')">Hapus</a></td></tr>
+                    <tr><td><a href="<?php echo esc_url(get_permalink($pid)); ?>" target="_blank"><?php the_title(); ?></a><div class="small text-muted"><?php echo esc_html($money((float) get_post_meta($pid, 'price', true))); ?></div><?php if ($premium) : ?><div class="small text-muted">Pengajuan premium sedang ditinjau.</div><?php endif; ?></td><td><?php echo esc_html(get_post_status($pid)); ?></td><td class="text-end"><a class="btn btn-outline-dark btn-sm" href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products', 'edit_product' => $pid])); ?>">Ubah</a> <a class="btn btn-outline-danger btn-sm" href="<?php echo esc_url($delete_url); ?>" onclick="return confirm('Hapus produk ini?')">Hapus</a></td></tr>
                 <?php endwhile; wp_reset_postdata(); ?>
                 </tbody></table></div>
             <?php else : ?>
-                <div class="small text-muted">Belum ada iklan produk.</div>
+                <div class="small text-muted">Belum ada produk yang ditambahkan.</div>
             <?php endif; ?>
         </div></div></div>
     </div>

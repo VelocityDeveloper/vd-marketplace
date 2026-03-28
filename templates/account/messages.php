@@ -2,9 +2,9 @@
     <div class="col-lg-4">
         <div class="card border-0 shadow-sm h-100">
             <div class="card-body">
-                <h3 class="h6 mb-3">Kontak Pesan</h3>
+                <h3 class="h6 mb-3">Daftar Percakapan</h3>
                 <?php if (empty($message_contacts)) : ?>
-                    <div class="small text-muted mb-0">Belum ada kontak pesan. Mulai chat dari detail order atau tombol pesan pada halaman produk.</div>
+                    <div class="small text-muted mb-0">Belum ada percakapan. Anda dapat memulai pesan dari detail pesanan atau halaman produk.</div>
                 <?php else : ?>
                     <div class="list-group list-group-flush">
                         <?php foreach ($message_contacts as $contact) : ?>
@@ -56,7 +56,7 @@
         <div class="card border-0 shadow-sm">
             <div class="card-body">
                 <?php if (!$selected_message_contact) : ?>
-                    <div class="small text-muted mb-0">Pilih kontak yang ingin diajak chat. Kontak akan tersedia setelah ada transaksi atau tombol pesan dari produk/order dibuka.</div>
+                    <div class="small text-muted mb-0">Pilih percakapan untuk melihat riwayat pesan. Kontak akan tersedia setelah ada transaksi atau pesan dimulai dari halaman produk.</div>
                 <?php else : ?>
                     <div class="d-flex justify-content-between align-items-center gap-2 mb-3 flex-wrap">
                         <div>
@@ -73,7 +73,7 @@
 
                     <div class="border rounded p-3 bg-light-subtle mb-3" data-message-thread style="max-height:540px; overflow:auto;">
                         <?php if (empty($message_thread)) : ?>
-                            <div class="small text-muted">Belum ada isi percakapan. Kirim pesan pertama dari kotak di bawah.</div>
+                            <div class="small text-muted">Belum ada pesan dalam percakapan ini. Kirim pesan pertama melalui formulir di bawah.</div>
                         <?php else : ?>
                             <div class="d-flex flex-column gap-3">
                                 <?php foreach ($message_thread as $row) : ?>
@@ -98,7 +98,7 @@
                     </div>
 
                     <div class="border rounded p-3">
-                        <h4 class="h6 mb-3">Kirim Pesan</h4>
+                        <h4 class="h6 mb-3">Pesan Baru</h4>
                         <form method="post" class="row g-2">
                             <input type="hidden" name="vmp_action" value="message_send">
                             <input type="hidden" name="recipient_id" value="<?php echo esc_attr((string) $selected_message_to); ?>">
@@ -106,11 +106,11 @@
                             <?php wp_nonce_field('vmp_message_send', 'vmp_message_nonce'); ?>
                             <?php if ($selected_message_invoice !== '') : ?>
                                 <div class="col-12">
-                                    <div class="form-text mt-0"><?php echo esc_html('Pesan ini ditautkan ke invoice ' . $selected_message_invoice . '.'); ?></div>
+                                    <div class="form-text mt-0"><?php echo esc_html('Percakapan ini terkait dengan invoice ' . $selected_message_invoice . '.'); ?></div>
                                 </div>
                             <?php endif; ?>
                             <div class="col-12">
-                                <textarea name="message" class="form-control" rows="5" placeholder="Tulis pesan..." required></textarea>
+                                <textarea name="message" class="form-control" rows="5" placeholder="Tulis pesan Anda" required></textarea>
                             </div>
                             <div class="col-12">
                                 <button type="submit" class="btn btn-dark">Kirim Pesan</button>

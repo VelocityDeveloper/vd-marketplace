@@ -8,6 +8,7 @@ class PostTypes
     {
         add_action('init', [$this, 'register_product_type']);
         add_action('init', [$this, 'register_order_type']);
+        add_action('init', [$this, 'register_coupon_type']);
     }
 
     public function register_product_type()
@@ -96,5 +97,38 @@ class PostTypes
         ];
 
         register_post_type('vmp_order', $args);
+    }
+
+    public function register_coupon_type()
+    {
+        $labels = [
+            'name' => 'Kupon Marketplace',
+            'singular_name' => 'Kupon Marketplace',
+            'menu_name' => 'Kupon',
+            'name_admin_bar' => 'Kupon Marketplace',
+            'add_new' => 'Tambah Baru',
+            'add_new_item' => 'Tambah Kupon',
+            'new_item' => 'Kupon Baru',
+            'edit_item' => 'Edit Kupon',
+            'view_item' => 'Lihat Kupon',
+            'all_items' => 'Semua Kupon',
+            'search_items' => 'Cari Kupon',
+            'not_found' => 'Kupon tidak ditemukan.',
+            'not_found_in_trash' => 'Kupon tidak ditemukan di trash.',
+        ];
+
+        $args = [
+            'labels' => $labels,
+            'public' => false,
+            'show_ui' => true,
+            'show_in_rest' => false,
+            'has_archive' => false,
+            'rewrite' => false,
+            'supports' => ['title'],
+            'menu_position' => 24,
+            'menu_icon' => 'dashicons-tickets-alt',
+        ];
+
+        register_post_type('vmp_coupon', $args);
     }
 }

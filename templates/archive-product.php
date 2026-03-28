@@ -7,9 +7,9 @@ get_header();
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-3 mb-4">
         <div>
             <h1 class="h3 mb-1"><?php post_type_archive_title(); ?></h1>
-            <div class="text-muted">Daftar produk marketplace</div>
+            <div class="text-muted">Daftar produk yang tersedia di marketplace.</div>
         </div>
-        <a href="<?php echo esc_url(site_url('/katalog/')); ?>" class="btn btn-sm btn-outline-dark">Mode Katalog Interaktif</a>
+        <a href="<?php echo esc_url(site_url('/katalog/')); ?>" class="btn btn-sm btn-outline-dark">Buka Katalog Interaktif</a>
     </div>
 
     <?php if (have_posts()) : ?>
@@ -48,14 +48,14 @@ get_header();
         <div class="mt-4">
             <?php
             echo wp_kses_post(paginate_links([
-                'prev_text' => 'Prev',
-                'next_text' => 'Next',
+                'prev_text' => 'Sebelumnya',
+                'next_text' => 'Berikutnya',
                 'type' => 'list',
             ]));
             ?>
         </div>
     <?php else : ?>
-        <div class="alert alert-info mb-0">Belum ada produk yang dipublish.</div>
+        <div class="alert alert-info mb-0">Belum ada produk yang tersedia saat ini.</div>
     <?php endif; ?>
 </div>
 <?php get_footer(); ?>

@@ -20,12 +20,12 @@ if (!is_user_logged_in()) {
         <?php if ($error !== '') : ?><div class="alert alert-danger py-2"><?php echo esc_html($error); ?></div><?php endif; ?>
         <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <h3 class="h5 mb-2">Akses Akun Marketplace</h3>
-                <p class="text-muted mb-3">Login dan registrasi memakai form bawaan WordPress tanpa field tambahan dari plugin ini. Captcha akan mengikuti integrasi dari plugin Velocity Addons di halaman tersebut.</p>
+                <h3 class="h5 mb-2">Akses Akun</h3>
+                <p class="text-muted mb-3">Masuk atau daftar untuk mengakses pesanan, profil, pesan, dan pengelolaan toko dalam satu dashboard.</p>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="<?php echo esc_url($login_url); ?>" class="btn btn-dark">Login</a>
+                    <a href="<?php echo esc_url($login_url); ?>" class="btn btn-dark">Masuk</a>
                     <?php if (get_option('users_can_register')) : ?>
-                        <a href="<?php echo esc_url($register_url); ?>" class="btn btn-primary">Daftar Member</a>
+                        <a href="<?php echo esc_url($register_url); ?>" class="btn btn-primary">Daftar Akun</a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -120,42 +120,77 @@ $logout_url = add_query_arg([
     'vmp_nonce' => wp_create_nonce('vmp_logout'),
 ], $nav_base_url);
 
-$store_name = (string) get_user_meta($current_user_id, 'vmp_name', true);
-$store_address = (string) get_user_meta($current_user_id, 'vmp_address', true);
+$store_name = (string) get_user_meta($current_user_id, 'vmp_store_name', true);
+$store_address = (string) get_user_meta($current_user_id, 'vmp_store_address', true);
 $profile_complete = !$can_sell || ($store_name !== '' && $store_address !== '');
 $is_star_seller = !empty(get_user_meta($current_user_id, 'vmp_is_star_seller', true));
 
-$tabs = [
-    ['key' => 'orders', 'label' => 'Riwayat Belanja'],
+$account_tabs = [
+    ['key' => 'orders', 'label' => 'Pesanan Saya'],
     ['key' => 'account_profile', 'label' => 'Profil Saya'],
-    ['key' => 'wishlist', 'label' => 'Wishlist'],
-    ['key' => 'tracking', 'label' => 'Tracking'],
+    ['key' => 'wishlist', 'label' => 'Favorit'],
+    ['key' => 'tracking', 'label' => 'Pelacakan'],
     ['key' => 'messages', 'label' => 'Pesan' . ($message_unread_count > 0 ? ' (' . $message_unread_count . ')' : '')],
-    ['key' => 'notifications', 'label' => 'Notifikasi (' . $unread_count . ')'],
+    ['key' => 'notifications', 'label' => 'Notifikasi' . ($unread_count > 0 ? ' (' . $unread_count . ')' : '')],
+    ['key' => 'wp_profile', 'label' => 'Pengaturan Akun WordPress', 'url' => admin_url('profile.php')],
+];
+$store_tabs = [];
+if ($can_sell) {
+    $store_tabs = [
+        ['key' => 'seller_home', 'label' => 'Beranda Toko'],
+        ['key' => 'seller_report', 'label' => 'Laporan'],
+        ['key' => 'seller_products', 'label' => 'Produk'],
+        ['key' => 'seller_profile', 'label' => 'Profil Toko'],
+    ];
+}
+
+$active_menu = in_array($tab, array_column($store_tabs, 'key'), true) ? 'store' : 'account';
+$menu_groups = [
+    [
+        'key' => 'account',
+        'label' => 'Akun',
+        'tab' => 'orders',
+        'items' => $account_tabs,
+    ],
 ];
 if ($can_sell) {
-    $tabs[] = ['key' => 'seller_home', 'label' => 'Beranda Toko'];
-    $tabs[] = ['key' => 'seller_report', 'label' => 'Laporan'];
-    $tabs[] = ['key' => 'seller_products', 'label' => 'Produk'];
-    $tabs[] = ['key' => 'seller_profile', 'label' => 'Edit Profil'];
+    $menu_groups[] = [
+        'key' => 'store',
+        'label' => 'Toko',
+        'tab' => 'seller_home',
+        'items' => $store_tabs,
+    ];
 }
+
+$active_submenu = $active_menu === 'store' ? $store_tabs : $account_tabs;
 ?>
 <div class="container py-4 vmp-wrap">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="h4 mb-0">Dashboard Marketplace</h2>
-            <small class="text-muted">Order, produk, profil toko, wishlist, notifikasi, tracking</small>
+            <h2 class="h4 mb-0">Akun Saya</h2>
+            <small class="text-muted">Kelola pesanan, profil, pesan, dan aktivitas toko dari satu dashboard.</small>
         </div>
-        <a href="<?php echo esc_url($logout_url); ?>" class="btn btn-sm btn-outline-dark">Logout</a>
+        <a href="<?php echo esc_url($logout_url); ?>" class="btn btn-sm btn-outline-dark">Keluar</a>
     </div>
 
     <?php if ($notice !== '') : ?><div class="alert alert-success py-2"><?php echo esc_html($notice); ?></div><?php endif; ?>
     <?php if ($error !== '') : ?><div class="alert alert-danger py-2"><?php echo esc_html($error); ?></div><?php endif; ?>
 
-    <div class="d-flex flex-wrap gap-2 mb-3">
-        <?php foreach ($tabs as $it) : ?>
-            <a class="btn btn-sm <?php echo $tab === $it['key'] ? 'btn-dark' : 'btn-outline-dark'; ?>" href="<?php echo esc_url(add_query_arg(['tab' => $it['key']], $nav_base_url)); ?>"><?php echo esc_html($it['label']); ?></a>
-        <?php endforeach; ?>
+    <div class="vmp-dashboard-menu mb-3">
+        <div class="vmp-dashboard-nav">
+            <?php foreach ($menu_groups as $group) : ?>
+                <a class="vmp-dashboard-nav__link<?php echo $active_menu === $group['key'] ? ' is-active' : ''; ?>" href="<?php echo esc_url(add_query_arg(['tab' => $group['tab']], $nav_base_url)); ?>"><?php echo esc_html($group['label']); ?></a>
+            <?php endforeach; ?>
+        </div>
+        <div class="vmp-dashboard-submenu">
+            <?php foreach ($active_submenu as $it) : ?>
+                <?php
+                $item_url = isset($it['url']) ? (string) $it['url'] : add_query_arg(['tab' => $it['key']], $nav_base_url);
+                $is_active = !isset($it['url']) && $tab === $it['key'];
+                ?>
+                <a class="vmp-dashboard-submenu__link<?php echo $is_active ? ' is-active' : ''; ?>" href="<?php echo esc_url($item_url); ?>"><?php echo esc_html($it['label']); ?></a>
+            <?php endforeach; ?>
+        </div>
     </div>
     <?php
     $view_data = get_defined_vars();
@@ -180,7 +215,7 @@ if ($can_sell) {
     } elseif ($tab === 'seller_profile' && $can_sell) {
         echo Template::render('seller/profile', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     } else {
-        echo '<div class="alert alert-warning mb-0">Menu tidak tersedia.</div>';
+        echo '<div class="alert alert-warning mb-0">Menu yang dipilih tidak tersedia.</div>';
     }
     ?>
 </div>

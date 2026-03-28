@@ -18,6 +18,7 @@ class Settings
             'payment_methods' => ['bank'],
             'seller_product_status' => 'publish',
             'shipping_api_key' => '',
+            'bank_accounts' => [],
         ];
 
         return array_merge($defaults, $settings);
@@ -117,6 +118,64 @@ class Settings
     {
         $settings = self::all();
         return trim((string) ($settings['shipping_api_key'] ?? ''));
+    }
+
+    public static function popular_bank_labels()
+    {
+        return [
+            'bca' => 'BCA',
+            'mandiri' => 'Mandiri',
+            'bni' => 'BNI',
+            'bri' => 'BRI',
+            'btn' => 'BTN',
+            'cimb_niaga' => 'CIMB Niaga',
+            'permata' => 'Permata Bank',
+            'danamon' => 'Danamon',
+            'ocbc_nisp' => 'OCBC NISP',
+            'maybank' => 'Maybank',
+            'mega' => 'Bank Mega',
+            'panin' => 'Panin Bank',
+            'bsi' => 'Bank Syariah Indonesia',
+            'jago' => 'Bank Jago',
+            'jenius' => 'Jenius / BTPN',
+            'seabank' => 'SeaBank',
+            'neocommerce' => 'Bank Neo Commerce',
+            'uob' => 'UOB Indonesia',
+            'hsbc' => 'HSBC Indonesia',
+            'dbs' => 'DBS Indonesia',
+        ];
+    }
+
+    public static function bank_accounts()
+    {
+        $settings = self::all();
+        $rows = isset($settings['bank_accounts']) && is_array($settings['bank_accounts'])
+            ? $settings['bank_accounts']
+            : [];
+
+        $accounts = [];
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $bank_name = trim((string) ($row['bank_name'] ?? ''));
+            $account_number = preg_replace('/[^0-9]/', '', (string) ($row['account_number'] ?? ''));
+            $account_holder = trim((string) ($row['account_holder'] ?? ''));
+
+            if ($bank_name === '' || $account_number === '' || $account_holder === '') {
+                continue;
+            }
+
+            $accounts[] = [
+                'bank_code' => sanitize_key((string) ($row['bank_code'] ?? '')),
+                'bank_name' => $bank_name,
+                'account_number' => $account_number,
+                'account_holder' => $account_holder,
+            ];
+        }
+
+        return $accounts;
     }
 
     public static function courier_labels()

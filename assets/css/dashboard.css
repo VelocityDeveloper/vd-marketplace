@@ -71,3 +71,114 @@
   border-top: 0 !important;
   padding-top: 0 !important;
 }
+
+.vmp-dashboard-menu {
+  padding: 1rem;
+  border: 1px solid #e8ebef;
+  border-radius: 1.25rem;
+  background:
+    radial-gradient(circle at top left, rgba(30, 41, 59, 0.04), transparent 32%),
+    linear-gradient(180deg, #ffffff, #f8fafc);
+  box-shadow: 0 16px 40px rgba(15, 23, 42, 0.06);
+}
+
+.vmp-dashboard-nav {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 0.5rem;
+  padding: 0.35rem;
+  border-radius: 999px;
+  background: #eef2f6;
+}
+
+.vmp-dashboard-nav__link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 2.5rem;
+  padding: 0.55rem 1rem;
+  border-radius: 999px;
+  color: #475569;
+  text-decoration: none;
+  font-weight: 600;
+  transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease, transform 0.2s ease;
+}
+
+.vmp-dashboard-nav__link:hover {
+  color: #0f172a;
+  background: rgba(255, 255, 255, 0.7);
+}
+
+.vmp-dashboard-nav__link.is-active {
+  color: #fff;
+  background: #111827;
+  box-shadow: 0 10px 24px rgba(17, 24, 39, 0.22);
+}
+
+.vmp-dashboard-submenu {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 1.2rem;
+  margin-top: 1rem;
+  padding-top: 1rem;
+  border-top: 1px solid #e8ebef;
+}
+
+.vmp-dashboard-submenu__link {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  min-height: 2.25rem;
+  padding: 0.2rem 0;
+  color: #64748b;
+  text-decoration: none;
+  font-weight: 600;
+  transition: color 0.2s ease;
+}
+
+.vmp-dashboard-submenu__link::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -0.15rem;
+  height: 2px;
+  border-radius: 999px;
+  background: #111827;
+  opacity: 0;
+  transform: scaleX(0.35);
+  transition: opacity 0.2s ease, transform 0.2s ease;
+}
+
+.vmp-dashboard-submenu__link:hover {
+  color: #0f172a;
+}
+
+.vmp-dashboard-submenu__link.is-active {
+  color: #0f172a;
+}
+
+.vmp-dashboard-submenu__link.is-active::after {
+  opacity: 1;
+  transform: scaleX(1);
+}
+
+@media (max-width: 575.98px) {
+  .vmp-dashboard-menu {
+    padding: 0.85rem;
+  }
+
+  .vmp-dashboard-nav {
+    width: 100%;
+    border-radius: 1rem;
+  }
+
+  .vmp-dashboard-nav__link {
+    flex: 1 1 calc(50% - 0.5rem);
+    padding-inline: 0.75rem;
+  }
+
+  .vmp-dashboard-submenu {
+    gap: 0.5rem 0.9rem;
+  }
+}
