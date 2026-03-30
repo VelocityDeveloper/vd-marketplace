@@ -1,56 +1,28 @@
-<div class="vmp-cart-shortcut" x-data="vmpCart({ drawer: true })" x-init="init()">
-    <button
-        type="button"
-        class="vmp-cart-shortcut__toggle"
-        @click="openDrawer()"
-        :aria-expanded="open ? 'true' : 'false'"
-        aria-controls="vmp-cart-drawer-panel"
-        aria-label="Buka keranjang"
+<div class="vmp-cart-drawer-host" x-data="vmpCart({ drawer: true })" x-init="init()" x-cloak>
+    <div
+        id="vmp-cart-drawer-panel"
+        class="offcanvas offcanvas-end vmp-cart-drawer"
+        tabindex="-1"
+        aria-labelledby="vmp-cart-drawer-title"
     >
-        <span class="vmp-cart-shortcut__icon" aria-hidden="true">
-            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-                <circle cx="9" cy="20" r="1.5"></circle>
-                <circle cx="18" cy="20" r="1.5"></circle>
-                <path d="M3 4h2l2.2 10.2a1 1 0 0 0 1 .8H18a1 1 0 0 0 1-.8L21 7H7.2"></path>
-            </svg>
-        </span>
-        <span class="vmp-cart-shortcut__badge" x-show="count > 0" x-cloak x-text="count"></span>
-    </button>
-
-    <div class="vmp-cart-drawer" :class="{ 'is-open': open }" x-cloak>
-        <button type="button" class="vmp-cart-drawer__backdrop" @click="closeDrawer()" aria-label="Tutup keranjang"></button>
-
-        <aside
-            id="vmp-cart-drawer-panel"
-            class="vmp-cart-drawer__panel"
-            role="dialog"
-            aria-modal="true"
-            aria-label="Keranjang"
-        >
-            <div class="vmp-cart-drawer__header">
-                <div>
-                    <h3 class="vmp-cart-drawer__title">Keranjang</h3>
-                    <div class="vmp-cart-drawer__meta" x-text="count > 0 ? count + ' produk' : 'Belum ada produk'"></div>
-                </div>
-                <button type="button" class="vmp-cart-drawer__close" @click="closeDrawer()" aria-label="Tutup">
-                    <span class="vmp-cart-drawer__close-icon" aria-hidden="true">
-                        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
-                            <path d="M18 6L6 18"></path>
-                            <path d="M6 6l12 12"></path>
-                        </svg>
-                    </span>
-                </button>
+        <div class="offcanvas-header vmp-cart-drawer__header">
+            <div>
+                <h3 id="vmp-cart-drawer-title" class="vmp-cart-drawer__title"><?php echo esc_html__('Keranjang', 'velocity-marketplace'); ?></h3>
+                <div class="vmp-cart-drawer__meta" x-text="count > 0 ? count + ' <?php echo esc_attr__('products', 'velocity-marketplace'); ?>' : '<?php echo esc_attr__('No products yet', 'velocity-marketplace'); ?>'"></div>
             </div>
+            <button type="button" class="btn-close" data-bs-dismiss="offcanvas" aria-label="<?php echo esc_attr__('Close', 'velocity-marketplace'); ?>"></button>
+        </div>
 
-            <div class="vmp-cart-drawer__message" x-show="message" x-text="message"></div>
+        <div class="offcanvas-body d-flex flex-column p-0">
+            <div class="alert alert-primary mx-3 mt-3 mb-0 py-2 small" x-show="message" x-text="message"></div>
 
             <div class="vmp-cart-drawer__body">
-                <div class="vmp-cart-drawer__loading" x-show="loading">Memuat keranjang...</div>
+                <div class="vmp-cart-drawer__loading" x-show="loading"><?php echo esc_html__('Loading cart...', 'velocity-marketplace'); ?></div>
 
                 <div class="vmp-cart-drawer__empty" x-show="!loading && items.length === 0">
-                    <div class="vmp-cart-drawer__empty-title">Keranjang masih kosong</div>
-                    <div class="vmp-cart-drawer__empty-text">Tambahkan produk untuk melanjutkan transaksi.</div>
-                    <a class="vmp-cart-drawer__browse" :href="catalogUrl">Lihat Katalog</a>
+                    <div class="vmp-cart-drawer__empty-title"><?php echo esc_html__('Your cart is empty', 'velocity-marketplace'); ?></div>
+                    <div class="vmp-cart-drawer__empty-text"><?php echo esc_html__('Add products to continue your checkout.', 'velocity-marketplace'); ?></div>
+                    <a class="vmp-cart-drawer__browse" :href="catalogUrl"><?php echo esc_html__('Lihat Katalog', 'velocity-marketplace'); ?></a>
                 </div>
 
                 <div class="vmp-cart-drawer__items" x-show="items.length > 0">
@@ -61,7 +33,7 @@
                                     <a
                                         class="vmp-cart-drawer__seller-label"
                                         :href="item.seller_url || '#'"
-                                        x-text="item.seller_name || 'Toko'"
+                                        x-text="item.seller_name || '<?php echo esc_attr__('Toko', 'velocity-marketplace'); ?>'"
                                     ></a>
                                     <span class="vmp-cart-drawer__seller-subtotal" x-text="formatPrice(sellerSubtotal(item.seller_id))"></span>
                                 </div>
@@ -80,7 +52,7 @@
                                         <button type="button" class="vmp-cart-drawer__qty-btn" @click="changeQty(item, item.qty + 1)">+</button>
                                     </div>
                                 </div>
-                                <button type="button" class="vmp-cart-drawer__remove" @click="remove(item)" aria-label="Hapus produk">
+                <button type="button" class="vmp-cart-drawer__remove" @click="remove(item)" aria-label="<?php echo esc_attr__('Remove product', 'velocity-marketplace'); ?>">
                                     <span class="vmp-cart-drawer__remove-icon" aria-hidden="true">
                                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.1" stroke-linecap="round" stroke-linejoin="round">
                                             <path d="M18 6L6 18"></path>
@@ -94,17 +66,17 @@
                 </div>
             </div>
 
-            <div class="vmp-cart-drawer__footer" x-show="items.length > 0">
+            <div class="vmp-cart-drawer__footer mt-auto" x-show="items.length > 0">
                 <div class="vmp-cart-drawer__actions">
-                    <a class="vmp-cart-drawer__cart-link" :href="cartUrl">Lihat Keranjang</a>
-                    <button class="vmp-cart-drawer__clear" type="button" @click="clearCart()" :disabled="loading || items.length === 0">Kosongkan</button>
+                    <a class="vmp-cart-drawer__cart-link" :href="cartUrl"><?php echo esc_html__('Lihat Keranjang', 'velocity-marketplace'); ?></a>
+                    <button class="vmp-cart-drawer__clear" type="button" @click="clearCart()" :disabled="loading || items.length === 0"><?php echo esc_html__('Clear', 'velocity-marketplace'); ?></button>
                 </div>
                 <div class="vmp-cart-drawer__summary">
-                    <div class="vmp-cart-drawer__summary-label">Total</div>
+                    <div class="vmp-cart-drawer__summary-label"><?php echo esc_html__('Total', 'velocity-marketplace'); ?></div>
                     <div class="vmp-cart-drawer__summary-value" x-text="formatPrice(total)"></div>
                 </div>
-                <a class="vmp-cart-drawer__checkout" :href="checkoutUrl">Checkout</a>
+                <a class="vmp-cart-drawer__checkout" :href="checkoutUrl"><?php echo esc_html__('Checkout', 'velocity-marketplace'); ?></a>
             </div>
-        </aside>
+        </div>
     </div>
 </div>

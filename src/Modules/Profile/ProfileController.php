@@ -86,7 +86,7 @@ class ProfileController
 
         return new WP_REST_Response([
             'success' => true,
-            'message' => (string) ($result['message'] ?? 'Profil member berhasil diperbarui.'),
+            'message' => (string) ($result['message'] ?? __('Member profile updated successfully.', 'velocity-marketplace')),
             'data' => [
                 'profile' => isset($result['profile']) && is_array($result['profile']) ? $result['profile'] : [],
             ],
@@ -98,7 +98,7 @@ class ProfileController
         if (!Account::can_sell(get_current_user_id())) {
             return new WP_REST_Response([
                 'success' => false,
-                'message' => 'Akses profil toko tidak tersedia untuk akun ini.',
+                'message' => __('Akses profil toko tidak tersedia untuk akun ini.', 'velocity-marketplace'),
             ], 403);
         }
 
@@ -117,7 +117,7 @@ class ProfileController
         if (!Account::can_sell(get_current_user_id())) {
             return new WP_REST_Response([
                 'success' => false,
-                'message' => 'Akses profil toko tidak tersedia untuk akun ini.',
+                'message' => __('Akses profil toko tidak tersedia untuk akun ini.', 'velocity-marketplace'),
             ], 403);
         }
 
@@ -137,7 +137,7 @@ class ProfileController
 
         return new WP_REST_Response([
             'success' => true,
-            'message' => (string) ($result['message'] ?? 'Profil toko berhasil diperbarui.'),
+            'message' => (string) ($result['message'] ?? __('Profil toko berhasil diperbarui.', 'velocity-marketplace')),
             'data' => [
                 'profile' => isset($result['profile']) && is_array($result['profile']) ? $result['profile'] : [],
             ],

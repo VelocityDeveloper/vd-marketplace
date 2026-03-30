@@ -2,6 +2,56 @@
 
 namespace VelocityMarketplace\Modules\Product;
 
+/**
+ * Registry schema field meta untuk CPT `vmp_product`.
+ *
+ * Struktur data yang dipakai file ini:
+ * - Section:
+ *   - `id` string unik section
+ *   - `title` judul section di form
+ *   - `fields` array daftar field
+ *
+ * - Field:
+ *   - `name` label field
+ *   - `id` meta key post
+ *   - `type` tipe field
+ *   - `desc` deskripsi/helper text
+ *   - `placeholder` placeholder input
+ *   - `default` nilai default
+ *   - `contexts` area tampil, contoh `frontend`, `admin`
+ *   - `full_width` bool, pakai kolom penuh saat render
+ *   - `rows` jumlah baris untuk textarea
+ *   - `min` batas minimum untuk number
+ *   - `step` step untuk number
+ *   - `options` opsi untuk select/radio
+ *   - `multiple` bool untuk field file multi-attachment
+ *   - `media_library` bool untuk field file berbasis media library
+ *
+ * Tipe field yang didukung:
+ * - `text`
+ * - `number`
+ * - `textarea`
+ * - `select`
+ * - `radio`
+ * - `checkbox`
+ * - `date`
+ * - `email`
+ * - `url`
+ * - `editor`
+ * - `file`
+ *
+ * Catatan:
+ * - Tambahkan field baru lewat `get_sections()`.
+ * - `id` field akan dipakai langsung sebagai post meta key.
+ * - Jika field `type=file` dan `multiple=true`, value disimpan sebagai array ID attachment.
+ * - Jika field butuh opsi tetap, gunakan `options` dengan key yang eksplisit.
+ * - Field galeri produk memakai meta key `gallery_ids`.
+ * - Field opsi varian memakai meta key `variant_name` dan `variant_options`.
+ * - Field penyesuaian harga memakai meta key `price_adjustment_name` dan
+ *   `price_adjustment_options`.
+ * - Gambar utama produk tidak didefinisikan di schema ini karena memakai featured image
+ *   bawaan WordPress (`_thumbnail_id`), bukan post meta custom schema produk.
+ */
 class ProductFields
 {
     public function register()
@@ -9,6 +59,13 @@ class ProductFields
         add_action('init', [$this, 'register_post_meta']);
     }
 
+    /**
+     * Mendefinisikan schema field produk per section.
+     *
+     * Context yang valid saat ini:
+     * - `frontend`
+     * - `admin`
+     */
     public static function get_sections($context = 'frontend')
     {
         $sections = [
@@ -21,7 +78,7 @@ class ProductFields
                         'id' => 'gallery_ids',
                         'type' => 'file',
                         'desc' => 'Pilih beberapa gambar dari media library untuk galeri produk.',
-                        'contexts' => ['frontend'],
+                        'contexts' => ['frontend', 'admin'],
                         'full_width' => true,
                         'multiple' => true,
                         'media_library' => true,
@@ -111,36 +168,36 @@ class ProductFields
                 'title' => 'Opsi Produk',
                 'fields' => [
                     [
-                        'name' => 'Nama Opsi Basic',
-                        'id' => 'basic_name',
+                        'name' => 'Nama Opsi Varian',
+                        'id' => 'variant_name',
                         'type' => 'text',
-                        'placeholder' => 'Pilihan Warna',
-                        'desc' => 'Judul opsi basic.',
-                        'default' => 'Pilihan Warna',
+                        'placeholder' => 'Warna',
+                        'desc' => 'Nama pilihan yang tidak mengubah harga, misalnya Warna atau Motif.',
+                        'default' => 'Pilihan Varian',
                     ],
                     [
-                        'name' => 'Opsi Basic',
-                        'id' => 'basic_options',
+                        'name' => 'Pilihan Varian',
+                        'id' => 'variant_options',
                         'type' => 'textarea',
                         'placeholder' => 'Merah, Biru, Hijau',
-                        'desc' => 'Pisahkan dengan koma.',
+                        'desc' => 'Pisahkan dengan koma. Pilihan ini tidak mengubah harga produk.',
                         'rows' => 2,
                         'full_width' => true,
                     ],
                     [
-                        'name' => 'Nama Opsi Advanced',
-                        'id' => 'advanced_name',
+                        'name' => 'Nama Opsi Harga',
+                        'id' => 'price_adjustment_name',
                         'type' => 'text',
-                        'placeholder' => 'Pilihan Ukuran',
-                        'desc' => 'Judul opsi advanced.',
-                        'default' => 'Pilihan Ukuran',
+                        'placeholder' => 'Ukuran',
+                        'desc' => 'Nama pilihan yang dapat menambah harga dari harga dasar produk.',
+                        'default' => 'Pilihan Harga',
                     ],
                     [
-                        'name' => 'Opsi Advanced',
-                        'id' => 'advanced_options',
+                        'name' => 'Pilihan Harga',
+                        'id' => 'price_adjustment_options',
                         'type' => 'textarea',
-                        'placeholder' => "Small=10000\nMedium=15000",
-                        'desc' => '1 baris = label=harga.',
+                        'placeholder' => "Small=0\nMedium=10000\nLarge=20000",
+                        'desc' => '1 baris = label=tambahan_harga. Gunakan 0 jika tidak ada tambahan harga.',
                         'rows' => 4,
                         'full_width' => true,
                     ],
@@ -334,6 +391,8 @@ class ProductFields
                     ?>
                 <?php elseif ($type === 'file' && !empty($field['media_library'])) : ?>
                     <?php
+                    $open_button_class = $context === 'admin' ? 'button button-secondary vmp-media-field__open' : 'btn btn-outline-dark btn-sm vmp-media-field__open';
+                    $clear_button_class = $context === 'admin' ? 'button button-secondary vmp-media-field__clear' : 'btn btn-outline-secondary btn-sm vmp-media-field__clear';
                     $preview_items = self::build_media_preview_items($value, !empty($field['multiple']));
                     $input_value = '';
                     if (!empty($field['multiple'])) {
@@ -345,10 +404,10 @@ class ProductFields
                     <div class="vmp-media-field" data-multiple="<?php echo !empty($field['multiple']) ? '1' : '0'; ?>">
                         <input id="<?php echo esc_attr($meta_key); ?>" type="hidden" name="<?php echo esc_attr($meta_key); ?>" class="vmp-media-field__input" value="<?php echo esc_attr($input_value); ?>">
                         <div class="d-flex flex-wrap gap-2 mb-2">
-                            <button type="button" class="btn btn-outline-dark btn-sm vmp-media-field__open" data-title="<?php echo esc_attr($label); ?>" data-button="<?php echo esc_attr(!empty($field['multiple']) ? 'Gunakan gambar terpilih' : 'Gunakan gambar ini'); ?>">
+                            <button type="button" class="<?php echo esc_attr($open_button_class); ?>" data-title="<?php echo esc_attr($label); ?>" data-button="<?php echo esc_attr(!empty($field['multiple']) ? 'Gunakan gambar terpilih' : 'Gunakan gambar ini'); ?>">
                                 <?php echo esc_html(!empty($field['multiple']) ? 'Pilih Galeri' : 'Pilih File'); ?>
                             </button>
-                            <button type="button" class="btn btn-outline-secondary btn-sm vmp-media-field__clear" <?php disabled(empty($preview_items)); ?>>Hapus Pilihan</button>
+                            <button type="button" class="<?php echo esc_attr($clear_button_class); ?>" <?php disabled(empty($preview_items)); ?>>Hapus Pilihan</button>
                         </div>
                         <div class="vmp-media-field__preview" data-placeholder="<?php echo esc_attr(!empty($field['multiple']) ? 'Belum ada gambar galeri.' : 'Belum ada file dipilih.'); ?>">
                             <?php echo self::render_media_preview_html($preview_items, !empty($field['multiple'])); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
@@ -582,4 +641,3 @@ class ProductFields
         return (string) ob_get_clean();
     }
 }
-

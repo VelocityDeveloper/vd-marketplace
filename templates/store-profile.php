@@ -8,7 +8,7 @@ $seller_id = isset($seller_id) ? (int) $seller_id : 0;
 $seller = $seller_id > 0 ? get_userdata($seller_id) : false;
 
 if (!$seller) {
-    return '<div class="container py-4 vmp-wrap"><div class="alert alert-warning mb-0">Toko tidak ditemukan.</div></div>';
+    return '<div class="container py-4 vmp-wrap"><div class="alert alert-warning mb-0">' . esc_html__('Toko tidak ditemukan.', 'velocity-marketplace') . '</div></div>';
 }
 
 $store_name = (string) get_user_meta($seller_id, 'vmp_store_name', true);
@@ -37,7 +37,7 @@ $store_last_active_text = '-';
 if ($store_last_active !== '') {
     $timestamp = strtotime($store_last_active);
     if ($timestamp) {
-        $store_last_active_text = human_time_diff($timestamp, current_time('timestamp')) . ' yang lalu';
+        $store_last_active_text = sprintf(__('%s yang lalu', 'velocity-marketplace'), human_time_diff($timestamp, current_time('timestamp')));
     }
 }
 
@@ -87,34 +87,34 @@ if ($product_query->have_posts()) {
                     <div class="d-flex flex-wrap align-items-center gap-2 mb-2">
                         <h1 class="h4 mb-0"><?php echo esc_html($display_name); ?></h1>
                         <?php if (!empty($seller_summary['is_star_seller'])) : ?>
-                            <span class="badge bg-warning text-dark">Star Seller</span>
+                            <span class="badge bg-warning text-dark"><?php echo esc_html__('Star Seller', 'velocity-marketplace'); ?></span>
                         <?php endif; ?>
                     </div>
                     <div class="row g-2 small mb-3">
-                        <div class="col-md-6"><strong>Total Produk:</strong> <?php echo esc_html((string) $total_products); ?></div>
-                        <div class="col-md-6"><strong>Bergabung:</strong> <?php echo esc_html(!empty($seller->user_registered) ? mysql2date('d-m-Y', $seller->user_registered) : '-'); ?></div>
-                        <div class="col-md-6"><strong>Rating Toko:</strong> <?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5 dari ' . (int) ($seller_summary['rating_count'] ?? 0) . ' ulasan'); ?></div>
-                        <div class="col-md-6"><strong>Order Selesai:</strong> <?php echo esc_html((string) (int) ($seller_summary['completed_orders'] ?? 0)); ?></div>
-                        <div class="col-md-6"><strong>Terakhir Aktif:</strong> <?php echo esc_html($store_last_active_text); ?></div>
-                        <div class="col-md-6"><strong>Lokasi:</strong> <?php echo esc_html(trim(implode(', ', array_filter([$store_subdistrict, $store_city, $store_province])))); ?></div>
-                        <div class="col-md-6"><strong>Telepon:</strong> <?php echo esc_html($store_phone !== '' ? $store_phone : '-'); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Total Produk:', 'velocity-marketplace'); ?></strong> <?php echo esc_html((string) $total_products); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Bergabung:', 'velocity-marketplace'); ?></strong> <?php echo esc_html(!empty($seller->user_registered) ? mysql2date('d-m-Y', $seller->user_registered) : '-'); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Rating Toko:', 'velocity-marketplace'); ?></strong> <?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5 ' . sprintf(__('dari %d ulasan', 'velocity-marketplace'), (int) ($seller_summary['rating_count'] ?? 0))); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Pesanan Selesai:', 'velocity-marketplace'); ?></strong> <?php echo esc_html((string) (int) ($seller_summary['completed_orders'] ?? 0)); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Terakhir Aktif:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($store_last_active_text); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Lokasi:', 'velocity-marketplace'); ?></strong> <?php echo esc_html(trim(implode(', ', array_filter([$store_subdistrict, $store_city, $store_province])))); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('Telepon:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($store_phone !== '' ? $store_phone : '-'); ?></div>
                         <?php if ($store_whatsapp !== '') : ?>
-                            <div class="col-md-6"><strong>WhatsApp:</strong> <?php echo esc_html($store_whatsapp); ?></div>
+                            <div class="col-md-6"><strong><?php echo esc_html__('WhatsApp:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($store_whatsapp); ?></div>
                         <?php endif; ?>
-                        <div class="col-md-6"><strong>COD:</strong> <?php echo esc_html($store_cod_enabled ? 'Tersedia' : 'Tidak aktif'); ?></div>
+                        <div class="col-md-6"><strong><?php echo esc_html__('COD:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($store_cod_enabled ? __('Tersedia', 'velocity-marketplace') : __('Tidak Aktif', 'velocity-marketplace')); ?></div>
                     </div>
                     <?php if ($store_description !== '') : ?>
                         <div class="mb-3 text-muted"><?php echo wp_kses_post(wpautop($store_description)); ?></div>
                     <?php endif; ?>
                     <?php if ($store_address !== '') : ?>
-                        <div class="small text-muted mb-3"><strong>Alamat Pengiriman:</strong> <?php echo esc_html($store_address); ?></div>
+                        <div class="small text-muted mb-3"><strong><?php echo esc_html__('Alamat Pengiriman:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($store_address); ?></div>
                     <?php endif; ?>
                     <?php if ($store_cod_enabled && !empty($store_cod_city_names)) : ?>
-                        <div class="small text-muted mb-3"><strong>Kota COD:</strong> <?php echo esc_html(implode(', ', array_filter(array_map('strval', $store_cod_city_names)))); ?></div>
+                        <div class="small text-muted mb-3"><strong><?php echo esc_html__('Kota COD:', 'velocity-marketplace'); ?></strong> <?php echo esc_html(implode(', ', array_filter(array_map('strval', $store_cod_city_names)))); ?></div>
                     <?php endif; ?>
                     <div class="d-flex flex-wrap gap-2">
-                        <a href="<?php echo esc_url($message_url); ?>" class="btn btn-dark">Hubungi Toko</a>
-                        <a href="<?php echo esc_url(Settings::store_profile_url($seller_id)); ?>" class="btn btn-outline-dark">Muat Ulang Profil</a>
+                        <a href="<?php echo esc_url($message_url); ?>" class="btn btn-dark"><?php echo esc_html__('Hubungi Toko', 'velocity-marketplace'); ?></a>
+                        <a href="<?php echo esc_url(Settings::store_profile_url($seller_id)); ?>" class="btn btn-outline-dark"><?php echo esc_html__('Muat Ulang Profil', 'velocity-marketplace'); ?></a>
                     </div>
                 </div>
             </div>
@@ -125,15 +125,15 @@ if ($product_query->have_posts()) {
         <div class="card-body">
             <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
                 <div>
-                    <h2 class="h5 mb-0">Ulasan Toko</h2>
-                    <small class="text-muted">Ulasan terbaru dari pembeli atas produk yang dijual toko ini.</small>
+                    <h2 class="h5 mb-0"><?php echo esc_html__('Ulasan Toko', 'velocity-marketplace'); ?></h2>
+                    <small class="text-muted"><?php echo esc_html__('Ulasan pembeli terbaru untuk produk yang dijual toko ini.', 'velocity-marketplace'); ?></small>
                 </div>
                 <div class="small text-muted">
                     <?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5 dari ' . (int) ($seller_summary['rating_count'] ?? 0) . ' ulasan'); ?>
                 </div>
             </div>
             <?php if (empty($store_reviews)) : ?>
-                <div class="text-muted small">Belum ada ulasan untuk toko ini.</div>
+                <div class="text-muted small"><?php echo esc_html__('Belum ada ulasan untuk toko ini.', 'velocity-marketplace'); ?></div>
             <?php else : ?>
                 <div class="vmp-review-list">
                     <?php foreach ($store_reviews as $review) : ?>
@@ -141,7 +141,7 @@ if ($product_query->have_posts()) {
                         <div class="vmp-review-item">
                             <div class="d-flex justify-content-between align-items-start gap-2 flex-wrap">
                                 <div>
-                                    <div class="fw-semibold"><?php echo esc_html((string) ($review['user_name'] ?? 'Member')); ?></div>
+                                    <div class="fw-semibold"><?php echo esc_html((string) ($review['user_name'] ?? __('Member', 'velocity-marketplace'))); ?></div>
                                     <div class="small text-muted"><?php echo wp_kses_post($review_stars); ?></div>
                                 </div>
                                 <div class="small text-muted"><?php echo esc_html(mysql2date('d-m-Y H:i', (string) ($review['created_at'] ?? ''))); ?></div>
@@ -152,7 +152,7 @@ if ($product_query->have_posts()) {
                             <div class="small mt-1"><?php echo esc_html((string) ($review['content'] ?? '')); ?></div>
                             <?php if (!empty($review['product_title'])) : ?>
                                 <div class="small text-muted mt-2">
-                                    Produk:
+                                    <?php echo esc_html__('Produk:', 'velocity-marketplace'); ?>
                                     <?php if (!empty($review['product_link'])) : ?>
                                         <a href="<?php echo esc_url((string) $review['product_link']); ?>"><?php echo esc_html((string) $review['product_title']); ?></a>
                                     <?php else : ?>
@@ -169,28 +169,28 @@ if ($product_query->have_posts()) {
 
     <div class="d-flex justify-content-between align-items-center mb-3 gap-2">
         <div>
-            <h2 class="h5 mb-0">Produk Toko</h2>
-            <small class="text-muted">Daftar produk terbaru dari toko ini</small>
+            <h2 class="h5 mb-0"><?php echo esc_html__('Produk Toko', 'velocity-marketplace'); ?></h2>
+            <small class="text-muted"><?php echo esc_html__('Produk terbaru dari toko ini.', 'velocity-marketplace'); ?></small>
         </div>
     </div>
 
     <?php if (empty($products)) : ?>
-        <div class="alert alert-info mb-0">Belum ada produk aktif yang ditampilkan oleh toko ini.</div>
+        <div class="alert alert-info mb-0"><?php echo esc_html__('Toko ini belum memiliki produk aktif.', 'velocity-marketplace'); ?></div>
     <?php else : ?>
         <div class="row g-3">
             <?php foreach ($products as $item) : ?>
                 <div class="col-6 col-md-4 col-lg-3">
                     <div class="card h-100 border-0 shadow-sm overflow-hidden">
                         <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="text-decoration-none text-dark">
-                            <img src="<?php echo esc_url((string) ($item['image'] ?? ProductData::no_image_url())); ?>" alt="<?php echo esc_attr((string) ($item['title'] ?? 'Produk')); ?>" class="card-img-top" style="aspect-ratio:1/1; object-fit:cover;">
+                            <img src="<?php echo esc_url((string) ($item['image'] ?? ProductData::no_image_url())); ?>" alt="<?php echo esc_attr((string) ($item['title'] ?? __('Produk', 'velocity-marketplace'))); ?>" class="card-img-top" style="aspect-ratio:1/1; object-fit:cover;">
                         </a>
                         <div class="card-body d-flex flex-column">
-                            <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="fw-semibold text-decoration-none text-dark mb-2"><?php echo esc_html((string) ($item['title'] ?? 'Produk')); ?></a>
+                            <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="fw-semibold text-decoration-none text-dark mb-2"><?php echo esc_html((string) ($item['title'] ?? __('Produk', 'velocity-marketplace'))); ?></a>
                             <div class="text-danger fw-semibold mb-3"><?php echo esc_html(Settings::currency_symbol() . ' ' . number_format((float) ($item['price'] ?? 0), 0, ',', '.')); ?></div>
                             <div class="small text-muted mb-3"><?php echo esc_html(number_format((float) ($item['rating_average'] ?? 0), 1, ',', '.') . '/5 dari ' . (int) ($item['review_count'] ?? 0) . ' ulasan'); ?></div>
                             <div class="mt-auto d-flex flex-wrap gap-2">
-                                <?php echo do_shortcode('[vmp_add_to_cart id="' . (int) ($item['id'] ?? 0) . '" text="Tambah Keranjang" class="btn btn-sm btn-dark"]'); ?>
-                                <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="btn btn-sm btn-outline-dark">Detail</a>
+                                <?php echo do_shortcode('[vmp_add_to_cart id="' . (int) ($item['id'] ?? 0) . '" text="' . esc_attr__('Tambah Keranjang', 'velocity-marketplace') . '" class="btn btn-sm btn-dark"]'); ?>
+                                <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="btn btn-sm btn-outline-dark"><?php echo esc_html__('Detail', 'velocity-marketplace'); ?></a>
                             </div>
                         </div>
                     </div>

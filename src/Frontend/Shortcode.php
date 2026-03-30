@@ -2,11 +2,16 @@
 
 namespace VelocityMarketplace\Frontend;
 
+use VelocityMarketplace\Modules\Cart\CartRepository;
+use VelocityMarketplace\Modules\Message\MessageRepository;
+use VelocityMarketplace\Modules\Notification\NotificationRepository;
 use VelocityMarketplace\Modules\Product\ProductData;
 use VelocityMarketplace\Support\Settings;
 
 class Shortcode
 {
+    private $needs_cart_drawer = false;
+
     public function register()
     {
         add_shortcode('vmp_catalog', [$this, 'render_catalog']);
@@ -21,10 +26,18 @@ class Shortcode
         add_shortcode('vmp_profile', [$this, 'render_profile']);
         add_shortcode('vmp_tracking', [$this, 'render_tracking']);
         add_shortcode('vmp_store_profile', [$this, 'render_store_profile']);
+        add_shortcode('vmp_messages_icon', [$this, 'render_messages_icon']);
+        add_shortcode('vmp_notifications_icon', [$this, 'render_notifications_icon']);
+        add_shortcode('vmp_profile_icon', [$this, 'render_profile_icon']);
+        add_shortcode('vmp_cart_page', [$this, 'render_cart_page']);
+
+        add_action('wp_footer', [$this, 'render_cart_drawer_footer'], 30);
     }
 
     public function render_catalog($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'per_page' => 12,
         ], $atts);
@@ -36,6 +49,8 @@ class Shortcode
 
     public function render_products($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'per_page' => 12,
             'columns' => 4,
@@ -74,12 +89,14 @@ class Shortcode
         return $this->render_product_grid_markup(
             $items,
             max(1, min(6, (int) $atts['columns'])),
-            'Produk belum tersedia.'
+            __('Produk belum tersedia.', 'velocity-marketplace')
         );
     }
 
     public function render_product_card($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'id' => 0,
         ], $atts);
@@ -99,6 +116,8 @@ class Shortcode
 
     public function render_thumbnail($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'id' => 0,
             'size' => 'large',
@@ -126,6 +145,8 @@ class Shortcode
 
     public function render_price($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'id' => 0,
             'class' => '',
@@ -150,9 +171,11 @@ class Shortcode
 
     public function render_add_to_cart($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'id' => 0,
-            'text' => 'Tambah Keranjang',
+            'text' => __('Tambah Keranjang', 'velocity-marketplace'),
             'class' => 'btn btn-sm btn-dark',
         ], $atts);
 
@@ -166,24 +189,21 @@ class Shortcode
             return '';
         }
 
-        $basic_default = !empty($item['basic_options'][0]) ? (string) $item['basic_options'][0] : '';
-        $advanced_default = !empty($item['advanced_options'][0]['label']) ? (string) $item['advanced_options'][0]['label'] : '';
-
         return $this->render_add_to_cart_markup(
-            $product_id,
+            $item,
             (string) $atts['text'],
-            (string) $atts['class'],
-            $basic_default,
-            $advanced_default
+            (string) $atts['class']
         );
     }
 
     public function render_add_to_wishlist($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'id' => 0,
-            'text' => 'Wishlist',
-            'class' => 'btn btn-sm btn-outline-secondary',
+            'text' => __('Wishlist', 'velocity-marketplace'),
+            'class' => 'btn btn-sm btn-outline-secondary vmp-wishlist-button',
         ], $atts);
 
         $product_id = $this->resolve_product_id((int) $atts['id']);
@@ -209,36 +229,57 @@ class Shortcode
 
     public function render_cart($atts = [])
     {
-        $atts = shortcode_atts([
-            'display' => 'page',
-        ], $atts);
+        $this->ensure_frontend_assets();
+        $this->needs_cart_drawer = true;
 
-        $display = sanitize_key((string) $atts['display']);
+        $count = (new CartRepository())->get_cart_data()['count'] ?? 0;
+        $url = $this->cart_page_url();
 
-        if ($display === 'drawer' || $display === 'mini') {
-            return Template::render('cart-drawer', []);
-        }
+        return $this->render_shortcut_icon_markup(
+            'cart',
+            $url,
+            (int) $count,
+            __('Keranjang', 'velocity-marketplace'),
+            '',
+            false,
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-cart2" viewBox="0 0 16 16"> <path d="M0 2.5A.5.5 0 0 1 .5 2H2a.5.5 0 0 1 .485.379L2.89 4H14.5a.5.5 0 0 1 .485.621l-1.5 6A.5.5 0 0 1 13 11H4a.5.5 0 0 1-.485-.379L1.61 3H.5a.5.5 0 0 1-.5-.5M3.14 5l1.25 5h8.22l1.25-5zM5 13a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0m9-1a1 1 0 1 0 0 2 1 1 0 0 0 0-2m-2 1a2 2 0 1 1 4 0 2 2 0 0 1-4 0"/> </svg>',
+            [
+                'data-vmp-cart-trigger' => 'true',
+                'data-vmp-cart-url' => $url,
+                'aria-controls' => 'vmp-cart-drawer-panel',
+            ],
+            false
+        );
+    }
 
+    public function render_cart_page($atts = [])
+    {
+        $this->ensure_frontend_assets();
         return Template::render('cart', []);
     }
 
     public function render_checkout($atts = [])
     {
+        $this->ensure_frontend_assets();
         return Template::render('checkout', []);
     }
 
     public function render_profile($atts = [])
     {
+        $this->ensure_frontend_assets();
         return Template::render('profile', []);
     }
 
     public function render_tracking($atts = [])
     {
+        $this->ensure_frontend_assets();
         return Template::render('tracking', []);
     }
 
     public function render_store_profile($atts = [])
     {
+        $this->ensure_frontend_assets();
+
         $atts = shortcode_atts([
             'seller' => 0,
         ], $atts);
@@ -251,6 +292,83 @@ class Shortcode
         return Template::render('store-profile', [
             'seller_id' => $seller_id,
         ]);
+    }
+
+    public function render_messages_icon($atts = [])
+    {
+        $this->ensure_frontend_assets();
+
+        $atts = shortcode_atts([
+            'class' => '',
+            'show_zero' => 'false',
+        ], $atts);
+
+        $count = is_user_logged_in() ? (new MessageRepository())->unread_count() : 0;
+        $url = add_query_arg(['tab' => 'messages'], Settings::profile_url());
+
+        return $this->render_shortcut_icon_markup(
+            'message',
+            $url,
+            $count,
+            __('Pesan', 'velocity-marketplace'),
+            (string) $atts['class'],
+            filter_var($atts['show_zero'], FILTER_VALIDATE_BOOLEAN),
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-chat" viewBox="0 0 16 16"> <path d="M2.678 11.894a1 1 0 0 1 .287.801 11 11 0 0 1-.398 2c1.395-.323 2.247-.697 2.634-.893a1 1 0 0 1 .71-.074A8 8 0 0 0 8 14c3.996 0 7-2.807 7-6s-3.004-6-7-6-7 2.808-7 6c0 1.468.617 2.83 1.678 3.894m-.493 3.905a22 22 0 0 1-.713.129c-.2.032-.352-.176-.273-.362a10 10 0 0 0 .244-.637l.003-.01c.248-.72.45-1.548.524-2.319C.743 11.37 0 9.76 0 8c0-3.866 3.582-7 8-7s8 3.134 8 7-3.582 7-8 7a9 9 0 0 1-2.347-.306c-.52.263-1.639.742-3.468 1.105"/> </svg>'
+        );
+    }
+
+    public function render_notifications_icon($atts = [])
+    {
+        $this->ensure_frontend_assets();
+
+        $atts = shortcode_atts([
+            'class' => '',
+            'show_zero' => 'false',
+        ], $atts);
+
+        $count = is_user_logged_in() ? (new NotificationRepository())->unread_count() : 0;
+        $url = add_query_arg(['tab' => 'notifications'], Settings::profile_url());
+
+        return $this->render_shortcut_icon_markup(
+            'notification',
+            $url,
+            $count,
+            __('Notifikasi', 'velocity-marketplace'),
+            (string) $atts['class'],
+            filter_var($atts['show_zero'], FILTER_VALIDATE_BOOLEAN),
+            '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-bell" viewBox="0 0 16 16"> <path d="M8 16a2 2 0 0 0 2-2H6a2 2 0 0 0 2 2M8 1.918l-.797.161A4 4 0 0 0 4 6c0 .628-.134 2.197-.459 3.742-.16.767-.376 1.566-.663 2.258h10.244c-.287-.692-.502-1.49-.663-2.258C12.134 8.197 12 6.628 12 6a4 4 0 0 0-3.203-3.92zM14.22 12c.223.447.481.801.78 1H1c.299-.199.557-.553.78-1C2.68 10.2 3 6.88 3 6c0-2.42 1.72-4.44 4.005-4.901a1 1 0 1 1 1.99 0A5 5 0 0 1 13 6c0 .88.32 4.2 1.22 6"/> </svg>'
+        );
+    }
+
+    public function render_profile_icon($atts = [])
+    {
+        $this->ensure_frontend_assets();
+
+        $atts = shortcode_atts([
+            'class' => '',
+        ], $atts);
+
+        $url = Settings::profile_url();
+        $icon_html = '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-person" viewBox="0 0 16 16"> <path d="M8 8a3 3 0 1 0 0-6 3 3 0 0 0 0 6m2-3a2 2 0 1 1-4 0 2 2 0 0 1 4 0m4 8c0 1-1 1-1 1H3s-1 0-1-1 1-4 6-4 6 3 6 4m-1-.004c-.001-.246-.154-.986-.832-1.664C11.516 10.68 10.289 10 8 10s-3.516.68-4.168 1.332c-.678.678-.83 1.418-.832 1.664z"/> </svg>';
+
+        return $this->render_shortcut_icon_markup(
+            'profile',
+            $url,
+            0,
+            __('Profil', 'velocity-marketplace'),
+            (string) $atts['class'],
+            false,
+            $icon_html
+        );
+    }
+
+    public function render_cart_drawer_footer()
+    {
+        if (!$this->needs_cart_drawer || is_admin()) {
+            return;
+        }
+
+        echo Template::render('cart-drawer', []); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     private function resolve_product_id($given_id = 0)
@@ -322,7 +440,7 @@ class Shortcode
     {
         $items = is_array($items) ? $items : [];
         $columns = max(1, min(6, (int) $columns));
-        $empty_message = $empty_message !== '' ? (string) $empty_message : 'Produk belum tersedia.';
+        $empty_message = $empty_message !== '' ? (string) $empty_message : __('Produk belum tersedia.', 'velocity-marketplace');
 
         $col_map = [
             1 => 'col-12',
@@ -335,7 +453,7 @@ class Shortcode
         $col_class = isset($col_map[$columns]) ? $col_map[$columns] : $col_map[4];
 
         if (empty($items)) {
-            return '<div class="py-4 text-center border rounded bg-light"><div class="h6 mb-1">Produk belum tersedia</div><div class="text-muted">' . esc_html($empty_message) . '</div></div>';
+            return '<div class="py-4 text-center border rounded bg-light"><div class="h6 mb-1">' . esc_html__('Produk belum tersedia.', 'velocity-marketplace') . '</div><div class="text-muted">' . esc_html($empty_message) . '</div></div>';
         }
 
         $html = '<div class="row g-3 vmp-builder-grid">';
@@ -365,12 +483,11 @@ class Shortcode
             }
         }
 
-        $basic_default = !empty($item['basic_options'][0]) ? (string) $item['basic_options'][0] : '';
-        $advanced_default = !empty($item['advanced_options'][0]['label']) ? (string) $item['advanced_options'][0]['label'] : '';
-
-        $stock_text = 'Stok tidak dibatasi';
+        $stock_text = __('Stok tidak terbatas', 'velocity-marketplace');
         if (isset($item['stock']) && $item['stock'] !== '' && $item['stock'] !== null) {
-            $stock_text = (float) $item['stock'] > 0 ? 'Stok: ' . (int) $item['stock'] : 'Stok habis';
+            $stock_text = (float) $item['stock'] > 0
+                ? sprintf(__('Stok: %d', 'velocity-marketplace'), (int) $item['stock'])
+                : __('Stok habis', 'velocity-marketplace');
         }
 
         $html = '<div class="card h-100 shadow-sm border-0 vmp-product-card">';
@@ -383,8 +500,8 @@ class Shortcode
         $html .= $this->render_price_markup($item, '', Settings::currency_symbol());
         $html .= '<div class="small text-muted mb-3">' . esc_html($stock_text) . '</div>';
         $html .= '<div class="mt-auto d-flex gap-2">';
-        $html .= $this->render_add_to_cart_markup($product_id, 'Tambah Keranjang', 'btn btn-sm btn-dark flex-grow-1', $basic_default, $advanced_default);
-        $html .= $this->render_add_to_wishlist_markup($product_id, 'Wishlist', 'btn btn-sm btn-outline-secondary', $wishlist_active);
+        $html .= $this->render_add_to_cart_markup($item, __('Tambah Keranjang', 'velocity-marketplace'), 'btn btn-sm btn-dark flex-grow-1');
+        $html .= $this->render_add_to_wishlist_markup($product_id, __('Wishlist', 'velocity-marketplace'), 'btn btn-sm btn-outline-secondary vmp-wishlist-button', $wishlist_active);
         $html .= '</div></div></div>';
 
         return $html;
@@ -401,7 +518,7 @@ class Shortcode
         if ($image !== '') {
             $html .= '<img src="' . esc_url((string) $image) . '" class="card-img-top vmp-thumb" alt="' . esc_attr($title) . '">';
         } else {
-            $html .= '<div class="vmp-thumb vmp-thumb--empty d-flex align-items-center justify-content-center text-muted">Tidak ada gambar</div>';
+            $html .= '<div class="vmp-thumb vmp-thumb--empty d-flex align-items-center justify-content-center text-muted">' . esc_html__('Tidak ada gambar', 'velocity-marketplace') . '</div>';
         }
         $html .= '</a>';
 
@@ -417,17 +534,28 @@ class Shortcode
         return '<div class="vmp-price-wrap mb-1' . ($price_html_class !== '' ? ' ' . esc_attr($price_html_class) : '') . '"><div class="fw-semibold text-danger">' . esc_html((string) $currency_symbol . ' ' . number_format($price, 0, ',', '.')) . '</div></div>';
     }
 
-    private function render_add_to_cart_markup($product_id, $text = 'Tambah Keranjang', $class_name = 'btn btn-sm btn-dark', $basic_default = '', $advanced_default = '')
+    private function render_add_to_cart_markup($item, $text = '', $class_name = 'btn btn-sm btn-dark')
     {
-        $product_id = (int) $product_id;
+        $item = is_array($item) ? $item : [];
+        $product_id = isset($item['id']) ? (int) $item['id'] : 0;
         if ($product_id <= 0) {
             return '';
         }
 
-        return '<button type="button" class="' . esc_attr(trim((string) $class_name)) . ' vmp-action-add-to-cart" data-product-id="' . esc_attr((string) $product_id) . '" data-basic="' . esc_attr((string) $basic_default) . '" data-advanced="' . esc_attr((string) $advanced_default) . '" data-default-label="' . esc_attr((string) $text) . '">' . esc_html((string) $text) . '</button>';
+        $text = $text !== '' ? (string) $text : __('Tambah Keranjang', 'velocity-marketplace');
+
+        $payload = [
+            'title' => (string) ($item['title'] ?? ''),
+            'variant_name' => (string) ($item['variant_name'] ?? ''),
+            'variant_options' => array_values((array) ($item['variant_options'] ?? [])),
+            'price_adjustment_name' => (string) ($item['price_adjustment_name'] ?? ''),
+            'price_adjustment_options' => array_values((array) ($item['price_adjustment_options'] ?? [])),
+        ];
+
+        return '<button type="button" class="' . esc_attr(trim((string) $class_name)) . ' vmp-action-add-to-cart" data-product-id="' . esc_attr((string) $product_id) . '" data-product-options="' . esc_attr(wp_json_encode($payload)) . '" data-default-label="' . esc_attr((string) $text) . '">' . esc_html((string) $text) . '</button>';
     }
 
-    private function render_add_to_wishlist_markup($product_id, $text = 'Wishlist', $class_name = 'btn btn-sm btn-outline-secondary', $active = false)
+    private function render_add_to_wishlist_markup($product_id, $text = '', $class_name = 'btn btn-sm btn-outline-secondary vmp-wishlist-button', $active = false)
     {
         $product_id = (int) $product_id;
         if ($product_id <= 0) {
@@ -435,8 +563,73 @@ class Shortcode
         }
 
         $active = !empty($active);
+        $text = $text !== '' ? (string) $text : __('Wishlist', 'velocity-marketplace');
+        $classes = trim((string) $class_name) . ' vmp-action-toggle-wishlist' . ($active ? ' is-active' : '');
 
-        return '<button type="button" class="' . esc_attr(trim((string) $class_name)) . ' vmp-action-toggle-wishlist' . ($active ? ' btn-danger' : '') . '" data-product-id="' . esc_attr((string) $product_id) . '" data-default-label="' . esc_attr((string) $text) . '" aria-pressed="' . ($active ? 'true' : 'false') . '" title="Wishlist">' . esc_html((string) $text) . '</button>';
+        return '<button type="button" class="' . esc_attr(trim($classes)) . '" data-product-id="' . esc_attr((string) $product_id) . '" data-default-label="' . esc_attr((string) $text) . '" aria-pressed="' . ($active ? 'true' : 'false') . '" title="' . esc_attr((string) $text) . '" aria-label="' . esc_attr((string) $text) . '">'
+            . $this->wishlist_icon_svg($active)
+            . '</button>';
+    }
+
+    private function wishlist_icon_svg($active = false)
+    {
+        if ($active) {
+            return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-heart-fill" viewBox="0 0 16 16" aria-hidden="true"><path fill-rule="evenodd" d="M8 1.314C12.438-3.248 23.534 4.735 8 15C-7.534 4.736 3.562-3.248 8 1.314"/></svg>';
+        }
+
+        return '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-heart" viewBox="0 0 16 16" aria-hidden="true"><path d="m8 2.748-.717-.737C5.6.281 2.514.878 1.4 3.053c-.523 1.023-.641 2.5.314 4.385.92 1.815 2.834 3.989 6.286 6.357 3.452-2.368 5.365-4.542 6.286-6.357.955-1.886.838-3.362.314-4.385C13.486.878 10.4.28 8.717 2.01zM8 15C-7.333 4.868 3.279-3.04 7.824 1.143c.06.055.119.112.176.171a3 3 0 0 1 .176-.17C12.72-3.042 23.333 4.867 8 15"/></svg>';
+    }
+
+    private function render_shortcut_icon_markup($type, $url, $count, $label, $class_name = '', $show_zero = false, $icon_svg = '', $attributes = [], $requires_login = true)
+    {
+        $type = sanitize_key((string) $type);
+        $count = max(0, (int) $count);
+        $label = sanitize_text_field((string) $label);
+        $class_name = trim((string) $class_name);
+        $url = (!$requires_login || is_user_logged_in()) ? (string) $url : wp_login_url((string) $url);
+        $should_show_badge = $show_zero || $count > 0;
+
+        $classes = trim('vmp-cart-shortcut vmp-shortcut vmp-shortcut--' . $type . ' ' . $class_name);
+        $badge_style = $should_show_badge ? '' : ' style="display:none"';
+        $badge_html = '<span class="vmp-cart-shortcut__badge" aria-hidden="true"' . $badge_style . '>' . esc_html((string) $count) . '</span>';
+        $attribute_html = '';
+
+        foreach ((array) $attributes as $name => $value) {
+            $name = strtolower(trim((string) $name));
+            if ($name === '') {
+                continue;
+            }
+            $attribute_html .= ' ' . esc_attr($name) . '="' . esc_attr((string) $value) . '"';
+        }
+
+        return '<a href="' . esc_url($url) . '" class="' . esc_attr($classes) . '" aria-label="' . esc_attr($label) . '"' . $attribute_html . '>'
+            . '<span class="vmp-cart-shortcut__toggle" aria-hidden="true">'
+            . '<span class="vmp-cart-shortcut__icon">' . $icon_svg . '</span>'
+            . $badge_html
+            . '</span>'
+            . '</a>';
+    }
+
+    private function cart_page_url()
+    {
+        $pages = get_option(VMP_PAGES_OPTION, []);
+        if (is_array($pages) && !empty($pages['keranjang'])) {
+            $url = get_permalink((int) $pages['keranjang']);
+            if ($url) {
+                return $url;
+            }
+        }
+
+        return site_url('/cart/');
+    }
+
+    private function ensure_frontend_assets()
+    {
+        if (is_admin()) {
+            return;
+        }
+
+        (new Assets())->enqueue_forced();
     }
 }
 

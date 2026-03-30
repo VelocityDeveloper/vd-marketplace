@@ -5,7 +5,7 @@
     return;
   }
 
-  const { cfg, api, request, money, placeholder } = shared;
+  const { cfg, api, request, money, placeholder, wishlistIconSvg } = shared;
 
   // Menyediakan state Alpine untuk filter, pagination, dan aksi katalog.
   const vmpCatalog = (perPage = 12) => ({
@@ -117,15 +117,15 @@
     // Menambahkan produk dari katalog ke keranjang dengan opsi default teraman.
     async addToCart(item) {
       const options = {};
-      if (Array.isArray(item.basic_options) && item.basic_options.length > 0) {
-        options.basic = item.basic_options[0];
+      if (Array.isArray(item.variant_options) && item.variant_options.length > 0) {
+        options.variant = item.variant_options[0];
       }
       if (
-        Array.isArray(item.advanced_options) &&
-        item.advanced_options.length > 0 &&
-        item.advanced_options[0].label
+        Array.isArray(item.price_adjustment_options) &&
+        item.price_adjustment_options.length > 0 &&
+        item.price_adjustment_options[0].label
       ) {
-        options.advanced = item.advanced_options[0].label;
+        options.price_adjustment = item.price_adjustment_options[0].label;
       }
 
       try {
@@ -147,6 +147,10 @@
     // Mengecek apakah produk sudah ada di daftar favorit user.
     isWishlisted(productId) {
       return this.wishlistIds.includes(Number(productId));
+    },
+    // Menghasilkan ikon hati outline/fill untuk tombol wishlist katalog.
+    wishlistIcon(active) {
+      return wishlistIconSvg(!!active);
     },
     // Menambah atau menghapus produk dari daftar favorit user login.
     async toggleWishlist(item) {

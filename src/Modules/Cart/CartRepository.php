@@ -28,19 +28,20 @@ class CartRepository
         ];
     }
 
-    public function upsert_item($product_id, $qty, $options = [])
+    public function upsert_item($product_id, $qty, $options = [], $cart_key = '')
     {
         $product_id = (int) $product_id;
         $qty = (int) $qty;
+        $cart_key = is_string($cart_key) ? trim($cart_key) : '';
 
         if ($product_id <= 0 || get_post_type($product_id) !== 'vmp_product') {
             return new \WP_Error('invalid_product', 'Produk tidak valid');
         }
 
         if ($this->is_logged_in()) {
-            $this->upsert_user_meta_item($product_id, $qty, $options);
+            $this->upsert_user_meta_item($product_id, $qty, $options, $cart_key);
         } else {
-            $this->upsert_cookie_item($product_id, $qty, $options);
+            $this->upsert_cookie_item($product_id, $qty, $options, $cart_key);
         }
 
         return true;
@@ -70,7 +71,7 @@ class CartRepository
         return $this->hydrate_items($value);
     }
 
-    private function upsert_user_meta_item($product_id, $qty, $options)
+    private function upsert_user_meta_item($product_id, $qty, $options, $cart_key = '')
     {
         $cart = get_user_meta(get_current_user_id(), self::USER_META_KEY, true);
         if (!is_array($cart)) {
@@ -78,11 +79,16 @@ class CartRepository
         }
         $normalized_options = ProductData::normalize_options($product_id, $options);
         $key = $this->cart_key($product_id, $normalized_options);
+        $current_key = ($cart_key !== '' && isset($cart[$cart_key])) ? $cart_key : $key;
 
         if ($qty <= 0) {
-            unset($cart[$key]);
+            unset($cart[$current_key]);
             update_user_meta(get_current_user_id(), self::USER_META_KEY, $cart);
             return;
+        }
+
+        if ($current_key !== $key) {
+            unset($cart[$current_key]);
         }
 
         $cart[$key] = [
@@ -99,16 +105,21 @@ class CartRepository
         return $this->hydrate_items($cart);
     }
 
-    private function upsert_cookie_item($product_id, $qty, $options)
+    private function upsert_cookie_item($product_id, $qty, $options, $cart_key = '')
     {
         $options = ProductData::normalize_options($product_id, is_array($options) ? $options : []);
         $cart = $this->read_cookie_cart();
         $key = $this->cart_key($product_id, $options);
+        $current_key = ($cart_key !== '' && isset($cart[$cart_key])) ? $cart_key : $key;
 
         if ($qty <= 0) {
-            unset($cart[$key]);
+            unset($cart[$current_key]);
             $this->write_cookie_cart($cart);
             return;
+        }
+
+        if ($current_key !== $key) {
+            unset($cart[$current_key]);
         }
 
         $cart[$key] = [
@@ -130,7 +141,7 @@ class CartRepository
         $seller_groups = [];
         $seller_order = [];
 
-        foreach ($rows as $row) {
+        foreach ($rows as $row_key => $row) {
             if (!is_array($row)) {
                 continue;
             }
@@ -153,12 +164,13 @@ class CartRepository
             $seller_url = $seller_id > 0 ? Settings::store_profile_url($seller_id) : '';
 
             $options = ProductData::normalize_options($product_id, $options);
-            $adv_label = isset($options['advanced']) ? (string) $options['advanced'] : '';
-            $price_override = ProductData::resolve_advanced_price($product_id, $adv_label);
-            $price = $price_override !== null ? $price_override : (float) $product['price'];
+            $price_adjustment_label = isset($options['price_adjustment']) ? (string) $options['price_adjustment'] : '';
+            $price_adjustment = ProductData::resolve_price_adjustment($product_id, $price_adjustment_label);
+            $price = (float) $product['price'] + (float) $price_adjustment;
             $subtotal = $price * $qty;
 
             $item = [
+                'cart_key' => is_string($row_key) ? $row_key : '',
                 'id' => $product_id,
                 'title' => $product['title'],
                 'link' => $product['link'],

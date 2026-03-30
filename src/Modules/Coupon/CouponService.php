@@ -47,31 +47,37 @@ class CouponService
         $shipping_total = (float) $shipping_total;
         $coupon = $this->find_by_code($code);
         if (!$coupon) {
-            return new \WP_Error('coupon_not_found', 'Kode kupon tidak ditemukan.');
+            return new \WP_Error('coupon_not_found', __('Coupon code not found.', 'velocity-marketplace'));
         }
 
         if (empty($coupon['is_active'])) {
-            return new \WP_Error('coupon_inactive', 'Kupon sedang tidak aktif.');
+            return new \WP_Error('coupon_inactive', __('This coupon is currently inactive.', 'velocity-marketplace'));
         }
 
         $now = current_time('timestamp');
         if (!empty($coupon['starts_at']) && strtotime((string) $coupon['starts_at']) > $now) {
-            return new \WP_Error('coupon_not_started', 'Kupon belum bisa digunakan.');
+            return new \WP_Error('coupon_not_started', __('This coupon is not available yet.', 'velocity-marketplace'));
         }
         if (!empty($coupon['ends_at']) && strtotime((string) $coupon['ends_at']) < $now) {
-            return new \WP_Error('coupon_expired', 'Kupon sudah berakhir.');
+            return new \WP_Error('coupon_expired', __('This coupon has expired.', 'velocity-marketplace'));
         }
 
         if ($subtotal <= 0) {
-            return new \WP_Error('coupon_invalid_cart', 'Subtotal belanja belum valid.');
+            return new \WP_Error('coupon_invalid_cart', __('Subtotal keranjang belum valid.', 'velocity-marketplace'));
         }
 
         if ($subtotal < (float) $coupon['min_purchase']) {
-            return new \WP_Error('coupon_min_purchase', 'Minimal belanja untuk kupon ini adalah Rp ' . number_format((float) $coupon['min_purchase'], 0, ',', '.') . '.');
+            return new \WP_Error(
+                'coupon_min_purchase',
+                sprintf(
+                    __('The minimum purchase for this coupon is Rp %s.', 'velocity-marketplace'),
+                    number_format((float) $coupon['min_purchase'], 0, ',', '.')
+                )
+            );
         }
 
         if ((int) $coupon['usage_limit'] > 0 && (int) $coupon['usage_count'] >= (int) $coupon['usage_limit']) {
-            return new \WP_Error('coupon_usage_limit', 'Kupon sudah mencapai batas penggunaan.');
+            return new \WP_Error('coupon_usage_limit', __('This coupon has reached its usage limit.', 'velocity-marketplace'));
         }
 
         $product_discount = 0.0;
@@ -80,7 +86,7 @@ class CouponService
 
         if ($scope === 'shipping') {
             if ($shipping_total <= 0) {
-                return new \WP_Error('coupon_invalid_shipping', 'Kupon ongkir baru bisa dipakai setelah ongkir tersedia.');
+                return new \WP_Error('coupon_invalid_shipping', __('Kupon ongkir hanya bisa digunakan setelah ongkir tersedia.', 'velocity-marketplace'));
             }
 
             if ($coupon['type'] === 'percent') {
@@ -100,7 +106,7 @@ class CouponService
 
         $discount = $product_discount + $shipping_discount;
         if ($discount <= 0.0) {
-            return new \WP_Error('coupon_zero_discount', 'Kupon tidak memberi potongan untuk transaksi ini.');
+            return new \WP_Error('coupon_zero_discount', __('This coupon does not provide a discount for this transaction.', 'velocity-marketplace'));
         }
 
         $coupon['product_discount'] = round($product_discount, 2);

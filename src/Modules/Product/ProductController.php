@@ -29,6 +29,7 @@ class ProductController
 
     public function get_products(WP_REST_Request $request)
     {
+        $product_query = new ProductQuery();
         $page = max(1, (int) $request->get_param('page'));
         $per_page = (int) $request->get_param('per_page');
         if ($per_page <= 0) {
@@ -36,96 +37,12 @@ class ProductController
         }
         $per_page = min(36, $per_page);
 
-        $search = sanitize_text_field((string) $request->get_param('search'));
-        $sort = sanitize_key((string) $request->get_param('sort'));
-        $cat = (int) $request->get_param('cat');
-        $author = (int) $request->get_param('author');
-        $label = sanitize_key((string) $request->get_param('label'));
-        $store_type = sanitize_key((string) $request->get_param('store_type'));
-        $min_price = $request->get_param('min_price');
-        $max_price = $request->get_param('max_price');
-
-        $args = [
-            'post_type' => 'vmp_product',
-            'post_status' => 'publish',
+        $filters = $product_query->normalize_filters($request->get_params());
+        $sort = (string) ($filters['sort'] ?? 'latest');
+        $args = $product_query->build_query_args($filters, [
             'paged' => $page,
             'posts_per_page' => $per_page,
-            's' => $search,
-        ];
-
-        if ($cat > 0) {
-            $args['tax_query'] = [
-                [
-                    'taxonomy' => 'vmp_product_cat',
-                    'field' => 'term_id',
-                    'terms' => [$cat],
-                ],
-            ];
-        }
-        if ($author > 0) {
-            $args['author'] = $author;
-        }
-        if ($store_type !== '') {
-            $author_ids = $this->author_ids_for_store_type($store_type);
-            if ($author > 0) {
-                if (!in_array($author, $author_ids, true)) {
-                    $args['author__in'] = [0];
-                }
-            } else {
-                $args['author__in'] = !empty($author_ids) ? $author_ids : [0];
-            }
-        }
-
-        $meta_query = [];
-        if ($min_price !== null && $min_price !== '') {
-            $meta_query[] = [
-                'key' => 'price',
-                'value' => (float) $min_price,
-                'type' => 'NUMERIC',
-                'compare' => '>=',
-            ];
-        }
-        if ($max_price !== null && $max_price !== '') {
-            $meta_query[] = [
-                'key' => 'price',
-                'value' => (float) $max_price,
-                'type' => 'NUMERIC',
-                'compare' => '<=',
-            ];
-        }
-        if ($label !== '') {
-            $meta_query[] = [
-                'key' => 'label',
-                'value' => $label,
-                'compare' => '=',
-            ];
-        }
-        if (!empty($meta_query)) {
-            $args['meta_query'] = array_merge(['relation' => 'AND'], $meta_query);
-        }
-
-        if ($sort === 'price_asc') {
-            $args['meta_key'] = 'price';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = 'ASC';
-        } elseif ($sort === 'price_desc') {
-            $args['meta_key'] = 'price';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = 'DESC';
-        } elseif ($sort === 'popular') {
-            $args['meta_key'] = 'vmp_hits';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = 'DESC';
-        } elseif ($sort === 'name_asc') {
-            $args['orderby'] = 'title';
-            $args['order'] = 'ASC';
-        } elseif ($sort === 'name_desc') {
-            $args['orderby'] = 'title';
-            $args['order'] = 'DESC';
-        } else {
-            $args['orderby'] = 'date';
-            $args['order'] = 'DESC';
-        }
+        ]);
 
         $query = new \WP_Query($args);
         $items = [];
@@ -173,38 +90,6 @@ class ProductController
 
         $item['content'] = apply_filters('the_content', get_post_field('post_content', $id));
         return new WP_REST_Response($item, 200);
-    }
-
-    private function author_ids_for_store_type($store_type)
-    {
-        $store_type = sanitize_key((string) $store_type);
-        if (!in_array($store_type, ['star_seller', 'regular'], true)) {
-            return [];
-        }
-
-        $users = get_users([
-            'fields' => ['ID'],
-            'role__in' => ['vmp_member', 'administrator'],
-            'number' => -1,
-        ]);
-
-        $author_ids = [];
-        foreach ((array) $users as $user) {
-            $user_id = isset($user->ID) ? (int) $user->ID : 0;
-            if ($user_id <= 0) {
-                continue;
-            }
-
-            $is_star = !empty(get_user_meta($user_id, 'vmp_is_star_seller', true));
-            if ($store_type === 'star_seller' && $is_star) {
-                $author_ids[] = $user_id;
-            }
-            if ($store_type === 'regular' && !$is_star) {
-                $author_ids[] = $user_id;
-            }
-        }
-
-        return array_values(array_unique($author_ids));
     }
 }
 

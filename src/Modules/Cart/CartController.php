@@ -55,13 +55,14 @@ class CartController
         $product_id = isset($body['id']) ? (int) $body['id'] : 0;
         $qty = isset($body['qty']) ? (int) $body['qty'] : 0;
         $options = isset($body['options']) && is_array($body['options']) ? $body['options'] : [];
+        $cart_key = isset($body['cart_key']) ? sanitize_text_field((string) $body['cart_key']) : '';
 
         if ($product_id <= 0) {
             return new WP_REST_Response(['message' => 'Produk tidak valid.'], 400);
         }
 
         $repo = new CartRepository();
-        $result = $repo->upsert_item($product_id, $qty, $options);
+        $result = $repo->upsert_item($product_id, $qty, $options, $cart_key);
         if (is_wp_error($result)) {
             return new WP_REST_Response(['message' => $result->get_error_message()], 400);
         }

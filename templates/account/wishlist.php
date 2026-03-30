@@ -1,14 +1,58 @@
-    <?php if (empty($wishlist_ids)) : ?>
-        <div class="alert alert-info mb-0">Belum ada produk dalam daftar favorit. Tambahkan produk dari katalog untuk menyimpannya di sini.</div>
-    <?php else : ?>
-        <?php $wishlist_query = new \WP_Query(['post_type' => 'vmp_product','post_status' => 'publish','posts_per_page' => 100,'post__in' => $wishlist_ids,'orderby' => 'post__in']); ?>
-        <div class="table-responsive border rounded"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Produk</th><th class="text-end">Harga</th><th class="text-end">Aksi</th></tr></thead><tbody>
-        <?php while ($wishlist_query->have_posts()) : $wishlist_query->the_post(); $pid = get_the_ID(); $price = (float) get_post_meta($pid, 'price', true); ?>
-            <tr>
-                <td><a href="<?php echo esc_url(get_permalink($pid)); ?>" target="_blank"><?php the_title(); ?></a></td>
-                <td class="text-end"><?php echo esc_html($money($price)); ?></td>
-                <td class="text-end"><form method="post" class="d-inline"><input type="hidden" name="vmp_action" value="wishlist_remove"><input type="hidden" name="product_id" value="<?php echo esc_attr($pid); ?>"><?php wp_nonce_field('vmp_wishlist_remove_' . $pid, 'vmp_wishlist_nonce'); ?><button class="btn btn-sm btn-outline-danger" type="submit">Hapus</button></form></td>
-            </tr>
-        <?php endwhile; wp_reset_postdata(); ?>
-        </tbody></table></div>
-    <?php endif; ?>
+<?php
+
+use VelocityMarketplace\Modules\Product\ProductData;
+
+if (empty($wishlist_ids)) :
+    ?>
+    <div class="alert alert-info mb-0"><?php echo esc_html__('Belum ada produk yang ditambahkan ke wishlist. Simpan produk dari katalog untuk melihatnya di sini.', 'velocity-marketplace'); ?></div>
+<?php
+else :
+    $wishlist_query = new \WP_Query([
+        'post_type' => 'vmp_product',
+        'post_status' => 'publish',
+        'posts_per_page' => 100,
+        'post__in' => $wishlist_ids,
+        'orderby' => 'post__in',
+    ]);
+    ?>
+    <div class="row g-3">
+        <?php while ($wishlist_query->have_posts()) : $wishlist_query->the_post(); ?>
+            <?php $item = ProductData::map_post(get_the_ID()); ?>
+            <?php if (!$item) : continue; endif; ?>
+            <div class="col-6 col-md-4 col-xl-3">
+                <div class="card h-100 shadow-sm border-0 vmp-product-card">
+                    <?php echo do_shortcode('[vmp_thumbnail id="' . (int) $item['id'] . '"]'); ?>
+                    <div class="card-body d-flex flex-column">
+                        <h3 class="card-title h6 mb-1">
+                            <a href="<?php echo esc_url($item['link']); ?>" class="text-decoration-none text-dark">
+                                <?php echo esc_html($item['title']); ?>
+                            </a>
+                        </h3>
+
+                        <?php if (!empty($item['label'])) : ?>
+                            <div class="small text-muted mb-2"><?php echo esc_html((string) $item['label']); ?></div>
+                        <?php endif; ?>
+
+                        <?php echo do_shortcode('[vmp_price id="' . (int) $item['id'] . '"]'); ?>
+
+                        <div class="small text-muted mb-3">
+                            <?php
+                            if ($item['stock'] === null || $item['stock'] === '') {
+                                echo esc_html__('Stok tidak terbatas', 'velocity-marketplace');
+                            } else {
+                                echo esc_html((float) $item['stock'] > 0 ? sprintf(__('Stok: %d', 'velocity-marketplace'), (int) $item['stock']) : __('Stok habis', 'velocity-marketplace'));
+                            }
+                            ?>
+                        </div>
+
+                        <div class="mt-auto d-flex gap-2">
+                            <?php echo do_shortcode('[vmp_add_to_cart id="' . (int) $item['id'] . '" class="btn btn-sm btn-dark flex-grow-1"]'); ?>
+                            <?php echo do_shortcode('[vmp_add_to_wishlist id="' . (int) $item['id'] . '" class="btn btn-sm btn-outline-secondary vmp-wishlist-button"]'); ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        <?php endwhile; ?>
+    </div>
+    <?php wp_reset_postdata(); ?>
+<?php endif; ?>

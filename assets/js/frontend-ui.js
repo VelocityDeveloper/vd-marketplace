@@ -5,22 +5,253 @@
     return;
   }
 
-  const { cfg, request, flashButtonLabel } = shared;
+  const { cfg, request, flashButtonLabel, money, wishlistIconSvg } = shared;
+  const bootstrapApi = window.bootstrap || window.justg || null;
+
+  // Membuat dan mengelola modal pilihan produk sebelum item dimasukkan ke keranjang.
+  const createCartOptionModal = () => {
+    let modal = null;
+    let modalInstance = null;
+    let activeButton = null;
+    let fallbackBackdrop = null;
+    const escapeHtml = (value) =>
+      String(value || '')
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+
+    const ensureModal = () => {
+      if (modal) return modal;
+
+      modal = document.createElement('div');
+      modal.className = 'modal fade';
+      modal.tabIndex = -1;
+      modal.setAttribute('aria-hidden', 'true');
+      modal.innerHTML = `
+        <div class="modal-dialog modal-dialog-centered">
+          <div class="modal-content border-0 shadow">
+            <form>
+              <div class="modal-header">
+                <div>
+                  <div class="text-uppercase text-muted small fw-semibold">Pilih Opsi Produk</div>
+                  <h5 class="modal-title mt-1" id="vmp-cart-option-title"></h5>
+                </div>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Tutup"></button>
+              </div>
+              <div class="modal-body">
+                <div class="vmp-cart-option-modal__fields d-grid gap-3"></div>
+              </div>
+              <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Batal</button>
+                <button type="submit" class="btn btn-dark">Tambah Keranjang</button>
+              </div>
+            </form>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(modal);
+      if (bootstrapApi && bootstrapApi.Modal) {
+        modalInstance = new bootstrapApi.Modal(modal);
+      }
+
+      modal.addEventListener('hidden.bs.modal', () => {
+        activeButton = null;
+      });
+
+      modal.querySelector('form').addEventListener('submit', async (event) => {
+        event.preventDefault();
+        if (!activeButton) return;
+
+        const productId = Number(activeButton.dataset.productId || 0);
+        if (productId <= 0) return;
+        const submittedButton = activeButton;
+
+        const form = event.currentTarget;
+        const variantSelect = form.querySelector('[name="variant"]');
+        const adjustmentSelect = form.querySelector('[name="price_adjustment"]');
+        const options = {};
+
+        if (variantSelect && String(variantSelect.value || '').trim() !== '') {
+          options.variant = String(variantSelect.value || '').trim();
+        }
+
+        if (adjustmentSelect && String(adjustmentSelect.value || '').trim() !== '') {
+          options.price_adjustment = String(adjustmentSelect.value || '').trim();
+        }
+
+        submittedButton.disabled = true;
+        try {
+          await request('cart', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              id: productId,
+              qty: 1,
+              options,
+            }),
+          });
+          flashButtonLabel(submittedButton, 'Ditambahkan');
+          window.dispatchEvent(new CustomEvent('vmp:cart-updated'));
+          closeModal();
+        } catch (e) {
+          flashButtonLabel(submittedButton, 'Gagal');
+        } finally {
+          window.setTimeout(() => {
+            submittedButton.disabled = false;
+          }, 500);
+        }
+      });
+
+      return modal;
+    };
+
+    const ensureFallbackBackdrop = () => {
+      if (fallbackBackdrop) return fallbackBackdrop;
+
+      fallbackBackdrop = document.createElement('div');
+      fallbackBackdrop.className = 'modal-backdrop fade';
+      fallbackBackdrop.addEventListener('click', () => {
+        closeModal();
+      });
+      return fallbackBackdrop;
+    };
+
+    const parseOptions = (button) => {
+      try {
+        return JSON.parse(String(button?.dataset.productOptions || '{}'));
+      } catch (e) {
+        return {};
+      }
+    };
+
+    const hasSelectableOptions = (button) => {
+      const payload = parseOptions(button);
+      return (
+        (Array.isArray(payload.variant_options) && payload.variant_options.length > 0) ||
+        (Array.isArray(payload.price_adjustment_options) &&
+          payload.price_adjustment_options.length > 0)
+      );
+    };
+
+    const renderAdjustmentOptions = (rows) =>
+      rows
+        .map((row, index) => {
+          const label = String(row?.label || '').trim();
+          if (!label) return '';
+          const amount = Number(row?.amount || 0);
+          const suffix = amount > 0 ? ` (+${money(amount)})` : '';
+          return `<option value="${escapeHtml(label)}" ${index === 0 ? 'selected' : ''}>${escapeHtml(label + suffix)}</option>`;
+        })
+        .join('');
+
+    const renderVariantOptions = (rows) =>
+      rows
+        .map((label, index) => {
+          const text = String(label || '').trim();
+          if (!text) return '';
+          return `<option value="${escapeHtml(text)}" ${index === 0 ? 'selected' : ''}>${escapeHtml(text)}</option>`;
+        })
+        .join('');
+
+    const openModal = (button) => {
+      const payload = parseOptions(button);
+      const node = ensureModal();
+      if (!node) return false;
+      const title = node.querySelector('#vmp-cart-option-title');
+      const fields = node.querySelector('.vmp-cart-option-modal__fields');
+      const parts = [];
+
+      if (Array.isArray(payload.variant_options) && payload.variant_options.length > 0) {
+        parts.push(`
+          <div>
+            <label class="form-label">${escapeHtml(String(payload.variant_name || 'Pilihan Varian'))}</label>
+            <select class="form-select" name="variant">
+              ${renderVariantOptions(payload.variant_options)}
+            </select>
+          </div>
+        `);
+      }
+
+      if (
+        Array.isArray(payload.price_adjustment_options) &&
+        payload.price_adjustment_options.length > 0
+      ) {
+        parts.push(`
+          <div>
+            <label class="form-label">${escapeHtml(String(payload.price_adjustment_name || 'Pilihan Harga'))}</label>
+            <select class="form-select" name="price_adjustment">
+              ${renderAdjustmentOptions(payload.price_adjustment_options)}
+            </select>
+            <div class="form-text">Pilihan ini akan menambah harga dari harga dasar produk.</div>
+          </div>
+        `);
+      }
+
+      title.textContent = String(payload.title || 'Pilih Opsi Produk');
+      fields.innerHTML = parts.join('');
+      activeButton = button;
+
+      if (modalInstance) {
+        modalInstance.show();
+        return true;
+      }
+
+      const backdrop = ensureFallbackBackdrop();
+      if (!document.body.contains(backdrop)) {
+        document.body.appendChild(backdrop);
+      }
+
+      node.style.display = 'block';
+      node.removeAttribute('aria-hidden');
+      node.classList.add('show');
+      backdrop.classList.add('show');
+      document.body.classList.add('modal-open');
+      return true;
+    };
+
+    const closeModal = () => {
+      if (modalInstance) {
+        modalInstance.hide();
+        return;
+      }
+
+      if (!modal) return;
+      modal.classList.remove('show');
+      modal.setAttribute('aria-hidden', 'true');
+      modal.style.display = 'none';
+      activeButton = null;
+      document.body.classList.remove('modal-open');
+      if (fallbackBackdrop && fallbackBackdrop.parentNode) {
+        fallbackBackdrop.parentNode.removeChild(fallbackBackdrop);
+      }
+    };
+
+    return {
+      hasSelectableOptions,
+      openModal,
+    };
+  };
 
   // Mengikat tombol global tambah ke keranjang dan toggle wishlist.
   const initActionButtons = () => {
+    const optionModal = createCartOptionModal();
+
     document.addEventListener('click', async (event) => {
       const cartButton = event.target.closest('.vmp-action-add-to-cart');
       if (cartButton) {
         event.preventDefault();
 
         const productId = Number(cartButton.dataset.productId || 0);
-        const basic = String(cartButton.dataset.basic || '').trim();
-        const advanced = String(cartButton.dataset.advanced || '').trim();
-        const options = {};
-        if (basic) options.basic = basic;
-        if (advanced) options.advanced = advanced;
         if (productId <= 0) return;
+
+        if (optionModal.hasSelectableOptions(cartButton)) {
+          if (optionModal.openModal(cartButton)) {
+            return;
+          }
+        }
 
         cartButton.disabled = true;
         try {
@@ -30,7 +261,7 @@
             body: JSON.stringify({
               id: productId,
               qty: 1,
-              options,
+              options: {},
             }),
           });
           flashButtonLabel(cartButton, 'Ditambahkan');
@@ -52,7 +283,6 @@
 
       event.preventDefault();
       if (!cfg.isLoggedIn) {
-        flashButtonLabel(wishlistButton, 'Masuk');
         return;
       }
 
@@ -67,12 +297,12 @@
           body: JSON.stringify({ product_id: productId }),
         });
         const active = !!data.active;
-        wishlistButton.classList.toggle('btn-danger', active);
-        wishlistButton.classList.toggle('btn-outline-secondary', !active);
+        wishlistButton.classList.toggle('is-active', active);
         wishlistButton.setAttribute('aria-pressed', active ? 'true' : 'false');
-        flashButtonLabel(wishlistButton, active ? 'Tersimpan' : 'Dihapus');
+        wishlistButton.innerHTML = wishlistIconSvg(active);
       } catch (e) {
-        flashButtonLabel(wishlistButton, 'Coba Lagi');
+        wishlistButton.classList.remove('is-active');
+        wishlistButton.innerHTML = wishlistIconSvg(false);
       } finally {
         window.setTimeout(() => {
           wishlistButton.disabled = false;

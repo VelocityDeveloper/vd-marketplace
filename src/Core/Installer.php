@@ -15,27 +15,33 @@ class Installer
     {
         $pages = [
             'katalog' => [
-                'title' => 'Katalog',
+                'title' => __('Katalog', 'velocity-marketplace'),
+                'slug' => 'catalog',
                 'content' => '[vmp_catalog]',
             ],
             'keranjang' => [
-                'title' => 'Keranjang',
-                'content' => '[vmp_cart]',
+                'title' => __('Keranjang', 'velocity-marketplace'),
+                'slug' => 'cart',
+                'content' => '[vmp_cart_page]',
             ],
             'checkout' => [
-                'title' => 'Checkout',
+                'title' => __('Checkout', 'velocity-marketplace'),
+                'slug' => 'checkout',
                 'content' => '[vmp_checkout]',
             ],
             'myaccount' => [
-                'title' => 'My Account',
+                'title' => __('Akun', 'velocity-marketplace'),
+                'slug' => 'account',
                 'content' => '[vmp_profile]',
             ],
             'tracking' => [
-                'title' => 'Lacak Pesanan',
+                'title' => __('Lacak Pesanan', 'velocity-marketplace'),
+                'slug' => 'order-tracking',
                 'content' => '[vmp_tracking]',
             ],
             'toko' => [
-                'title' => 'Profil Toko',
+                'title' => __('Toko', 'velocity-marketplace'),
+                'slug' => 'store',
                 'content' => '[vmp_store_profile]',
             ],
         ];
@@ -46,7 +52,8 @@ class Installer
         }
 
         foreach ($pages as $slug => $page) {
-            $existing = get_page_by_path($slug);
+            $page_slug = isset($page['slug']) ? sanitize_title((string) $page['slug']) : sanitize_title((string) $slug);
+            $existing = get_page_by_path($page_slug);
             if ($existing && isset($existing->ID)) {
                 $stored[$slug] = (int) $existing->ID;
                 continue;
@@ -56,7 +63,7 @@ class Installer
                 'post_type' => 'page',
                 'post_status' => 'publish',
                 'post_title' => $page['title'],
-                'post_name' => $slug,
+                'post_name' => $page_slug,
                 'post_content' => $page['content'],
                 'comment_status' => 'closed',
                 'ping_status' => 'closed',
@@ -94,7 +101,7 @@ class Installer
         remove_role('vmp_customer');
         remove_role('vmp_seller');
 
-        add_role('vmp_member', 'Marketplace Member', [
+        add_role('vmp_member', __('Member Marketplace', 'velocity-marketplace'), [
             'read' => true,
             'upload_files' => true,
         ]);

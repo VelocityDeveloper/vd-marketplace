@@ -15,10 +15,10 @@ class ProductData
 
         $price = self::resolve_price($post_id);
         $sale_price = self::resolve_sale_price($post_id);
-        $basic_name = self::meta_text($post_id, 'basic_name', 'Pilihan Warna');
-        $basic_options = self::basic_options($post_id);
-        $advanced_name = self::meta_text($post_id, 'advanced_name', 'Pilihan Ukuran');
-        $advanced_options = self::advanced_options($post_id);
+        $variant_name = self::meta_text($post_id, 'variant_name', 'Pilihan Varian');
+        $variant_options = self::variant_options($post_id);
+        $price_adjustment_name = self::meta_text($post_id, 'price_adjustment_name', 'Pilihan Harga');
+        $price_adjustment_options = self::price_adjustment_options($post_id);
         $gallery_ids = self::gallery_ids($post_id);
         $image = self::image_url($post_id, 'large', $gallery_ids);
         $review_summary = (new ReviewRepository())->product_summary($post_id);
@@ -40,10 +40,10 @@ class ProductData
             'weight' => self::meta_number($post_id, 'weight', 0),
             'label' => self::meta_text($post_id, 'label'),
             'is_premium' => (int) self::meta_number($post_id, 'is_premium', 0) === 1,
-            'basic_name' => $basic_name,
-            'basic_options' => $basic_options,
-            'advanced_name' => $advanced_name,
-            'advanced_options' => $advanced_options,
+            'variant_name' => $variant_name,
+            'variant_options' => $variant_options,
+            'price_adjustment_name' => $price_adjustment_name,
+            'price_adjustment_options' => $price_adjustment_options,
             'review_count' => isset($review_summary['review_count']) ? (int) $review_summary['review_count'] : 0,
             'rating_average' => isset($review_summary['rating_average']) ? (float) $review_summary['rating_average'] : 0.0,
         ];
@@ -79,9 +79,9 @@ class ProductData
         return (float) $sale;
     }
 
-    public static function advanced_options($post_id)
+    public static function price_adjustment_options($post_id)
     {
-        $rows = preg_split('/\r\n|\r|\n/', self::meta_text($post_id, 'advanced_options'));
+        $rows = preg_split('/\r\n|\r|\n/', self::meta_text($post_id, 'price_adjustment_options'));
         $result = [];
 
         foreach ((array) $rows as $row) {
@@ -104,33 +104,33 @@ class ProductData
 
             $result[] = [
                 'label' => $label,
-                'price' => (float) $price,
+                'amount' => (float) $price,
             ];
         }
 
         return $result;
     }
 
-    public static function resolve_advanced_price($post_id, $selected_label)
+    public static function resolve_price_adjustment($post_id, $selected_label)
     {
         $selected_label = trim((string) $selected_label);
         if ($selected_label === '') {
-            return null;
+            return 0.0;
         }
 
-        $options = self::advanced_options($post_id);
+        $options = self::price_adjustment_options($post_id);
         foreach ($options as $opt) {
-            if ((string) $opt['label'] === $selected_label && (float) $opt['price'] > 0) {
-                return (float) $opt['price'];
+            if ((string) $opt['label'] === $selected_label) {
+                return (float) ($opt['amount'] ?? 0);
             }
         }
 
-        return null;
+        return 0.0;
     }
 
-    public static function basic_options($post_id)
+    public static function variant_options($post_id)
     {
-        $raw = self::meta_text($post_id, 'basic_options');
+        $raw = self::meta_text($post_id, 'variant_options');
         if ($raw === '') {
             return [];
         }
@@ -143,24 +143,24 @@ class ProductData
     public static function normalize_options($post_id, $options = [])
     {
         $options = is_array($options) ? $options : [];
-        $basic_name = self::meta_text($post_id, 'basic_name', 'Pilihan Warna');
-        $advanced_name = self::meta_text($post_id, 'advanced_name', 'Pilihan Ukuran');
+        $variant_name = self::meta_text($post_id, 'variant_name', 'Pilihan Varian');
+        $price_adjustment_name = self::meta_text($post_id, 'price_adjustment_name', 'Pilihan Harga');
 
-        $basic = isset($options['basic']) ? sanitize_text_field((string) $options['basic']) : '';
-        $advanced = isset($options['advanced']) ? sanitize_text_field((string) $options['advanced']) : '';
+        $variant = isset($options['variant']) ? sanitize_text_field((string) $options['variant']) : '';
+        $price_adjustment = isset($options['price_adjustment']) ? sanitize_text_field((string) $options['price_adjustment']) : '';
 
-        if ($basic === '' && isset($options[$basic_name])) {
-            $basic = sanitize_text_field((string) $options[$basic_name]);
+        if ($variant === '' && isset($options[$variant_name])) {
+            $variant = sanitize_text_field((string) $options[$variant_name]);
         }
-        if ($advanced === '' && isset($options[$advanced_name])) {
-            $advanced = sanitize_text_field((string) $options[$advanced_name]);
+        if ($price_adjustment === '' && isset($options[$price_adjustment_name])) {
+            $price_adjustment = sanitize_text_field((string) $options[$price_adjustment_name]);
         }
 
         $normalized = [
-            'basic' => $basic,
-            'advanced' => $advanced,
-            $basic_name => $basic,
-            $advanced_name => $advanced,
+            'variant' => $variant,
+            'price_adjustment' => $price_adjustment,
+            $variant_name => $variant,
+            $price_adjustment_name => $price_adjustment,
         ];
 
         return $normalized;

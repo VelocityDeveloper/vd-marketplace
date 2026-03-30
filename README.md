@@ -77,6 +77,7 @@ Pakai satu standar ini saja. Jangan tambah alias baru kecuali memang ada alasan 
 - `[vmp_add_to_cart]`
 - `[vmp_add_to_wishlist]`
 - `[vmp_cart]`
+- `[vmp_cart_page]`
 - `[vmp_checkout]`
 - `[vmp_profile]`
 - `[vmp_tracking]`
@@ -86,12 +87,12 @@ Pakai satu standar ini saja. Jangan tambah alias baru kecuali memang ada alasan 
 
 Installer akan membuat page ini jika belum ada:
 
-- `katalog` -> `[vmp_catalog]`
-- `keranjang` -> `[vmp_cart]`
+- `catalog` -> `[vmp_catalog]`
+- `cart` -> `[vmp_cart_page]`
 - `checkout` -> `[vmp_checkout]`
-- `myaccount` -> `[vmp_profile]`
-- `tracking` -> `[vmp_tracking]`
-- `toko` -> `[vmp_store_profile]`
+- `account` -> `[vmp_profile]`
+- `order-tracking` -> `[vmp_tracking]`
+- `store` -> `[vmp_store_profile]`
 
 ## Struktur folder
 

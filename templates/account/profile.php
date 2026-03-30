@@ -29,8 +29,8 @@ $location_state = [
 ?>
 <div class="card border-0 shadow-sm" x-data='vmpMemberProfileForm(<?php echo wp_json_encode($location_state); ?>)' x-init="init()">
     <div class="card-body">
-        <h3 class="h6 mb-3">Profil Saya</h3>
-        <p class="text-muted small mb-3">Simpan data akun dan alamat utama agar proses checkout berikutnya terisi lebih cepat.</p>
+        <h3 class="h6 mb-3"><?php echo esc_html__('Profil Saya', 'velocity-marketplace'); ?></h3>
+        <p class="text-muted small mb-3"><?php echo esc_html__('Simpan data akun dan alamat utama untuk mempercepat proses checkout berikutnya.', 'velocity-marketplace'); ?></p>
         <div class="alert alert-success py-2" x-show="saveMessage" x-text="saveMessage" style="display:none;"></div>
         <div class="alert alert-danger py-2" x-show="saveError" x-text="saveError" style="display:none;"></div>
         <form method="post" class="row g-3" @submit.prevent="submit($event)">
@@ -38,30 +38,30 @@ $location_state = [
             <input type="hidden" name="tab" value="account_profile">
             <?php wp_nonce_field('vmp_customer_profile', 'vmp_customer_profile_nonce'); ?>
             <div class="col-md-6">
-                <label class="form-label">Nama</label>
+                <label class="form-label"><?php echo esc_html__('Nama', 'velocity-marketplace'); ?></label>
                 <input type="text" name="customer_name" class="form-control" value="<?php echo esc_attr($customer_name); ?>" required>
             </div>
             <div class="col-md-6">
-                <label class="form-label">Telepon</label>
+                <label class="form-label"><?php echo esc_html__('Telepon', 'velocity-marketplace'); ?></label>
                 <input type="text" name="customer_phone" class="form-control" value="<?php echo esc_attr($customer_phone); ?>" required>
             </div>
             <div class="col-md-6">
-                <label class="form-label">Email</label>
+                <label class="form-label"><?php echo esc_html__('Email', 'velocity-marketplace'); ?></label>
                 <input type="email" class="form-control" value="<?php echo esc_attr($customer_email); ?>" readonly>
-                <div class="form-text">Perubahan email akun dilakukan melalui pengaturan akun WordPress.</div>
+                <div class="form-text"><?php echo esc_html__('Perubahan email dikelola dari halaman pengaturan akun WordPress.', 'velocity-marketplace'); ?></div>
             </div>
             <div class="col-md-6">
-                <label class="form-label">Kode Pos</label>
+                <label class="form-label"><?php echo esc_html__('Kode Pos', 'velocity-marketplace'); ?></label>
                 <input type="text" name="customer_postcode" class="form-control" x-model="form.postcode">
             </div>
             <div class="col-12">
-                <label class="form-label">Alamat</label>
+                <label class="form-label"><?php echo esc_html__('Alamat', 'velocity-marketplace'); ?></label>
                 <textarea name="customer_address" class="form-control" rows="3" required><?php echo esc_textarea($customer_address); ?></textarea>
             </div>
             <div class="col-md-4">
-                <label class="form-label">Provinsi</label>
+                <label class="form-label"><?php echo esc_html__('Provinsi', 'velocity-marketplace'); ?></label>
                 <select name="customer_province_id" class="form-select" x-ref="provinceSelect" x-model="form.province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
-                    <option value="">Pilih provinsi</option>
+                    <option value=""><?php echo esc_html__('Pilih provinsi', 'velocity-marketplace'); ?></option>
                     <template x-for="prov in provinces" :key="prov.province_id">
                         <option :value="prov.province_id" x-text="prov.province"></option>
                     </template>
@@ -69,9 +69,9 @@ $location_state = [
                 <input type="hidden" name="customer_province_name" :value="form.province_name">
             </div>
             <div class="col-md-4">
-                <label class="form-label">Kota/Kabupaten</label>
+                <label class="form-label"><?php echo esc_html__('Kota/Kabupaten', 'velocity-marketplace'); ?></label>
                 <select name="customer_city_id" class="form-select" x-ref="citySelect" x-model="form.city_id" @change="onCityChange()" :disabled="!form.province_id || isLoadingCities">
-                    <option value="">Pilih kota atau kabupaten</option>
+                    <option value=""><?php echo esc_html__('Pilih kota atau kabupaten', 'velocity-marketplace'); ?></option>
                     <template x-for="city in cities" :key="city.city_id">
                         <option :value="city.city_id" x-text="(city.type ? city.type + ' ' : '') + city.city_name"></option>
                     </template>
@@ -79,9 +79,9 @@ $location_state = [
                 <input type="hidden" name="customer_city_name" :value="form.city_name">
             </div>
             <div class="col-md-4">
-                <label class="form-label">Kecamatan</label>
+                <label class="form-label"><?php echo esc_html__('Kecamatan', 'velocity-marketplace'); ?></label>
                 <select name="customer_subdistrict_id" class="form-select" x-ref="subdistrictSelect" x-model="form.subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.city_id || isLoadingSubdistricts">
-                    <option value="">Pilih kecamatan</option>
+                    <option value=""><?php echo esc_html__('Pilih kecamatan', 'velocity-marketplace'); ?></option>
                     <template x-for="subdistrict in subdistricts" :key="subdistrict.subdistrict_id">
                         <option :value="subdistrict.subdistrict_id" x-text="subdistrict.subdistrict_name"></option>
                     </template>
@@ -92,7 +92,7 @@ $location_state = [
                 <div class="small text-muted" x-show="locationMessage" x-text="locationMessage"></div>
             </div>
             <div class="col-12">
-                <button type="submit" class="btn btn-dark" :disabled="saving" x-text="saving ? 'Menyimpan...' : 'Simpan Profil'">Simpan Profil</button>
+                <button type="submit" class="btn btn-dark" :disabled="saving" x-text="saving ? '<?php echo esc_attr__('Menyimpan...', 'velocity-marketplace'); ?>' : '<?php echo esc_attr__('Simpan Profil', 'velocity-marketplace'); ?>'"><?php echo esc_html__('Simpan Profil', 'velocity-marketplace'); ?></button>
             </div>
         </form>
     </div>

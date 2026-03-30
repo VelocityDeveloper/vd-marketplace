@@ -92,7 +92,7 @@ class Settings
                 return $url;
             }
         }
-        return site_url('/myaccount/');
+        return site_url('/account/');
     }
 
     public static function store_profile_url($seller_id = 0)
@@ -103,7 +103,7 @@ class Settings
             $base = get_permalink((int) $pages['toko']);
         }
         if (!$base) {
-            $base = site_url('/toko/');
+            $base = site_url('/store/');
         }
 
         $seller_id = (int) $seller_id;

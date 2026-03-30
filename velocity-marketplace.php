@@ -1,9 +1,10 @@
 <?php
 /**
  * Plugin Name: Velocity Marketplace
- * Description: Marketplace plugin berbasis REST API + Alpine.js untuk migrasi vmplace.
+ * Description: Plugin Marketplace oleh Velocity Developer.
  * Version: 1.0.0
  * Author: Velocity Developer
+ * Author URI: https://velocitydeveloper.com/
  * Text Domain: velocity-marketplace
  */
 

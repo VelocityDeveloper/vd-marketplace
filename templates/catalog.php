@@ -9,16 +9,16 @@ $categories = get_terms([
     'hide_empty' => false,
 ]);
 $label_options = [
-    'new' => 'Baru',
-    'limited' => 'Terbatas',
-    'best' => 'Terlaris',
+    'new' => __('New', 'velocity-marketplace'),
+    'limited' => __('Limited', 'velocity-marketplace'),
+    'best' => __('Best Seller', 'velocity-marketplace'),
 ];
 ?>
 <div class="container py-4 vmp-wrap" x-data="vmpCatalog(<?php echo esc_attr($pp); ?>)" x-init="init()">
     <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
         <div>
-            <h2 class="h4 mb-0">Katalog Produk</h2>
-            <small class="text-muted">Temukan produk berdasarkan nama, kategori, label, jenis toko, dan rentang harga.</small>
+            <h2 class="h4 mb-0"><?php echo esc_html__('Katalog Produk', 'velocity-marketplace'); ?></h2>
+            <small class="text-muted"><?php echo esc_html__('Find products by name, category, label, store type, and price range.', 'velocity-marketplace'); ?></small>
         </div>
     </div>
 
@@ -26,13 +26,13 @@ $label_options = [
         <div class="card-body">
             <div class="row g-2">
                 <div class="col-md-4">
-                    <label class="form-label small mb-1">Nama Produk</label>
-                    <input type="search" class="form-control form-control-sm" placeholder="Cari nama produk" x-model="search" @keydown.enter.prevent="fetchProducts(1)">
+                    <label class="form-label small mb-1"><?php echo esc_html__('Nama Produk', 'velocity-marketplace'); ?></label>
+                    <input type="search" class="form-control form-control-sm" placeholder="<?php echo esc_attr__('Search product name', 'velocity-marketplace'); ?>" x-model="search" @keydown.enter.prevent="fetchProducts(1)">
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small mb-1">Kategori</label>
+                    <label class="form-label small mb-1"><?php echo esc_html__('Kategori', 'velocity-marketplace'); ?></label>
                     <select class="form-select form-select-sm" x-model="cat" @change="fetchProducts(1)">
-                        <option value="">Semua Kategori</option>
+                        <option value=""><?php echo esc_html__('Semua Kategori', 'velocity-marketplace'); ?></option>
                         <?php foreach ((array) $categories as $category) : ?>
                             <?php if (!is_object($category) || empty($category->term_id)) { continue; } ?>
                             <option value="<?php echo esc_attr((string) $category->term_id); ?>"><?php echo esc_html((string) $category->name); ?></option>
@@ -40,44 +40,44 @@ $label_options = [
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Label</label>
+                    <label class="form-label small mb-1"><?php echo esc_html__('Label', 'velocity-marketplace'); ?></label>
                     <select class="form-select form-select-sm" x-model="label" @change="fetchProducts(1)">
-                        <option value="">Semua Label</option>
+                        <option value=""><?php echo esc_html__('Semua Label', 'velocity-marketplace'); ?></option>
                         <?php foreach ($label_options as $label_value => $label_name) : ?>
                             <option value="<?php echo esc_attr($label_value); ?>"><?php echo esc_html($label_name); ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <div class="col-md-3">
-                    <label class="form-label small mb-1">Jenis Toko</label>
+                    <label class="form-label small mb-1"><?php echo esc_html__('Jenis Toko', 'velocity-marketplace'); ?></label>
                     <select class="form-select form-select-sm" x-model="storeType" @change="fetchProducts(1)">
-                        <option value="">Semua Toko</option>
-                        <option value="star_seller">Star Seller</option>
-                        <option value="regular">Toko Biasa</option>
+                        <option value=""><?php echo esc_html__('Semua Toko', 'velocity-marketplace'); ?></option>
+                        <option value="star_seller"><?php echo esc_html__('Star Seller', 'velocity-marketplace'); ?></option>
+                        <option value="regular"><?php echo esc_html__('Toko Biasa', 'velocity-marketplace'); ?></option>
                     </select>
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Harga Minimum</label>
+                    <label class="form-label small mb-1"><?php echo esc_html__('Harga Minimum', 'velocity-marketplace'); ?></label>
                     <input type="number" min="0" step="1000" class="form-control form-control-sm" x-model="minPrice" @keydown.enter.prevent="fetchProducts(1)">
                 </div>
                 <div class="col-md-2">
-                    <label class="form-label small mb-1">Harga Maksimum</label>
+                    <label class="form-label small mb-1"><?php echo esc_html__('Harga Maksimum', 'velocity-marketplace'); ?></label>
                     <input type="number" min="0" step="1000" class="form-control form-control-sm" x-model="maxPrice" @keydown.enter.prevent="fetchProducts(1)">
                 </div>
                 <div class="col-md-4">
-                    <label class="form-label small mb-1">Urutkan</label>
+                    <label class="form-label small mb-1"><?php echo esc_html__('Urutkan', 'velocity-marketplace'); ?></label>
                     <select class="form-select form-select-sm" x-model="sort" @change="fetchProducts(1)">
-                        <option value="latest">Terbaru</option>
-                        <option value="price_asc">Harga Terendah</option>
-                        <option value="price_desc">Harga Tertinggi</option>
-                        <option value="name_asc">Nama A-Z</option>
-                        <option value="name_desc">Nama Z-A</option>
-                        <option value="popular">Terpopuler</option>
+                        <option value="latest"><?php echo esc_html__('Terbaru', 'velocity-marketplace'); ?></option>
+                        <option value="price_asc"><?php echo esc_html__('Harga Terendah', 'velocity-marketplace'); ?></option>
+                        <option value="price_desc"><?php echo esc_html__('Harga Tertinggi', 'velocity-marketplace'); ?></option>
+                        <option value="name_asc"><?php echo esc_html__('Name A-Z', 'velocity-marketplace'); ?></option>
+                        <option value="name_desc"><?php echo esc_html__('Name Z-A', 'velocity-marketplace'); ?></option>
+                        <option value="popular"><?php echo esc_html__('Most Popular', 'velocity-marketplace'); ?></option>
                     </select>
                 </div>
                 <div class="col-md-4 d-flex align-items-end gap-2">
-                    <button class="btn btn-sm btn-primary" type="button" @click="fetchProducts(1)">Terapkan Filter</button>
-                    <button class="btn btn-sm btn-outline-secondary" type="button" @click="resetFilters()">Atur Ulang</button>
+                    <button class="btn btn-sm btn-primary" type="button" @click="fetchProducts(1)"><?php echo esc_html__('Terapkan Filter', 'velocity-marketplace'); ?></button>
+                    <button class="btn btn-sm btn-outline-secondary" type="button" @click="resetFilters()"><?php echo esc_html__('Atur Ulang', 'velocity-marketplace'); ?></button>
                 </div>
             </div>
         </div>
@@ -98,14 +98,17 @@ $label_options = [
                         <div class="small text-muted mb-1" x-text="stockText(item.stock)"></div>
                         <div class="small text-muted mb-3" x-text="ratingText(item)"></div>
                         <div class="mt-auto d-flex gap-2">
-                            <button type="button" class="btn btn-sm btn-dark flex-grow-1" @click="addToCart(item)">Tambah Keranjang</button>
+                            <button type="button" class="btn btn-sm btn-dark flex-grow-1" @click="addToCart(item)"><?php echo esc_html__('Tambah Keranjang', 'velocity-marketplace'); ?></button>
                             <button
                                 type="button"
-                                class="btn btn-sm"
-                                :class="isWishlisted(item.id) ? 'btn-danger' : 'btn-outline-secondary'"
+                                class="btn btn-sm btn-outline-secondary vmp-wishlist-button"
+                                :class="{ 'is-active': isWishlisted(item.id) }"
                                 @click="toggleWishlist(item)"
-                                title="Wishlist"
-                            >&hearts;</button>
+                                title="<?php echo esc_attr__('Wishlist', 'velocity-marketplace'); ?>"
+                                :aria-pressed="isWishlisted(item.id) ? 'true' : 'false'"
+                                aria-label="<?php echo esc_attr__('Wishlist', 'velocity-marketplace'); ?>"
+                                x-html="wishlistIcon(isWishlisted(item.id))"
+                            ></button>
                         </div>
                     </div>
                 </div>
@@ -115,17 +118,17 @@ $label_options = [
 
     <div class="py-5 text-center" x-show="loading">
         <div class="spinner-border text-primary" role="status"></div>
-        <div class="small text-muted mt-2">Memuat daftar produk...</div>
+        <div class="small text-muted mt-2"><?php echo esc_html__('Loading products...', 'velocity-marketplace'); ?></div>
     </div>
 
     <div class="py-5 text-center border rounded bg-light" x-show="!loading && items.length === 0">
-        <div class="h5 mb-1">Produk tidak ditemukan</div>
-        <div class="text-muted">Ubah kata kunci atau filter untuk melihat hasil lainnya.</div>
+        <div class="h5 mb-1"><?php echo esc_html__('No products found', 'velocity-marketplace'); ?></div>
+        <div class="text-muted"><?php echo esc_html__('Adjust the keyword or filters to see other results.', 'velocity-marketplace'); ?></div>
     </div>
 
     <div class="d-flex justify-content-center align-items-center gap-2 mt-4" x-show="totalPages > 1">
-        <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage <= 1" @click="fetchProducts(currentPage - 1)">Sebelumnya</button>
-        <span class="small text-muted">Halaman <span x-text="currentPage"></span> / <span x-text="totalPages"></span></span>
-        <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage >= totalPages" @click="fetchProducts(currentPage + 1)">Berikutnya</button>
+        <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage <= 1" @click="fetchProducts(currentPage - 1)"><?php echo esc_html__('Previous', 'velocity-marketplace'); ?></button>
+        <span class="small text-muted"><?php echo esc_html__('Page', 'velocity-marketplace'); ?> <span x-text="currentPage"></span> / <span x-text="totalPages"></span></span>
+        <button class="btn btn-outline-secondary btn-sm" type="button" :disabled="currentPage >= totalPages" @click="fetchProducts(currentPage + 1)"><?php echo esc_html__('Next', 'velocity-marketplace'); ?></button>
     </div>
 </div>

@@ -7,17 +7,35 @@ use VelocityMarketplace\Modules\Product\ProductData;
 
 class Assets
 {
+    private static $frontend_enqueued = false;
+
     public function register()
     {
-        add_action('wp_enqueue_scripts', [$this, 'enqueue']);
+        add_action('wp_enqueue_scripts', [$this, 'enqueue'], 30);
     }
 
     public function enqueue()
     {
-        $context = $this->get_enqueue_context();
-        if (empty($context['enabled'])) {
+        $this->enqueue_assets(false);
+    }
+
+    public function enqueue_forced()
+    {
+        $this->enqueue_assets(true);
+    }
+
+    private function enqueue_assets($force = false)
+    {
+        if (self::$frontend_enqueued) {
             return;
         }
+
+        $context = $this->get_enqueue_context();
+        if (!$force && empty($context['enabled'])) {
+            return;
+        }
+
+        self::$frontend_enqueued = true;
 
         wp_register_script(
             'alpinejs',
@@ -53,7 +71,7 @@ class Assets
         wp_enqueue_script(
             'velocity-marketplace-frontend-cart-js',
             VMP_URL . 'assets/js/frontend-cart.js',
-            ['velocity-marketplace-frontend-shared-js'],
+            $this->frontend_script_dependencies(['velocity-marketplace-frontend-shared-js'], true),
             VMP_VERSION,
             true
         );
@@ -77,7 +95,7 @@ class Assets
         wp_enqueue_script(
             'velocity-marketplace-frontend-ui-js',
             VMP_URL . 'assets/js/frontend-ui.js',
-            ['velocity-marketplace-frontend-shared-js'],
+            $this->frontend_script_dependencies(['velocity-marketplace-frontend-shared-js'], true),
             VMP_VERSION,
             true
         );
@@ -115,10 +133,10 @@ class Assets
         }
 
         $pages = get_option(VMP_PAGES_OPTION, []);
-        $catalog_url = $this->resolve_page_url($pages, 'katalog', '/katalog/');
-        $cart_url = $this->resolve_page_url($pages, 'keranjang', '/keranjang/');
+        $catalog_url = $this->resolve_page_url($pages, 'katalog', '/catalog/');
+        $cart_url = $this->resolve_page_url($pages, 'keranjang', '/cart/');
         $checkout_url = $this->resolve_page_url($pages, 'checkout', '/checkout/');
-        $profile_url = $this->resolve_page_url($pages, 'myaccount', '/myaccount/');
+        $profile_url = $this->resolve_page_url($pages, 'myaccount', '/account/');
         $currency = Settings::currency();
         $currency_symbol = Settings::currency_symbol();
         $payment_methods = Settings::payment_methods();
@@ -196,6 +214,16 @@ class Assets
 
         if (is_page()) {
             global $post;
+            $pages = get_option(VMP_PAGES_OPTION, []);
+            if ($post && is_array($pages) && in_array((int) $post->ID, array_map('intval', $pages), true)) {
+                $profile_page_id = !empty($pages['myaccount']) ? (int) $pages['myaccount'] : 0;
+
+                return [
+                    'enabled' => true,
+                    'profile' => $profile_page_id > 0 && (int) $post->ID === $profile_page_id,
+                ];
+            }
+
             if ($post && isset($post->post_content)) {
                 $content = (string) $post->post_content;
                 $enabled = $this->content_has_any_shortcode($content, [
@@ -207,10 +235,14 @@ class Assets
                     'vmp_add_to_cart',
                     'vmp_add_to_wishlist',
                     'vmp_cart',
+                    'vmp_cart_page',
                     'vmp_checkout',
                     'vmp_profile',
                     'vmp_tracking',
                     'vmp_store_profile',
+                    'vmp_messages_icon',
+                    'vmp_notifications_icon',
+                    'vmp_profile_icon',
                 ]);
                 $profile = $this->content_has_any_shortcode($content, [
                     'vmp_profile',
@@ -250,5 +282,16 @@ class Assets
         }
 
         return site_url($fallback);
+    }
+
+    private function frontend_script_dependencies($base = [], $needs_theme_bootstrap = false)
+    {
+        $deps = is_array($base) ? $base : [];
+
+        if ($needs_theme_bootstrap && wp_script_is('justg-scripts', 'registered')) {
+            $deps[] = 'justg-scripts';
+        }
+
+        return array_values(array_unique($deps));
     }
 }

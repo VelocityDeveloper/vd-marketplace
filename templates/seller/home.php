@@ -26,19 +26,19 @@ $status_badge_class = static function ($status) {
     <div class="row g-3">
         <div class="col-lg-4">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
-                <h3 class="h6 mb-2">Ringkasan Toko</h3>
-                <div class="mb-2">Label: <?php echo !empty($seller_summary['is_star_seller']) ? '<span class="badge bg-warning text-dark">Star Seller</span>' : '<span class="badge bg-secondary">Toko Aktif</span>'; ?></div>
-                <div class="small text-muted">Pesanan masuk: <strong><?php echo esc_html(count($seller_order_ids)); ?></strong></div>
-                <div class="small text-muted">Rating toko: <strong><?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5'); ?></strong> dari <?php echo esc_html((string) (int) ($seller_summary['rating_count'] ?? 0)); ?> ulasan</div>
-                <div class="small text-muted">Pesanan selesai: <strong><?php echo esc_html((string) (int) ($seller_summary['completed_orders'] ?? 0)); ?></strong></div>
-                <?php if (!$profile_complete) : ?><div class="alert alert-warning py-2 mt-2 mb-0">Lengkapi profil toko sebelum menambahkan produk baru.</div><?php endif; ?>
+                <h3 class="h6 mb-2"><?php echo esc_html__('Ringkasan Toko', 'velocity-marketplace'); ?></h3>
+                <div class="mb-2"><?php echo esc_html__('Label:', 'velocity-marketplace'); ?> <?php echo !empty($seller_summary['is_star_seller']) ? '<span class="badge bg-warning text-dark">' . esc_html__('Star Seller', 'velocity-marketplace') . '</span>' : '<span class="badge bg-secondary">' . esc_html__('Toko Aktif', 'velocity-marketplace') . '</span>'; ?></div>
+                <div class="small text-muted"><?php echo esc_html__('Incoming orders:', 'velocity-marketplace'); ?> <strong><?php echo esc_html(count($seller_order_ids)); ?></strong></div>
+                <div class="small text-muted"><?php echo esc_html__('Rating toko:', 'velocity-marketplace'); ?> <strong><?php echo esc_html(number_format((float) ($seller_summary['rating_average'] ?? 0), 1, ',', '.') . '/5'); ?></strong> <?php echo esc_html(sprintf(__('dari %d ulasan', 'velocity-marketplace'), (int) ($seller_summary['rating_count'] ?? 0))); ?></div>
+                <div class="small text-muted"><?php echo esc_html__('Completed orders:', 'velocity-marketplace'); ?> <strong><?php echo esc_html((string) (int) ($seller_summary['completed_orders'] ?? 0)); ?></strong></div>
+                <?php if (!$profile_complete) : ?><div class="alert alert-warning py-2 mt-2 mb-0"><?php echo esc_html__('Complete your store profile before adding a new product.', 'velocity-marketplace'); ?></div><?php endif; ?>
             </div></div>
         </div>
         <div class="col-lg-8">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
-                <h3 class="h6 mb-2">Pesanan Masuk</h3>
+                <h3 class="h6 mb-2"><?php echo esc_html__('Pesanan Masuk', 'velocity-marketplace'); ?></h3>
                 <?php if (empty($seller_order_ids)) : ?>
-                    <div class="small text-muted">Belum ada pesanan yang masuk.</div>
+                    <div class="small text-muted"><?php echo esc_html__('There are no incoming orders yet.', 'velocity-marketplace'); ?></div>
                 <?php else : ?>
                     <div class="accordion" id="vmpSellerOrders">
                         <?php foreach ($seller_order_ids as $idx => $order_id) :
@@ -84,23 +84,23 @@ $status_badge_class = static function ($status) {
                                     <div class="accordion-body">
                                         <div class="row g-3 mb-3">
                                             <div class="col-md-6">
-                                                <div><strong>Pembeli:</strong> <?php echo esc_html($customer['name'] ?? '-'); ?></div>
-                                                <div><strong>Telepon:</strong> <?php echo esc_html($customer['phone'] ?? '-'); ?></div>
-                                                <div><strong>Alamat:</strong> <?php echo esc_html($customer['address'] ?? '-'); ?></div>
+                                                <div><strong><?php echo esc_html__('Buyer:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($customer['name'] ?? '-'); ?></div>
+                                                <div><strong><?php echo esc_html__('Telepon:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($customer['phone'] ?? '-'); ?></div>
+                                                <div><strong><?php echo esc_html__('Address:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($customer['address'] ?? '-'); ?></div>
                                             </div>
                                             <div class="col-md-6">
-                                                <div><strong>Kurir:</strong> <?php echo esc_html($receipt_courier !== '' ? $receipt_courier : '-'); ?></div>
-                                                <div><strong>No Resi:</strong> <?php echo esc_html($receipt_no !== '' ? $receipt_no : '-'); ?></div>
-                                                <div><strong>Ongkir Toko Ini:</strong> <?php echo esc_html($money((float) ($seller_shipping['cost'] ?? 0))); ?></div>
+                                                <div><strong><?php echo esc_html__('Kurir:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($receipt_courier !== '' ? $receipt_courier : '-'); ?></div>
+                                                <div><strong><?php echo esc_html__('Nomor Resi:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($receipt_no !== '' ? $receipt_no : '-'); ?></div>
+                                                <div><strong><?php echo esc_html__('Pengiriman untuk Toko Ini:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($money((float) ($seller_shipping['cost'] ?? 0))); ?></div>
                                                 <?php if ($transfer_proof_url) : ?>
-                                                    <a href="<?php echo esc_url($transfer_proof_url); ?>" class="btn btn-sm btn-outline-primary mt-2" target="_blank">Lihat Bukti Pembayaran</a>
+                                                    <a href="<?php echo esc_url($transfer_proof_url); ?>" class="btn btn-sm btn-outline-primary mt-2" target="_blank"><?php echo esc_html__('Lihat Bukti Pembayaran', 'velocity-marketplace'); ?></a>
                                                 <?php else : ?>
-                                                    <div class="small text-muted mt-1">Bukti pembayaran belum diunggah.</div>
+                                                    <div class="small text-muted mt-1"><?php echo esc_html__('Bukti pembayaran belum diunggah.', 'velocity-marketplace'); ?></div>
                                                 <?php endif; ?>
                                                 <?php $buyer_contact_id = isset($customer['user_id']) ? (int) $customer['user_id'] : (int) get_post_meta($order_id, 'vmp_user_id', true); ?>
                                                 <?php if ($buyer_contact_id > 0) : ?>
                                                     <div class="mt-2">
-                                                        <a href="<?php echo esc_url(add_query_arg(['tab' => 'messages', 'message_to' => $buyer_contact_id, 'message_order' => $order_id])); ?>" class="btn btn-sm btn-outline-dark">Kirim Pesan ke Pembeli</a>
+                                                        <a href="<?php echo esc_url(add_query_arg(['tab' => 'messages', 'message_to' => $buyer_contact_id, 'message_order' => $order_id])); ?>" class="btn btn-sm btn-outline-dark"><?php echo esc_html__('Kirim Pesan ke Pembeli', 'velocity-marketplace'); ?></a>
                                                     </div>
                                                 <?php endif; ?>
                                             </div>
@@ -115,7 +115,7 @@ $status_badge_class = static function ($status) {
                                         ?>
                                         <?php if (!empty($tracking_rows)) : ?>
                                             <div class="border rounded p-3 mb-3 vmp-tracking-box">
-                                                <div class="fw-semibold mb-2">Tracking Resi</div>
+                                                <div class="fw-semibold mb-2"><?php echo esc_html__('Pelacakan Resi', 'velocity-marketplace'); ?></div>
                                                 <?php foreach ($tracking_rows as $tracking_row) : ?>
                                                     <div class="border-top py-2 vmp-tracking-box__item">
                                                         <div class="fw-semibold"><?php echo esc_html((string) ($tracking_row['manifest_description'] ?? $tracking_row['description'] ?? '-')); ?></div>
@@ -124,20 +124,20 @@ $status_badge_class = static function ($status) {
                                                 <?php endforeach; ?>
                                             </div>
                                         <?php endif; ?>
-                                        <div class="table-responsive mb-3"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th>Produk</th><th class="text-center">Qty</th><th class="text-end">Subtotal</th></tr></thead><tbody>
+                                        <div class="table-responsive mb-3"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th><?php echo esc_html__('Produk', 'velocity-marketplace'); ?></th><th class="text-center"><?php echo esc_html__('Qty', 'velocity-marketplace'); ?></th><th class="text-end"><?php echo esc_html__('Subtotal', 'velocity-marketplace'); ?></th></tr></thead><tbody>
                                         <?php foreach ($seller_items as $line) : ?>
                                             <tr><td><?php echo esc_html(isset($line['title']) ? (string) $line['title'] : '-'); ?></td><td class="text-center"><?php echo esc_html((string) ((int) ($line['qty'] ?? 0))); ?></td><td class="text-end"><?php echo esc_html($money((float) ($line['subtotal'] ?? 0))); ?></td></tr>
                                         <?php endforeach; ?>
                                         </tbody></table></div>
 
                                         <div class="border rounded p-3 bg-light-subtle vmp-shipping-card">
-                                            <div class="fw-semibold mb-3">Pengiriman Toko Ini</div>
+                                            <div class="fw-semibold mb-3"><?php echo esc_html__('Pengiriman untuk Toko Ini', 'velocity-marketplace'); ?></div>
                                             <form method="post" class="row g-3">
                                                 <input type="hidden" name="vmp_action" value="seller_update_order">
                                                 <input type="hidden" name="order_id" value="<?php echo esc_attr($order_id); ?>">
                                                 <?php wp_nonce_field('vmp_seller_order_' . $order_id, 'vmp_seller_order_nonce'); ?>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Status Pesanan</label>
+                                                    <label class="form-label"><?php echo esc_html__('Status Pesanan', 'velocity-marketplace'); ?></label>
                                                     <select name="order_status" class="form-select form-select-sm">
                                                         <?php foreach ($status_labels as $status_key => $status_text) : ?>
                                                             <option value="<?php echo esc_attr($status_key); ?>" <?php selected($status, $status_key); ?>><?php echo esc_html($status_text); ?></option>
@@ -145,31 +145,31 @@ $status_badge_class = static function ($status) {
                                                     </select>
                                                 </div>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Kurir</label>
-                                                    <input type="text" name="receipt_courier" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_courier); ?>" placeholder="JNE/SICEPAT/JNT">
+                                                    <label class="form-label"><?php echo esc_html__('Courier', 'velocity-marketplace'); ?></label>
+                                                    <input type="text" name="receipt_courier" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_courier); ?>" placeholder="<?php echo esc_attr__('JNE/SICEPAT/JNT', 'velocity-marketplace'); ?>">
                                                 </div>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">No Resi</label>
-                                                    <input type="text" name="receipt_no" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_no); ?>" placeholder="Masukkan nomor resi">
+                                                    <label class="form-label"><?php echo esc_html__('Receipt Number', 'velocity-marketplace'); ?></label>
+                                                    <input type="text" name="receipt_no" class="form-control form-control-sm" value="<?php echo esc_attr($receipt_no); ?>" placeholder="<?php echo esc_attr__('Enter receipt number', 'velocity-marketplace'); ?>">
                                                 </div>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Layanan</label>
+                                                    <label class="form-label"><?php echo esc_html__('Service', 'velocity-marketplace'); ?></label>
                                                     <input type="text" class="form-control form-control-sm" value="<?php echo esc_attr((string) ($seller_shipping['service'] ?? '-')); ?>" readonly>
                                                 </div>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Ongkir</label>
+                                                    <label class="form-label"><?php echo esc_html__('Biaya Pengiriman', 'velocity-marketplace'); ?></label>
                                                     <input type="text" class="form-control form-control-sm" value="<?php echo esc_attr($money((float) ($seller_shipping['cost'] ?? 0))); ?>" readonly>
                                                 </div>
                                                 <div class="col-md-4">
-                                                    <label class="form-label">Tujuan</label>
+                                                    <label class="form-label"><?php echo esc_html__('Destination', 'velocity-marketplace'); ?></label>
                                                     <input type="text" class="form-control form-control-sm" value="<?php echo esc_attr($seller_destination_text !== '' ? $seller_destination_text : '-'); ?>" readonly>
                                                 </div>
                                                 <div class="col-12">
-                                                    <label class="form-label">Catatan Seller</label>
-                                                    <textarea name="seller_note" class="form-control form-control-sm" rows="2" placeholder="Tambahkan catatan untuk pembeli"><?php echo esc_textarea($seller_note); ?></textarea>
+                                                    <label class="form-label"><?php echo esc_html__('Seller Note', 'velocity-marketplace'); ?></label>
+                                                    <textarea name="seller_note" class="form-control form-control-sm" rows="2" placeholder="<?php echo esc_attr__('Add a note for the buyer', 'velocity-marketplace'); ?>"><?php echo esc_textarea($seller_note); ?></textarea>
                                                 </div>
                                                 <div class="col-12 text-end">
-                                                    <button type="submit" class="btn btn-sm btn-dark">Simpan Perubahan Pesanan</button>
+                                                    <button type="submit" class="btn btn-sm btn-dark"><?php echo esc_html__('Simpan Perubahan Pesanan', 'velocity-marketplace'); ?></button>
                                                 </div>
                                             </form>
                                         </div>

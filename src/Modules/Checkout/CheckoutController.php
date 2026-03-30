@@ -320,7 +320,7 @@ class CheckoutController
             }
         }
 
-        return add_query_arg(['invoice' => $invoice], site_url('/myaccount/'));
+        return add_query_arg(['invoice' => $invoice], site_url('/account/'));
     }
 
     private function build_shipping_groups($submitted_groups, $destination, $context_data, $order_items, $payment_method)

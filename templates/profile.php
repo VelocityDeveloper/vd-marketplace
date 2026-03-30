@@ -20,12 +20,12 @@ if (!is_user_logged_in()) {
         <?php if ($error !== '') : ?><div class="alert alert-danger py-2"><?php echo esc_html($error); ?></div><?php endif; ?>
         <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <h3 class="h5 mb-2">Akses Akun</h3>
-                <p class="text-muted mb-3">Masuk atau daftar untuk mengakses pesanan, profil, pesan, dan pengelolaan toko dalam satu dashboard.</p>
+                <h3 class="h5 mb-2"><?php echo esc_html__('Akses Akun', 'velocity-marketplace'); ?></h3>
+                <p class="text-muted mb-3"><?php echo esc_html__('Sign in or register to access orders, profile, messages, and store management from one dashboard.', 'velocity-marketplace'); ?></p>
                 <div class="d-flex flex-wrap gap-2">
-                    <a href="<?php echo esc_url($login_url); ?>" class="btn btn-dark">Masuk</a>
+                    <a href="<?php echo esc_url($login_url); ?>" class="btn btn-dark"><?php echo esc_html__('Sign In', 'velocity-marketplace'); ?></a>
                     <?php if (get_option('users_can_register')) : ?>
-                        <a href="<?php echo esc_url($register_url); ?>" class="btn btn-primary">Daftar Akun</a>
+                        <a href="<?php echo esc_url($register_url); ?>" class="btn btn-primary"><?php echo esc_html__('Daftar Akun', 'velocity-marketplace'); ?></a>
                     <?php endif; ?>
                 </div>
             </div>
@@ -101,9 +101,10 @@ if (!$selected_message_contact && $selected_message_to > 0) {
 }
 $wishlist_repo = new WishlistRepository();
 $wishlist_ids = $wishlist_repo->get_ids($current_user_id);
+$wishlist_count = count($wishlist_ids);
 
 $money = static function ($value) {
-    return 'Rp ' . number_format((float) $value, 0, ',', '.');
+    return esc_html__('Rp', 'velocity-marketplace') . ' ' . number_format((float) $value, 0, ',', '.');
 };
 
 $nav_base_url = remove_query_arg([
@@ -126,21 +127,21 @@ $profile_complete = !$can_sell || ($store_name !== '' && $store_address !== '');
 $is_star_seller = !empty(get_user_meta($current_user_id, 'vmp_is_star_seller', true));
 
 $account_tabs = [
-    ['key' => 'orders', 'label' => 'Pesanan Saya'],
-    ['key' => 'account_profile', 'label' => 'Profil Saya'],
-    ['key' => 'wishlist', 'label' => 'Favorit'],
-    ['key' => 'tracking', 'label' => 'Pelacakan'],
-    ['key' => 'messages', 'label' => 'Pesan' . ($message_unread_count > 0 ? ' (' . $message_unread_count . ')' : '')],
-    ['key' => 'notifications', 'label' => 'Notifikasi' . ($unread_count > 0 ? ' (' . $unread_count . ')' : '')],
-    ['key' => 'wp_profile', 'label' => 'Pengaturan Akun WordPress', 'url' => admin_url('profile.php')],
+    ['key' => 'orders', 'label' => __('Pesanan Saya', 'velocity-marketplace')],
+    ['key' => 'account_profile', 'label' => __('Profil Saya', 'velocity-marketplace')],
+    ['key' => 'wishlist', 'label' => __('Wishlist', 'velocity-marketplace') . ($wishlist_count > 0 ? ' (' . $wishlist_count . ')' : '')],
+    ['key' => 'tracking', 'label' => __('Tracking', 'velocity-marketplace')],
+    ['key' => 'messages', 'label' => __('Pesan', 'velocity-marketplace') . ($message_unread_count > 0 ? ' (' . $message_unread_count . ')' : '')],
+    ['key' => 'notifications', 'label' => __('Notifikasi', 'velocity-marketplace') . ($unread_count > 0 ? ' (' . $unread_count . ')' : '')],
+    ['key' => 'wp_profile', 'label' => __('Pengaturan Akun', 'velocity-marketplace'), 'url' => admin_url('profile.php')],
 ];
 $store_tabs = [];
 if ($can_sell) {
     $store_tabs = [
-        ['key' => 'seller_home', 'label' => 'Beranda Toko'],
-        ['key' => 'seller_report', 'label' => 'Laporan'],
-        ['key' => 'seller_products', 'label' => 'Produk'],
-        ['key' => 'seller_profile', 'label' => 'Profil Toko'],
+        ['key' => 'seller_home', 'label' => __('Store Home', 'velocity-marketplace')],
+        ['key' => 'seller_report', 'label' => __('Reports', 'velocity-marketplace')],
+        ['key' => 'seller_products', 'label' => __('Products', 'velocity-marketplace')],
+        ['key' => 'seller_profile', 'label' => __('Profil Toko', 'velocity-marketplace')],
     ];
 }
 
@@ -148,7 +149,7 @@ $active_menu = in_array($tab, array_column($store_tabs, 'key'), true) ? 'store' 
 $menu_groups = [
     [
         'key' => 'account',
-        'label' => 'Akun',
+        'label' => __('Akun', 'velocity-marketplace'),
         'tab' => 'orders',
         'items' => $account_tabs,
     ],
@@ -156,7 +157,7 @@ $menu_groups = [
 if ($can_sell) {
     $menu_groups[] = [
         'key' => 'store',
-        'label' => 'Toko',
+        'label' => __('Toko', 'velocity-marketplace'),
         'tab' => 'seller_home',
         'items' => $store_tabs,
     ];
@@ -167,10 +168,10 @@ $active_submenu = $active_menu === 'store' ? $store_tabs : $account_tabs;
 <div class="container py-4 vmp-wrap">
     <div class="d-flex flex-wrap justify-content-between align-items-center gap-2 mb-3">
         <div>
-            <h2 class="h4 mb-0">Akun Saya</h2>
-            <small class="text-muted">Kelola pesanan, profil, pesan, dan aktivitas toko dari satu dashboard.</small>
+            <h2 class="h4 mb-0"><?php echo esc_html__('Akun Saya', 'velocity-marketplace'); ?></h2>
+            <small class="text-muted"><?php echo esc_html__('Manage orders, profile, messages, and store activity from one dashboard.', 'velocity-marketplace'); ?></small>
         </div>
-        <a href="<?php echo esc_url($logout_url); ?>" class="btn btn-sm btn-outline-dark">Keluar</a>
+        <a href="<?php echo esc_url($logout_url); ?>" class="btn btn-sm btn-outline-dark"><?php echo esc_html__('Log Out', 'velocity-marketplace'); ?></a>
     </div>
 
     <?php if ($notice !== '') : ?><div class="alert alert-success py-2"><?php echo esc_html($notice); ?></div><?php endif; ?>
@@ -215,8 +216,7 @@ $active_submenu = $active_menu === 'store' ? $store_tabs : $account_tabs;
     } elseif ($tab === 'seller_profile' && $can_sell) {
         echo Template::render('seller/profile', $view_data); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     } else {
-        echo '<div class="alert alert-warning mb-0">Menu yang dipilih tidak tersedia.</div>';
+        echo '<div class="alert alert-warning mb-0">' . esc_html__('The selected menu is not available.', 'velocity-marketplace') . '</div>';
     }
     ?>
 </div>
-

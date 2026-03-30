@@ -75,6 +75,9 @@ class Plugin
 
     private function load_frontend()
     {
+        $product_archive = new \VelocityMarketplace\Modules\Product\ProductArchive();
+        $product_archive->register();
+
         $template = new \VelocityMarketplace\Frontend\Template();
         $template->register();
 

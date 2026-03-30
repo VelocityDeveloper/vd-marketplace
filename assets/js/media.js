@@ -4,6 +4,36 @@
   const currentUserId = Number(cfg.currentUserId || 0);
   const canManageOptions = !!cfg.canManageOptions;
 
+  // Mengubah nilai input hidden menjadi daftar ID attachment yang valid.
+  const parseAttachmentIds = (value) =>
+    String(value || "")
+      .split(",")
+      .map((item) => Number(item.trim()))
+      .filter((item) => item > 0);
+
+  // Mengambil item preview yang sedang tampil agar bisa dipertahankan saat user menambah galeri.
+  const currentPreviewItems = (preview) =>
+    Array.from(preview?.querySelectorAll(".vmp-media-field__item") || []).map((item) => ({
+      id: Number(item.dataset.id || 0),
+      url: String(item.querySelector(".vmp-media-field__image")?.getAttribute("src") || ""),
+      title: String(item.querySelector(".vmp-media-field__image")?.getAttribute("alt") || ""),
+    })).filter((item) => item.id > 0);
+
+  // Menggabungkan item lama dan baru tanpa menduplikasi attachment yang sama.
+  const mergeItemsById = (items) => {
+    const map = new Map();
+    (Array.isArray(items) ? items : []).forEach((item) => {
+      const id = Number(item?.id || 0);
+      if (id <= 0) return;
+      map.set(id, {
+        id,
+        url: String(item.url || ""),
+        title: String(item.title || ""),
+      });
+    });
+    return Array.from(map.values());
+  };
+
   // Merender ulang preview media berdasarkan attachment yang dipilih user.
   const renderMediaPreview = (preview, items, multiple, emptyText) => {
     if (!preview) return;
@@ -80,12 +110,22 @@
               });
             }
           }
+
+          if (multiple) {
+            const selection = frame.state().get("selection");
+            parseAttachmentIds(input.value).forEach((id) => {
+              const attachment = wp.media.attachment(id);
+              if (attachment) {
+                attachment.fetch();
+                selection.add(attachment);
+              }
+            });
+          }
         });
 
         frame.on("select", () => {
           const selection = frame.state().get("selection");
-          const items = [];
-          const ids = [];
+          const items = multiple ? currentPreviewItems(preview) : [];
 
           selection.each((attachment) => {
             const data = attachment.toJSON();
@@ -99,7 +139,6 @@
 
             if (!data.id || !imageUrl) return;
 
-            ids.push(Number(data.id));
             items.push({
               id: Number(data.id),
               url: imageUrl,
@@ -107,8 +146,11 @@
             });
           });
 
-          input.value = multiple ? ids.join(",") : String(ids[0] || "");
-          renderMediaPreview(preview, multiple ? items : items.slice(0, 1), multiple, emptyText);
+          const normalizedItems = multiple ? mergeItemsById(items) : items.slice(0, 1);
+          input.value = multiple
+            ? normalizedItems.map((item) => item.id).join(",")
+            : String(normalizedItems[0]?.id || "");
+          renderMediaPreview(preview, normalizedItems, multiple, emptyText);
           syncButtons();
         });
 
