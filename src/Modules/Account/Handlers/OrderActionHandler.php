@@ -7,8 +7,8 @@ use VelocityMarketplace\Modules\Captcha\CaptchaBridge;
 use VelocityMarketplace\Modules\Email\EmailTemplateService;
 use VelocityMarketplace\Modules\Notification\NotificationRepository;
 use VelocityMarketplace\Modules\Order\OrderData;
-use VelocityMarketplace\Modules\Product\ProductData;
 use VelocityMarketplace\Support\Settings;
+use WpStore\Domain\Product\ProductData;
 
 class OrderActionHandler extends BaseActionHandler
 {

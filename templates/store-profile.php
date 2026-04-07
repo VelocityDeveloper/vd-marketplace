@@ -1,5 +1,6 @@
 <?php
 use VelocityMarketplace\Modules\Product\ProductData;
+use VelocityMarketplace\Modules\Account\Account;
 use VelocityMarketplace\Modules\Review\RatingRenderer;
 use VelocityMarketplace\Modules\Review\ReviewRepository;
 use VelocityMarketplace\Modules\Review\StarSellerService;
@@ -8,7 +9,7 @@ use VelocityMarketplace\Support\Settings;
 $seller_id = isset($seller_id) ? (int) $seller_id : 0;
 $seller = $seller_id > 0 ? get_userdata($seller_id) : false;
 
-if (!$seller) {
+if (!$seller || !Account::can_sell($seller_id)) {
     return '<div class="container py-4 vmp-wrap"><div class="alert alert-warning mb-0">' . esc_html__('Toko tidak ditemukan.', 'velocity-marketplace') . '</div></div>';
 }
 

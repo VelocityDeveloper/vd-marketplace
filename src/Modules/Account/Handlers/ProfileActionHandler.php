@@ -9,7 +9,7 @@ class ProfileActionHandler extends BaseActionHandler
 {
     public function save_store_profile()
     {
-        if (!Account::can_sell()) {
+        if (!Account::can_manage_store_profile()) {
             $this->stay_with(['vmp_error' => 'Fitur ini hanya untuk member marketplace.', 'tab' => 'orders']);
             return;
         }

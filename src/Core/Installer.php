@@ -76,8 +76,9 @@ class Installer
     {
         remove_role('vmp_customer');
         remove_role('vmp_seller');
+        remove_role('vmp_member');
 
-        add_role('vmp_member', __('Member Marketplace', 'velocity-marketplace'), [
+        add_role('vd_member', __('Member Marketplace', 'velocity-marketplace'), [
             'read' => true,
             'upload_files' => true,
         ]);

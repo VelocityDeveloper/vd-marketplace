@@ -259,12 +259,12 @@ class CheckoutController
         update_post_meta($order_id, 'vmp_status', $order_status);
         update_post_meta($order_id, 'vmp_notes', $notes);
         update_post_meta($order_id, 'vmp_created_at', current_time('mysql'));
-        update_post_meta($order_id, 'vmp_coupon_id', $coupon_id);
-        update_post_meta($order_id, 'vmp_coupon_code', $coupon_code);
-        update_post_meta($order_id, 'vmp_coupon_scope', $coupon_scope);
-        update_post_meta($order_id, 'vmp_coupon_product_discount', (float) $coupon_product_discount);
-        update_post_meta($order_id, 'vmp_coupon_shipping_discount', (float) $coupon_shipping_discount);
-        update_post_meta($order_id, 'vmp_coupon_discount', (float) $coupon_discount);
+        if ($coupon_id > 0) {
+            update_post_meta($order_id, '_store_order_coupon_id', $coupon_id);
+            update_post_meta($order_id, '_store_order_coupon_scope', $coupon_scope);
+            update_post_meta($order_id, '_store_order_coupon_product_discount', (float) $coupon_product_discount);
+            update_post_meta($order_id, '_store_order_coupon_shipping_discount', (float) $coupon_shipping_discount);
+        }
         OrderData::sync_core_status($order_id, $order_status);
 
         $redirect = $this->resolve_profile_url($invoice);

@@ -95,7 +95,7 @@ class ProfileController
 
     public function get_store_profile(WP_REST_Request $request)
     {
-        if (!Account::can_sell(get_current_user_id())) {
+        if (!Account::can_manage_store_profile(get_current_user_id())) {
             return new WP_REST_Response([
                 'success' => false,
                 'message' => __('Akses profil toko tidak tersedia untuk akun ini.', 'velocity-marketplace'),
@@ -114,7 +114,7 @@ class ProfileController
 
     public function save_store_profile(WP_REST_Request $request)
     {
-        if (!Account::can_sell(get_current_user_id())) {
+        if (!Account::can_manage_store_profile(get_current_user_id())) {
             return new WP_REST_Response([
                 'success' => false,
                 'message' => __('Akses profil toko tidak tersedia untuk akun ini.', 'velocity-marketplace'),

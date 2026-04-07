@@ -7,7 +7,7 @@ Status saat ini:
 - masih tahap pembuatan awal
 - banyak bagian belum final
 - belum dirilis
-- arah arsitektur sekarang adalah menjadikan `vd-marketplace` addon marketplace di atas `vd-store`, bukan sistem terpisah yang mengabaikan fondasi data lama
+- arah arsitektur sekarang adalah menjadikan `vd-marketplace` addon marketplace di atas `vd-store`
 - runtime plugin sekarang **wajib** membutuhkan `VD Store` aktif
 - jika `VD Store` tidak aktif, `VD Marketplace` tidak akan boot
 
@@ -25,7 +25,7 @@ Target resmi perusahaan:
   - taxonomy produk
   - meta inti produk
   - shortcode publik frontend
-- `vd-marketplace` tidak boleh lagi bertindak sebagai fallback core kedua jika `vd-store` tidak aktif
+- `vd-marketplace` tidak boleh lagi bertindak sebagai core kedua jika `vd-store` tidak aktif
 - pengaturan inti commerce seperti mata uang, pembayaran, rekening bank, API ongkir, dan halaman inti harus mengikuti `vd-store`
 
 Dokumen acuan utamanya ada di:
@@ -37,9 +37,7 @@ Dokumen acuan utamanya ada di:
   - sort baru `Terlaris` dan `Rating Tertinggi`
   - chip filter aktif + tombol reset
 - single product:
-  - share sosial via SVG Bootstrap (`WhatsApp`, `Facebook`, `X`, `Telegram`)
-  - copy link produk
-  - seller card menampilkan `last active`
+  - seller card marketplace disuntik ke single product core `vd-store` lewat hook
 - halaman akun:
   - blok `Produk yang Baru Dilihat` dipasang di bagian bawah halaman
 - order/tracking:
@@ -82,7 +80,8 @@ Catatan:
   - wishlist dasar: tabel `store_wishlists` milik `vd-store`
   - profil user umum: user meta
   - pengaturan kurir toko: user meta
-  - role marketplace: `vmp_member`
+  - role marketplace: `vd_member`
+  - flag seller aktif: `_store_is_seller`
   - badge star seller: user meta hasil evaluasi otomatis
 - Pengaturan inti yang dibaca dari `vd-store`:
   - `currency_symbol`
@@ -98,7 +97,7 @@ Catatan:
   - raw cart canonical: kolom `cart`
   - snapshot shipping core: kolom `shipping_data`
   - snapshot grouping seller marketplace: kolom `marketplace_snapshot`
-- tidak ada lagi storage cart legacy aktif di addon
+- tidak ada lagi storage cart lama aktif di addon
 
 - Skema profil member:
   - `first_name` / `display_name` / `nickname` (WordPress core)
@@ -125,10 +124,10 @@ Catatan:
   - `vmp_cod_city_ids`
   - `vmp_cod_city_names`
 
-- Meta agregat produk:
-  - `vmp_review_count`
-  - `vmp_rating_average`
-  - `vmp_sold_count`
+- Meta agregat produk canonical:
+  - `_store_review_count`
+  - `_store_rating_average`
+  - `_store_sold_count`
 
 ## Shortcode resmi
 
@@ -141,31 +140,36 @@ Catatan:
 - `[vmp_product_card]`
   - renderer kartu produk sekarang mengikuti komponen core `vd-store`
 - `[vmp_product_gallery]`
+  - alias tipis ke `[wp_store_gallery]`
 - `[vmp_product_reviews]`
 - `[vmp_product_seller_card]`
 - `[vmp_recently_viewed]`
-  - default dipakai di bagian bawah halaman akun
+  - alias tipis ke `[wp_store_recently_viewed]`
 - `[vmp_product_filter]`
 - `[vmp_rating]`
-- `[vmp_review_count]`
-- `[vmp_sold_count]`
 - `[vmp_add_to_cart]`
 - `[vmp_add_to_wishlist]`
 - `[vmp_cart]`
 - `[vmp_cart_page]`
 - `[vmp_checkout]`
 - `[vmp_profile]`
+  - alias tipis ke `[wp_store_profile]`
 - `[vmp_tracking]`
+  - alias tipis ke `[wp_store_tracking]`
 - `[vmp_store_profile]`
+  - route publik seller sekarang memakai permalink rapi berbasis `user_login`
+  - contoh: `/store/namauser/`
 - `[vmp_messages_icon]`
 - `[vmp_notifications_icon]`
 - `[vmp_profile_icon]`
 
 Shortcode inti yang sudah milik `vd-store` tidak lagi diregister ulang di addon:
 - gunakan `[wp_store_catalog]` untuk katalog inti
+- gunakan `[wp_store_gallery]` untuk galeri produk inti
 - gunakan `[wp_store_thumbnail]` untuk thumbnail produk
 - gunakan `[wp_store_price]` untuk harga produk
 - gunakan `[wp_store_related]` untuk produk terkait
+- gunakan `[wp_store_recently_viewed]` untuk recently viewed inti
 
 ### Ringkasan shortcode baru
 
@@ -184,7 +188,7 @@ Shortcode inti yang sudah milik `vd-store` tidak lagi diregister ulang di addon:
     - `Paling Banyak Dilihat`
 
 - `[vmp_product_gallery]`
-  - render galeri produk lengkap
+  - sekarang didelegasikan ke `[wp_store_gallery]`
   - support current single product context tanpa isi `id`
 
 - `[vmp_product_reviews]`
@@ -203,8 +207,8 @@ Shortcode inti yang sudah milik `vd-store` tidak lagi diregister ulang di addon:
   - parameter utama: `id`, `per_page`
 
 - `[vmp_recently_viewed]`
-  - render daftar produk yang baru dilihat
-  - source data dari cookie `vmp_recently_viewed`
+  - sekarang didelegasikan ke `[wp_store_recently_viewed]`
+  - source data tetap dari cookie `vmp_recently_viewed`
   - support current product context untuk exclude item aktif
   - atribut:
     - `limit`
@@ -233,15 +237,8 @@ Shortcode inti yang sudah milik `vd-store` tidak lagi diregister ulang di addon:
     - `value_class`
     - `count_class`
 
-- `[vmp_review_count]`
-  - tampilkan jumlah ulasan produk
-  - contoh:
-    - `[vmp_review_count id="123"]`
-
-- `[vmp_sold_count]`
-  - tampilkan jumlah terjual produk
-  - contoh:
-    - `[vmp_sold_count id="123"]`
+- summary review dan sold count produk sekarang mengikuti meta canonical milik `VD Store`
+- jika butuh tampilkan angka review atau sold count secara custom, ambil dari data produk / helper core, bukan dari meta `vmp_*` lama
 
 - `[vmp_add_to_cart]`
   - render tombol tambah keranjang reusable
@@ -278,6 +275,9 @@ Shortcode inti yang sudah milik `vd-store` tidak lagi diregister ulang di addon:
 Installer hanya membuat page marketplace-specific jika belum ada:
 
 - `store` -> `[vmp_store_profile]`
+
+Catatan route toko publik:
+- URL canonical seller sekarang berbentuk `/store/{user_login}/`
 
 Halaman inti:
 - katalog
@@ -319,9 +319,6 @@ mengikuti page bawaan `vd-store` dan tidak dibuat ulang oleh addon.
   - helper shared frontend
   - request REST, formatter, helper wilayah, helper cart
 
-- `assets/js/frontend-catalog.js`
-  - logic katalog dan advance filter
-
 - `assets/js/frontend-cart.js`
   - logic halaman keranjang
 
@@ -335,14 +332,6 @@ mengikuti page bawaan `vd-store` dan tidak dibuat ulang oleh addon.
   - helper UI lintas halaman
   - add to cart/wishlist global
   - galeri produk
-
-- `assets/js/frontend.js`
-  - placeholder legacy internal
-  - tidak dipakai sebagai asset aktif
-
-  - behavior ringan dashboard
-  - focus composer pesan
-  - auto scroll thread pesan ke bawah
 
 - `assets/js/media.js`
   - integrasi WordPress media library untuk frontend seller
@@ -389,13 +378,13 @@ mengikuti page bawaan `vd-store` dan tidak dibuat ulang oleh addon.
 
 - `Template.php`
   - helper locate dan render template
-  - override archive/single produk default plugin
+  - dipakai oleh block/template marketplace yang memang masih aktif
 
 ### `src/Modules/Account/`
 
 - `Account.php`
   - login/register integration ke halaman bawaan WordPress
-  - assign role tunggal `vmp_member` saat register
+  - assign role tunggal `vd_member` saat register
   - helper cek member marketplace dan akses jual
   - logout frontend
 
@@ -461,10 +450,6 @@ mengikuti page bawaan `vd-store` dan tidak dibuat ulang oleh addon.
 
 ### `src/Modules/Coupon/`
 
-- `CouponAdmin.php`
-  - metabox dan kolom admin untuk kupon/voucher
-  - kupon canonical disimpan sebagai CPT `store_coupon`
-
 - `CouponController.php`
   - REST preview kupon saat checkout
 
@@ -472,6 +457,7 @@ mengikuti page bawaan `vd-store` dan tidak dibuat ulang oleh addon.
   - cari kupon berdasarkan kode
   - validasi minimal belanja, periode aktif, dan batas penggunaan
   - hitung diskon nominal / persen
+  - admin kupon sepenuhnya mengikuti `vd-store`
   - simpan shipping groups
   - reduce stock
   - notifikasi order
@@ -552,10 +538,9 @@ Catatan:
   - filter produk:
   - nama
   - kategori
-  - label
   - rentang harga
   - jenis toko
-  - urutan harga / nama / populer
+  - urutan harga / nama / terlaris / rating
 
 - `ProductData.php`
   - mapper data produk untuk frontend/API
@@ -564,7 +549,7 @@ Catatan:
   - harga aktif
   - opsi produk
   - ringkasan rating HTML siap pakai untuk loop katalog/archive
-  - sold count produk
+  - sold count produk dari meta canonical core
 
 - admin metabox `store_product` mengikuti `vd-store` lewat `ProductMetaBoxes` / `ProductSchema`
 - addon seller form memakai helper field produk dari core yang sama
@@ -598,12 +583,6 @@ Catatan:
 
 ### `templates/`
 
-- `catalog.php`
-  - halaman katalog utama
-  - advance filter produk
-  - loop produk via REST + Alpine
-  - menerima `rating_html` dari mapper produk
-
 - `cart.php`
   - halaman keranjang
 
@@ -614,30 +593,9 @@ Catatan:
   - kupon / voucher
   - COD per kota per toko
 
-- `profile.php`
-  - router dashboard account
-  - menentukan tab yang dirender
-
-- `tracking.php`
-  - tracking publik via invoice
-
-- `archive-product.php`
-  - archive default `store_product`
-  - filter query string native
-  - cocok untuk Beaver Themer
-
-- `single-product.php`
-  - single product default
-  - sekarang bertindak sebagai komposer layout
-  - memanggil block reusable:
-    - `product-gallery.php`
-    - `product-seller-card.php`
-    - `product-reviews.php`
-  - deskripsi produk memakai `the_content()` WordPress
-  - tombol add to cart / wishlist tetap inline karena masih satu alur dengan opsi produk
-
-- `product-gallery.php`
-  - block reusable galeri produk
+Catatan:
+- archive dan single produk default sekarang resmi dimiliki `vd-store`
+- addon tidak lagi punya template katalog, archive, atau single produk sendiri
 
 - `product-seller-card.php`
   - block reusable kartu seller di halaman produk
@@ -675,11 +633,6 @@ Catatan:
 - `wishlist.php`
   - daftar wishlist
 
-- `tracking.php`
-  - tracking di dashboard login
-  - detail pembayaran
-  - upload bukti transfer dari menu tracking
-
 - `messages.php`
   - inbox pesan per kontak/thread
 
@@ -714,19 +667,19 @@ Catatan:
 ### Cart
 
 1. User klik add to cart
-2. `frontend.js` hit REST cart
+2. `frontend-cart.js` hit REST cart
 3. `CartController.php` proses request
 4. `CartRepository.php` delegasi ke service cart core `vd-store`
 5. raw cart canonical disimpan di tabel `store_carts`
 6. grouping seller marketplace disimpan sebagai snapshot di `marketplace_snapshot`
 
 Catatan:
-- source of truth cart sekarang ada di core, bukan lagi user meta / cookie legacy addon
+- source of truth cart sekarang ada di core, bukan lagi user meta / cookie lama addon
 
 ### Checkout
 
 1. User buka checkout
-2. `frontend.js` load cart + shipping context
+2. `frontend-checkout.js` load cart + shipping context
 3. alamat default diisi dari profil customer
 4. user bisa pakai kupon bila valid
 5. user pilih service ongkir per seller atau COD jika tersedia di kota tujuan
@@ -749,7 +702,7 @@ Catatan:
 6. saat buyer konfirmasi diterima:
    - status grup toko menjadi `Selesai`
    - timestamp `received_at` disimpan
-   - `vmp_sold_count` produk di grup toko itu ditambah sekali
+   - `_store_sold_count` produk di grup toko itu ditambah sekali
 
 ### Pesan
 
@@ -764,9 +717,9 @@ Catatan:
 1. Member hanya bisa memberi ulasan dari order miliknya yang grup toko produknya sudah `completed`
 2. Satu produk hanya punya satu ulasan per user per order
 3. Ulasan masuk ke table `wp_vmp_reviews`
-4. Setelah ulasan masuk, meta agregat produk diperbarui:
-   - `vmp_review_count`
-   - `vmp_rating_average`
+4. Setelah ulasan masuk, meta agregat produk canonical diperbarui:
+   - `_store_review_count`
+   - `_store_rating_average`
 5. Produk yang sudah selesai dan belum direview akan menampilkan tombol `Berikan Penilaian`
 6. Setelah ulasan tersimpan, form review disembunyikan dan diganti ringkasan ulasan tersimpan
 7. Ulasan bisa menyimpan sampai 3 foto review
@@ -784,13 +737,14 @@ Catatan:
 ## Catatan perubahan yang perlu diperhatikan developer berikutnya
 
 - Prefix shortcode final saat ini: `vmp_*`
-- Role marketplace final saat ini: `vmp_member`
+- Role marketplace final saat ini: `vd_member`
 - Pesan tidak lagi membuat notifikasi internal
 - Tracking publik tersedia lewat page tracking
+- Menu akun tidak lagi menambahkan tab Tracking; tracking tetap lewat halaman core `vd-store`
 - Message memakai custom table, bukan CPT
 - Order title baru tidak lagi memakai prefix kata `Order`
 - Status order buyer sekarang dibaca per toko / per `shipping_group`
-- Buyer confirm `Pesanan Diterima` menambah `vmp_sold_count` produk terkait
+- Buyer confirm `Pesanan Diterima` menambah `_store_sold_count` produk terkait
 - Renderer rating sekarang dipusatkan di `RatingRenderer`
 - Shortcode rating/count baru tersedia untuk kebutuhan Beaver Builder / Themer
 - Single product mulai dipecah ke block reusable agar native template dan Beaver Themer bisa berbagi renderer yang sama

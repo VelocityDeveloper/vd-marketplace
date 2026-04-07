@@ -139,7 +139,9 @@ Meta berikut harus dianggap shared product schema:
 - `_store_stock`
 - `_store_min_order`
 - `_store_weight_kg`
-- `_store_label`
+- `_store_sold_count`
+- `_store_review_count`
+- `_store_rating_average`
 - `_store_gallery_ids`
 - `_store_option_name`
 - `_store_options`
@@ -151,6 +153,7 @@ Aturan format:
 - `_store_options` menyimpan daftar pilihan varian dasar
 - `_store_advanced_options` menyimpan array terstruktur, bukan textarea bebas
 - format textarea lama tidak boleh dijadikan contract canonical perusahaan
+- fitur label / badge produk umum tidak lagi dianggap bagian kontrak aktif
 
 ## 4.3.a Meta Item Order Canonical
 
@@ -162,6 +165,47 @@ Aturan:
 - addon tidak lagi membaca `vmp_items` sebagai fallback runtime
 - item order marketplace harus selalu dibaca dari `_store_order_items`
 - UI addon harus membaca item order lewat helper `OrderData::get_items()`, bukan langsung dari `vmp_items`
+
+## 4.3.b Meta Kupon Canonical
+
+Untuk kupon, canonical yang harus dipakai bersama adalah:
+- `_store_coupon_code`
+- `_store_coupon_scope`
+- `_store_coupon_type`
+- `_store_coupon_value`
+- `_store_coupon_min_purchase`
+- `_store_coupon_usage_limit`
+- `_store_coupon_usage_count`
+- `_store_coupon_starts_at`
+- `_store_coupon_expires_at`
+
+Untuk meta order hasil pemakaian kupon, canonical yang harus dipakai adalah:
+- `_store_order_coupon_code`
+- `_store_order_discount_type`
+- `_store_order_discount_value`
+- `_store_order_discount_amount`
+- `_store_order_coupon_id`
+- `_store_order_coupon_scope`
+- `_store_order_coupon_product_discount`
+- `_store_order_coupon_shipping_discount`
+
+Aturan:
+- `vd-store` menjadi owner admin field dan validasi kupon dasar
+- `velocity-marketplace` tidak lagi menulis meta kupon bersama dengan prefix `vmp_`
+- `velocity-marketplace` tidak lagi membaca meta kupon lama dengan prefix `vmp_`
+
+## 4.3.c Role Dan Meta Seller
+
+Untuk akun marketplace, kontrak identitas seller yang dipakai adalah:
+- role member netral: `vd_member`
+- flag seller aktif: `_store_is_seller`
+
+Aturan:
+- `vd_member` berarti akun sudah masuk ekosistem marketplace
+- akun tidak otomatis boleh jualan hanya karena punya role `vd_member`
+- hak jual ditentukan oleh `_store_is_seller=1`
+- `Profil Toko` tetap bisa diakses oleh akun `vd_member`
+- tab operasional seller seperti beranda toko, laporan, dan produk hanya muncul jika seller aktif
 
 ## 4.4 Public Shortcode API
 
@@ -199,8 +243,7 @@ Catatan:
 - shortcode `vmp_*` boleh tetap ada
 - tetapi `vmp_*` bukan contract canonical yang wajib dipakai theme/builder
 - target akhirnya adalah shortcode dasar dipelihara oleh `vd-store`
-- `velocity-marketplace` tidak lagi boleh mendaftarkan alias compat `wp_store_*` jika `vd-store` tidak aktif
-- legacy bridge hanya boleh dipertahankan sebagai kode transisi internal, bukan jalur runtime final
+- `velocity-marketplace` tidak lagi mendaftarkan alias `wp_store_*` sebagai pengganti core
 
 ## 4.5 Fungsi Global Publik
 
@@ -210,6 +253,10 @@ Fungsi berikut harus tetap tersedia sebagai public API:
 - `wps_discount_badge_html()`
 
 Implementasi internal boleh berubah, tetapi signature dan perilaku wajarnya harus tetap kompatibel.
+
+Catatan:
+- `wps_label_badge_html()` sekarang praktis menjadi no-op / kosong
+- ini dipertahankan hanya untuk kompatibilitas ringan agar pemanggilan lama tidak fatal
 
 ## 4.6 Custom Database
 
@@ -331,7 +378,7 @@ Pengaturan yang tetap boleh hidup di `velocity-marketplace`:
 Aturan:
 - addon tidak boleh lagi punya form admin sendiri untuk mata uang, metode pembayaran, rekening bank, atau API key pengiriman
 - halaman settings addon harus memberi arah jelas ke halaman settings `vd-store` untuk pengaturan inti
-- karena plugin ini diposisikan sebagai plugin baru, tidak perlu jalur cleanup khusus untuk key lama `vmp_settings`
+- karena plugin ini diposisikan sebagai plugin baru, tidak ada jalur cleanup atau migrasi legacy yang perlu dipertahankan
 
 ## 5. Status Implementasi Saat Ini
 
@@ -381,7 +428,8 @@ Domain berikut tetap addon-only:
 - star seller
 - message buyer-seller
 - payout / settlement
-- agregat marketplace seperti `vmp_sold_count`, `vmp_rating_average`, `vmp_review_count`
+- agregat seller / store marketplace
+- agregat seller rating dan star seller
 - metabox fulfillment marketplace di admin order
 - shipping group per seller di admin order
 - seller receipt / seller note / seller status di admin order
@@ -398,7 +446,7 @@ Boundary utama yang sekarang sudah aktif di runtime:
 
 Bagian yang masih tinggal audit lanjutan:
 - audit end-to-end `cart -> shipping -> checkout -> order`
-- rapikan dokumen README agar tidak lagi menyebut jalur lama
+- rapikan dokumen README agar tetap selaras dengan runtime aktif
 
 ## 5. Peta Perubahan Konkret
 
@@ -666,7 +714,7 @@ Artinya:
 
 Secara praktis:
 - `vd-store` sekarang menjadi pemilik utama untuk data produk dasar
-- `VD Marketplace` membaca data produk dari core, lalu menambah data marketplace seperti seller, rating, sold count, dan premium
+- `VD Marketplace` membaca data produk dari core, lalu menambah data marketplace seperti seller, premium, dan agregat seller
 
 #### Related Products
 

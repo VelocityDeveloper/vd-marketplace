@@ -32,9 +32,6 @@ class Plugin
             $store_bank_admin = new \VelocityMarketplace\Modules\Profile\StoreBankAdmin();
             $store_bank_admin->register();
 
-            $coupon_admin = new \VelocityMarketplace\Modules\Coupon\CouponAdmin();
-            $coupon_admin->register();
-
             $settings_page = new SettingsPage();
             $settings_page->register();
         }
@@ -78,11 +75,11 @@ class Plugin
 
     private function load_frontend()
     {
+        $store_profile_route = new \VelocityMarketplace\Frontend\StoreProfileRoute();
+        $store_profile_route->register();
+
         $product_archive = new \VelocityMarketplace\Modules\Product\ProductArchive();
         $product_archive->register();
-
-        $template = new \VelocityMarketplace\Frontend\Template();
-        $template->register();
 
         $assets = new \VelocityMarketplace\Frontend\Assets();
         $assets->register();

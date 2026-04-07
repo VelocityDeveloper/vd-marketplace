@@ -8,8 +8,6 @@ use VelocityMarketplace\Modules\Notification\NotificationRepository;
 use VelocityMarketplace\Modules\Product\ProductData;
 use VelocityMarketplace\Modules\Product\ProductMeta;
 use VelocityMarketplace\Modules\Product\ProductQuery;
-use VelocityMarketplace\Modules\Product\RelatedProducts;
-use VelocityMarketplace\Modules\Product\RecentlyViewed;
 use VelocityMarketplace\Modules\Review\RatingRenderer;
 use VelocityMarketplace\Modules\Wishlist\WishlistRepository;
 use VelocityMarketplace\Support\Contract;
@@ -44,6 +42,7 @@ class Shortcode
         $this->register_shortcode_aliases(['vmp_profile_icon'], 'render_profile_icon');
 
         add_action('wp_footer', [$this, 'render_cart_drawer_footer'], 30);
+        add_action('wp_store_single_after_summary', [$this, 'render_core_single_marketplace_extension'], 20, 2);
     }
 
     private function register_shortcode_aliases($tags, $method)
@@ -117,22 +116,17 @@ class Shortcode
         ]);
     }
 
-    public function render_catalog($atts = [])
+    public function render_core_single_marketplace_extension($product_id, $context = [])
     {
-        $this->ensure_frontend_assets();
-
-        $core = $this->render_core_shortcode('wp_store_catalog', $atts);
-        if ($core !== '') {
-            return $core;
+        $product_id = (int) $product_id;
+        if ($product_id <= 0 || get_post_type($product_id) !== Contract::PRODUCT_POST_TYPE) {
+            return;
         }
 
-        $atts = shortcode_atts([
-            'per_page' => 12,
-        ], $atts);
-
-        return Template::render('catalog', [
-            'per_page' => (int) $atts['per_page'],
-        ]);
+        echo Template::render('product-seller-card', [
+            'product_id' => $product_id,
+            'context' => is_array($context) ? $context : [],
+        ]); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped
     }
 
     public function render_products($atts = [])
@@ -211,19 +205,7 @@ class Shortcode
     public function render_product_gallery($atts = [])
     {
         $this->ensure_frontend_assets();
-
-        $atts = shortcode_atts([
-            'id' => 0,
-        ], $atts);
-
-        $product_id = $this->resolve_product_id((int) $atts['id']);
-        if ($product_id <= 0) {
-            return '';
-        }
-
-        return Template::render('product-gallery', [
-            'product_id' => $product_id,
-        ]);
+        return $this->render_core_shortcode('wp_store_gallery', $atts);
     }
 
     public function render_product_reviews($atts = [])
@@ -264,124 +246,10 @@ class Shortcode
         ]);
     }
 
-    public function render_related_products($atts = [])
-    {
-        $this->ensure_frontend_assets();
-
-        $core = $this->render_core_shortcode('wp_store_related', $atts, [
-            'limit' => 'per_page',
-        ]);
-        if ($core !== '') {
-            return $core;
-        }
-
-        $atts = shortcode_atts([
-            'id' => 0,
-            'limit' => 4,
-            'title' => __('Produk Terkait', 'velocity-marketplace'),
-        ], $atts);
-
-        $product_id = $this->resolve_product_id((int) $atts['id']);
-        if ($product_id <= 0) {
-            return '';
-        }
-
-        $items = RelatedProducts::items($product_id, (int) $atts['limit']);
-        if (empty($items)) {
-            return '';
-        }
-
-        return Template::render('product-related', [
-            'title' => (string) $atts['title'],
-            'items' => $items,
-        ]);
-    }
-
     public function render_recently_viewed($atts = [])
     {
         $this->ensure_frontend_assets();
-
-        $atts = shortcode_atts([
-            'limit' => 4,
-            'exclude_current' => 'true',
-            'title' => __('Produk yang Baru Dilihat', 'velocity-marketplace'),
-        ], $atts);
-
-        $exclude_id = filter_var($atts['exclude_current'], FILTER_VALIDATE_BOOLEAN) ? $this->resolve_product_id(0) : 0;
-        $items = RecentlyViewed::items($exclude_id, (int) $atts['limit']);
-        if (empty($items)) {
-            return '';
-        }
-
-        return Template::render('product-recently-viewed', [
-            'title' => (string) $atts['title'],
-            'items' => $items,
-        ]);
-    }
-
-    public function render_thumbnail($atts = [])
-    {
-        $this->ensure_frontend_assets();
-
-        $core = $this->render_core_shortcode('wp_store_thumbnail', $atts);
-        if ($core !== '') {
-            return $core;
-        }
-
-        $atts = shortcode_atts([
-            'id' => 0,
-            'size' => 'large',
-            'class' => '',
-        ], $atts);
-
-        $product_id = $this->resolve_product_id((int) $atts['id']);
-        if ($product_id <= 0) {
-            return '';
-        }
-
-        $item = ProductData::map_post($product_id);
-        if (!$item) {
-            return '';
-        }
-
-        $image = ProductData::image_url($product_id, sanitize_key((string) $atts['size']), $item['gallery_ids']);
-
-        return $this->render_thumbnail_markup(
-            $item,
-            $image,
-            sanitize_text_field((string) $atts['class'])
-        );
-    }
-
-    public function render_price($atts = [])
-    {
-        $this->ensure_frontend_assets();
-
-        $core = $this->render_core_shortcode('wp_store_price', $atts);
-        if ($core !== '') {
-            return $core;
-        }
-
-        $atts = shortcode_atts([
-            'id' => 0,
-            'class' => '',
-        ], $atts);
-
-        $product_id = $this->resolve_product_id((int) $atts['id']);
-        if ($product_id <= 0) {
-            return '';
-        }
-
-        $item = ProductData::map_post($product_id);
-        if (!$item) {
-            return '';
-        }
-
-        return $this->render_price_markup(
-            $item,
-            sanitize_text_field((string) $atts['class']),
-            Settings::currency_symbol()
-        );
+        return $this->render_core_shortcode('wp_store_recently_viewed', $atts);
     }
 
     public function render_add_to_cart($atts = [])
@@ -520,7 +388,7 @@ class Shortcode
             return '';
         }
 
-        $count = (int) get_post_meta($product_id, 'vmp_sold_count', true);
+        $count = (int) get_post_meta($product_id, '_store_sold_count', true);
         $class = trim((string) $atts['class']);
 
         return sprintf(
@@ -570,7 +438,12 @@ class Shortcode
     public function render_profile($atts = [])
     {
         $this->ensure_frontend_assets();
-        return Template::render('profile', []);
+        $core = $this->render_core_shortcode('wp_store_profile', $atts);
+        if ($core !== '') {
+            return $core;
+        }
+
+        return '';
     }
 
     public function render_tracking($atts = [])
@@ -589,10 +462,28 @@ class Shortcode
         $this->ensure_frontend_assets();
 
         $atts = shortcode_atts([
-            'seller' => 0,
+            'seller' => '',
         ], $atts);
 
-        $seller_id = (int) $atts['seller'];
+        $seller_id = 0;
+        $seller_attr = trim((string) $atts['seller']);
+        if ($seller_attr !== '') {
+            if (ctype_digit($seller_attr)) {
+                $seller_id = (int) $seller_attr;
+            } else {
+                $seller = get_user_by('login', sanitize_user($seller_attr, true));
+                $seller_id = $seller ? (int) $seller->ID : 0;
+            }
+        }
+
+        if ($seller_id <= 0) {
+            $seller_login = trim((string) get_query_var('vmp_store_user'));
+            if ($seller_login !== '') {
+                $seller = get_user_by('login', sanitize_user($seller_login, true));
+                $seller_id = $seller ? (int) $seller->ID : 0;
+            }
+        }
+
         if ($seller_id <= 0) {
             $seller_id = isset($_GET['seller']) ? (int) wp_unslash($_GET['seller']) : 0;
         }
@@ -633,7 +524,6 @@ class Shortcode
                 'taxonomy' => Contract::PRODUCT_TAXONOMY,
                 'hide_empty' => false,
             ]),
-            'label_options' => $product_query->label_options(),
             'action_url' => $action_url,
             'form_class' => sanitize_text_field((string) $atts['class']),
         ]);

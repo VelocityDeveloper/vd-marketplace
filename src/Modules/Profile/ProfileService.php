@@ -100,6 +100,7 @@ class ProfileService
             'whatsapp' => (string) get_user_meta($user_id, 'vmp_store_whatsapp', true),
             'address' => (string) get_user_meta($user_id, 'vmp_store_address', true),
             'bank_details' => (string) get_user_meta($user_id, 'vmp_store_bank_details', true),
+            'is_seller' => !empty(get_user_meta($user_id, '_store_is_seller', true)),
             'province_id' => (string) get_user_meta($user_id, 'vmp_store_province_id', true),
             'province_name' => (string) get_user_meta($user_id, 'vmp_store_province', true),
             'city_id' => (string) get_user_meta($user_id, 'vmp_store_city_id', true),
@@ -148,6 +149,9 @@ class ProfileService
         foreach ($map as $meta_key => $value) {
             update_user_meta($user_id, $meta_key, $value);
         }
+
+        $is_seller = $this->to_bool($this->pick_value($payload, ['is_seller', 'store_is_seller']));
+        update_user_meta($user_id, '_store_is_seller', $is_seller ? 1 : 0);
 
         $couriers = $this->sanitize_array($payload, ['couriers', 'store_couriers']);
         $couriers = array_values(array_unique(array_filter(array_map('sanitize_key', $couriers), static function ($code) {

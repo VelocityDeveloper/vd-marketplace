@@ -1,4 +1,4 @@
-    <?php
+<?php
     $store_name = (string) get_user_meta($current_user_id, 'vmp_store_name', true);
     $store_phone = (string) get_user_meta($current_user_id, 'vmp_store_phone', true);
     $store_whatsapp = (string) get_user_meta($current_user_id, 'vmp_store_whatsapp', true);
@@ -12,6 +12,7 @@
     $store_city_id = (string) get_user_meta($current_user_id, 'vmp_store_city_id', true);
     $store_province_id = (string) get_user_meta($current_user_id, 'vmp_store_province_id', true);
     $store_postcode = (string) get_user_meta($current_user_id, 'vmp_store_postcode', true);
+    $store_is_seller = !empty(get_user_meta($current_user_id, '_store_is_seller', true));
     $store_couriers = get_user_meta($current_user_id, 'vmp_couriers', true);
     if (!is_array($store_couriers)) {
         $store_couriers = [];
@@ -26,9 +27,11 @@
         $cod_city_names = [];
     }
     $avatar_id = (int) get_user_meta($current_user_id, 'vmp_store_avatar_id', true);
-    $avatar_url = $avatar_id > 0 ? wp_get_attachment_image_url($avatar_id, 'thumbnail') : '';
+    $avatar_url = $avatar_id > 0 ? wp_get_attachment_image_url($avatar_id, 'medium') : '';
+    $is_star_seller = !empty(get_user_meta($current_user_id, 'vmp_is_star_seller', true));
     $courier_options = \VelocityMarketplace\Support\Settings::courier_labels();
     $location_state = [
+        'seller_enabled' => $store_is_seller,
         'province_id' => $store_province_id,
         'province_name' => $store_province,
         'city_id' => $store_city_id,
@@ -49,10 +52,25 @@
             <input type="hidden" name="vmp_action" value="save_store_profile">
             <input type="hidden" name="tab" value="seller_profile">
             <?php wp_nonce_field('vmp_store_profile', 'vmp_store_profile_nonce'); ?>
+            <div class="col-12">
+                <div class="form-check">
+                    <input class="form-check-input" type="checkbox" id="store_is_seller" name="store_is_seller" value="1" <?php checked($store_is_seller); ?>>
+                    <label class="form-check-label" for="store_is_seller"><?php echo esc_html__('Aktif sebagai Seller', 'velocity-marketplace'); ?></label>
+                </div>
+                <div class="form-text">
+                    <?php
+                    echo esc_html(
+                        $store_is_seller
+                            ? __('Akun ini sedang aktif untuk menjual produk di marketplace.', 'velocity-marketplace')
+                            : __('Centang untuk mengaktifkan akun seller. Jika dimatikan, tab produk dan operasional toko akan disembunyikan.', 'velocity-marketplace')
+                    );
+                    ?>
+                </div>
+            </div>
             <div class="col-md-6"><label class="form-label"><?php echo esc_html__('Nama Toko', 'velocity-marketplace'); ?></label><input type="text" name="store_name" class="form-control" value="<?php echo esc_attr($store_name); ?>" required></div>
             <div class="col-md-6">
                 <label class="form-label"><?php echo esc_html__('Foto Profil Toko', 'velocity-marketplace'); ?></label>
-                <div class="vmp-media-field" data-multiple="0">
+                <div class="vmp-media-field vmp-media-field--avatar" data-multiple="0" data-overlay-remove="0" data-preview-ratio="1x1" data-preview-fit="contain">
                     <input type="hidden" name="store_avatar_id" class="vmp-media-field__input" value="<?php echo esc_attr((string) $avatar_id); ?>">
                     <div class="d-flex flex-wrap gap-2 mb-2">
                         <button type="button" class="btn btn-outline-dark btn-sm vmp-media-field__open" data-title="<?php echo esc_attr__('Foto Profil Toko', 'velocity-marketplace'); ?>" data-button="<?php echo esc_attr__('Gunakan foto ini', 'velocity-marketplace'); ?>"><?php echo esc_html__('Pilih dari Media Library', 'velocity-marketplace'); ?></button>
@@ -62,8 +80,9 @@
                         <?php if ($avatar_url) : ?>
                             <div class="vmp-media-field__grid vmp-media-field__grid--single">
                                 <div class="vmp-media-field__item" data-id="<?php echo esc_attr((string) $avatar_id); ?>">
-                                    <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr__('Foto profil toko', 'velocity-marketplace'); ?>" class="vmp-media-field__image">
-                                    <button type="button" class="btn-close vmp-media-field__remove" aria-label="<?php echo esc_attr__('Hapus foto', 'velocity-marketplace'); ?>"></button>
+                                    <div class="vmp-media-field__frame ratio ratio-1x1">
+                                        <img src="<?php echo esc_url($avatar_url); ?>" alt="<?php echo esc_attr__('Foto profil toko', 'velocity-marketplace'); ?>" class="vmp-media-field__image vmp-media-field__image--contain">
+                                    </div>
                                 </div>
                             </div>
                         <?php else : ?>
@@ -148,6 +167,21 @@
                     </div>
                 <?php endif; ?>
             </div>
-            <div class="col-12 d-flex justify-content-between align-items-center"><div><?php if ($is_star_seller) : ?><span class="badge bg-warning text-dark"><?php echo esc_html__('Star Seller Aktif', 'velocity-marketplace'); ?></span><?php else : ?><span class="badge bg-secondary"><?php echo esc_html__('Star Seller Tidak Aktif', 'velocity-marketplace'); ?></span><?php endif; ?></div><button type="submit" class="btn btn-dark" :disabled="saving" x-text="saving ? '<?php echo esc_attr__('Menyimpan...', 'velocity-marketplace'); ?>' : '<?php echo esc_attr__('Simpan Profil Toko', 'velocity-marketplace'); ?>'"><?php echo esc_html__('Simpan Profil Toko', 'velocity-marketplace'); ?></button></div>
+            <div class="col-12 d-flex justify-content-between align-items-center flex-wrap gap-2">
+                <div>
+                    <?php if ($is_star_seller) : ?>
+                        <span class="badge bg-warning text-dark"><?php echo esc_html__('Star Seller Aktif', 'velocity-marketplace'); ?></span>
+                    <?php else : ?>
+                        <span class="badge bg-secondary"><?php echo esc_html__('Star Seller Tidak Aktif', 'velocity-marketplace'); ?></span>
+                    <?php endif; ?>
+                    <span class="badge <?php echo esc_attr($store_is_seller ? 'bg-success' : 'bg-secondary'); ?> ms-2">
+                        <?php echo esc_html($store_is_seller ? __('Seller Aktif', 'velocity-marketplace') : __('Seller Tidak Aktif', 'velocity-marketplace')); ?>
+                    </span>
+                </div>
+                <button type="submit" class="btn btn-dark" :disabled="saving">
+                    <span x-show="!saving"><?php echo esc_html__('Simpan Profil Toko', 'velocity-marketplace'); ?></span>
+                    <span x-show="saving" style="display:none;"><?php echo esc_html__('Menyimpan...', 'velocity-marketplace'); ?></span>
+                </button>
+            </div>
         </form>
     </div></div>

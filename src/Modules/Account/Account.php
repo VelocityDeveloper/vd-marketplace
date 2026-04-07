@@ -8,6 +8,7 @@ class Account
 {
     public function register()
     {
+        add_action('init', [$this, 'ensure_member_role'], 5);
         add_action('init', [$this, 'handle_actions']);
         add_action('user_register', [$this, 'apply_register_fields']);
         add_action('login_enqueue_scripts', [$this, 'customize_login_logo']);
@@ -26,6 +27,39 @@ class Account
         add_action('wp_store_tracking_after_order_content', [$this, 'render_tracking_marketplace_extension'], 20, 2);
     }
 
+    public function ensure_member_role()
+    {
+        if (!get_role('vd_member')) {
+            add_role('vd_member', __('Member Marketplace', 'velocity-marketplace'), [
+                'read' => true,
+                'upload_files' => true,
+            ]);
+        }
+
+        if (get_option('vmp_roles_normalized_to_vd_member') === '1') {
+            return;
+        }
+
+        $legacy_users = get_users([
+            'role__in' => ['vmp_member'],
+            'fields' => ['ID'],
+            'number' => -1,
+        ]);
+
+        foreach ((array) $legacy_users as $legacy_user) {
+            $user_id = isset($legacy_user->ID) ? (int) $legacy_user->ID : 0;
+            if ($user_id <= 0) {
+                continue;
+            }
+
+            $user = new \WP_User($user_id);
+            $user->set_role('vd_member');
+        }
+
+        remove_role('vmp_member');
+        update_option('vmp_roles_normalized_to_vd_member', '1', false);
+    }
+
     public static function is_member($user_id = 0)
     {
         $user_id = $user_id > 0 ? (int) $user_id : get_current_user_id();
@@ -39,12 +73,38 @@ class Account
         }
 
         $roles = is_array($user->roles) ? $user->roles : [];
-        return in_array('vmp_member', $roles, true) || in_array('administrator', $roles, true);
+        return in_array('vd_member', $roles, true) || in_array('administrator', $roles, true);
+    }
+
+    public static function can_manage_store_profile($user_id = 0)
+    {
+        return self::is_member($user_id);
     }
 
     public static function can_sell($user_id = 0)
     {
-        return self::is_member($user_id);
+        $user_id = $user_id > 0 ? (int) $user_id : get_current_user_id();
+        if ($user_id <= 0) {
+            return false;
+        }
+
+        $user = get_userdata($user_id);
+        if (!$user) {
+            return false;
+        }
+
+        $roles = is_array($user->roles) ? $user->roles : [];
+        if (in_array('administrator', $roles, true)) {
+            return true;
+        }
+
+        if (!in_array('vd_member', $roles, true)) {
+            return false;
+        }
+
+        // Satu titik aturan seller aktif. Kalau nanti logikanya berkembang,
+        // perubahan cukup dipusatkan di helper ini tanpa menyentuh semua caller.
+        return self::seller_flag_enabled($user_id);
     }
 
     public static function user_role_label($user_id = 0)
@@ -63,7 +123,10 @@ class Account
         if (in_array('administrator', $roles, true)) {
             return 'Admin';
         }
-        if (in_array('vmp_member', $roles, true)) {
+        if (self::can_sell($user_id)) {
+            return 'Seller';
+        }
+        if (in_array('vd_member', $roles, true)) {
             return 'Member';
         }
 
@@ -85,7 +148,15 @@ class Account
     public function apply_register_fields($user_id)
     {
         $user = new \WP_User($user_id);
-        $user->set_role('vmp_member');
+        $user->set_role('vd_member');
+        update_user_meta($user_id, '_store_is_seller', 0);
+    }
+
+    // Flag seller dasar sengaja dipisah agar future logic seperti moderation,
+    // subscription, atau capability tambahan bisa dibungkus di sini.
+    private static function seller_flag_enabled($user_id)
+    {
+        return !empty(get_user_meta((int) $user_id, '_store_is_seller', true));
     }
 
     public function filter_admin_bar($show)
@@ -202,16 +273,10 @@ class Account
         $message_count = (new \VelocityMarketplace\Modules\Message\MessageRepository())->unread_count($user_id);
         $notification_count = (new \VelocityMarketplace\Modules\Notification\NotificationRepository())->unread_count($user_id);
 
-        $tabs['tracking'] = [
-            'key' => 'tracking',
-            'label' => __('Tracking', 'velocity-marketplace'),
-            'priority' => 50,
-        ];
-
         $tabs['messages'] = [
             'key' => 'messages',
             'label' => __('Pesan', 'velocity-marketplace'),
-            'priority' => 60,
+            'priority' => 50,
             'badge_binding' => 'messageUnreadCount',
             'badge_initial' => $message_count,
         ];
@@ -219,12 +284,20 @@ class Account
         $tabs['notifications'] = [
             'key' => 'notifications',
             'label' => __('Notifikasi', 'velocity-marketplace'),
-            'priority' => 70,
+            'priority' => 60,
             'badge_binding' => 'notificationUnreadCount',
             'badge_initial' => $notification_count,
         ];
 
-        if (self::can_sell($user_id)) {
+        if (self::can_manage_store_profile($user_id)) {
+            $tabs['seller_profile'] = [
+                'key' => 'seller_profile',
+                'label' => __('Profil Toko', 'velocity-marketplace'),
+                'priority' => 100,
+            ];
+        }
+
+        if (self::can_manage_store_profile($user_id)) {
             $tabs['seller_home'] = [
                 'key' => 'seller_home',
                 'label' => __('Beranda Toko', 'velocity-marketplace'),
@@ -240,11 +313,6 @@ class Account
                 'label' => __('Produk', 'velocity-marketplace'),
                 'priority' => 130,
             ];
-            $tabs['seller_profile'] = [
-                'key' => 'seller_profile',
-                'label' => __('Profil Toko', 'velocity-marketplace'),
-                'priority' => 140,
-            ];
         }
 
         return $tabs;
@@ -257,25 +325,27 @@ class Account
             return $panels;
         }
 
-        $panels['tracking'] = [
-            'key' => 'tracking',
-            'priority' => 50,
-            'render_callback' => [$this, 'render_core_tracking_panel'],
-        ];
-
         $panels['messages'] = [
             'key' => 'messages',
-            'priority' => 60,
+            'priority' => 50,
             'render_callback' => [$this, 'render_core_messages_panel'],
         ];
 
         $panels['notifications'] = [
             'key' => 'notifications',
-            'priority' => 70,
+            'priority' => 60,
             'render_callback' => [$this, 'render_core_notifications_panel'],
         ];
 
-        if (self::can_sell($user_id)) {
+        if (self::can_manage_store_profile($user_id)) {
+            $panels['seller_profile'] = [
+                'key' => 'seller_profile',
+                'priority' => 100,
+                'render_callback' => [$this, 'render_core_seller_profile_panel'],
+            ];
+        }
+
+        if (self::can_manage_store_profile($user_id)) {
             $panels['seller_home'] = [
                 'key' => 'seller_home',
                 'priority' => 110,
@@ -291,19 +361,9 @@ class Account
                 'priority' => 130,
                 'render_callback' => [$this, 'render_core_seller_products_panel'],
             ];
-            $panels['seller_profile'] = [
-                'key' => 'seller_profile',
-                'priority' => 140,
-                'render_callback' => [$this, 'render_core_seller_profile_panel'],
-            ];
         }
 
         return $panels;
-    }
-
-    public function render_core_tracking_panel($context = [])
-    {
-        return do_shortcode('[wp_store_tracking]');
     }
 
     public function filter_tracking_query_param($query_param, $atts = [])
@@ -401,6 +461,13 @@ class Account
     public function render_core_seller_home_panel($context = [])
     {
         $user_id = isset($context['user_id']) ? (int) $context['user_id'] : get_current_user_id();
+        if (!self::can_sell($user_id)) {
+            return $this->render_inactive_seller_panel(
+                __('Beranda Toko', 'velocity-marketplace'),
+                __('Aktifkan seller di tab Profil Toko untuk melihat ringkasan operasional toko Anda.', 'velocity-marketplace')
+            );
+        }
+
         return \VelocityMarketplace\Frontend\Template::render('seller/home', [
             'current_user_id' => $user_id,
             'money' => $this->money_formatter(),
@@ -411,6 +478,13 @@ class Account
     public function render_core_seller_report_panel($context = [])
     {
         $user_id = isset($context['user_id']) ? (int) $context['user_id'] : get_current_user_id();
+        if (!self::can_sell($user_id)) {
+            return $this->render_inactive_seller_panel(
+                __('Laporan', 'velocity-marketplace'),
+                __('Aktifkan seller di tab Profil Toko untuk membuka laporan penjualan toko.', 'velocity-marketplace')
+            );
+        }
+
         return \VelocityMarketplace\Frontend\Template::render('seller/report', [
             'current_user_id' => $user_id,
             'money' => $this->money_formatter(),
@@ -420,6 +494,13 @@ class Account
     public function render_core_seller_products_panel($context = [])
     {
         $user_id = isset($context['user_id']) ? (int) $context['user_id'] : get_current_user_id();
+        if (!self::can_sell($user_id)) {
+            return $this->render_inactive_seller_panel(
+                __('Produk', 'velocity-marketplace'),
+                __('Aktifkan seller di tab Profil Toko untuk mulai menambahkan dan mengelola produk.', 'velocity-marketplace')
+            );
+        }
+
         return \VelocityMarketplace\Frontend\Template::render('seller/products', [
             'current_user_id' => $user_id,
             'profile_complete' => $this->profile_complete($user_id),
@@ -439,6 +520,15 @@ class Account
         $store_name = (string) get_user_meta((int) $user_id, 'vmp_store_name', true);
         $store_address = (string) get_user_meta((int) $user_id, 'vmp_store_address', true);
         return $store_name !== '' && $store_address !== '';
+    }
+
+    private function render_inactive_seller_panel($title, $message)
+    {
+        return \VelocityMarketplace\Frontend\Template::render('seller/inactive-state', [
+            'title' => (string) $title,
+            'message' => (string) $message,
+            'profile_url' => add_query_arg(['tab' => 'seller_profile'], Settings::profile_url()),
+        ]);
     }
 
     private function money_formatter()

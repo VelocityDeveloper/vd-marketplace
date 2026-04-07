@@ -1,5 +1,6 @@
 <?php
 use WpStore\Domain\Product\ProductFields;
+use VelocityMarketplace\Support\Settings;
     $product_captcha_html = \VelocityMarketplace\Modules\Captcha\CaptchaBridge::render();
     $edit_product_id = isset($_GET['edit_product']) ? (int) $_GET['edit_product'] : 0;
     $edit_product = null;
@@ -56,7 +57,7 @@ use WpStore\Domain\Product\ProductFields;
                         </div>
                         <div class="col-12">
                             <label class="form-label"><?php echo esc_html__('Gambar Utama', 'velocity-marketplace'); ?></label>
-                            <div class="vmp-media-field" data-multiple="0">
+                            <div class="vmp-media-field" data-multiple="0" data-overlay-remove="0">
                                 <input type="hidden" id="featured_image_id" name="featured_image_id" class="vmp-media-field__input" value="<?php echo esc_attr($featured_image_id); ?>">
                                 <div class="d-flex flex-wrap gap-2 mb-2">
                                     <button type="button" class="btn btn-outline-dark btn-sm vmp-media-field__open" data-title="<?php echo esc_attr__('Gambar Utama', 'velocity-marketplace'); ?>" data-button="<?php echo esc_attr__('Gunakan gambar ini', 'velocity-marketplace'); ?>"><?php echo esc_html__('Pilih dari Media Library', 'velocity-marketplace'); ?></button>
@@ -67,7 +68,6 @@ use WpStore\Domain\Product\ProductFields;
                                         <div class="vmp-media-field__grid vmp-media-field__grid--single">
                                             <div class="vmp-media-field__item" data-id="<?php echo esc_attr((string) $featured_image_id); ?>">
                                                 <img src="<?php echo esc_url($featured_image_url); ?>" alt="<?php echo esc_attr__('Featured product image', 'velocity-marketplace'); ?>" class="vmp-media-field__image">
-                                                <button type="button" class="btn-close vmp-media-field__remove" aria-label="<?php echo esc_attr__('Remove image', 'velocity-marketplace'); ?>"></button>
                                             </div>
                                         </div>
                                     <?php else : ?>
@@ -88,7 +88,7 @@ use WpStore\Domain\Product\ProductFields;
             <?php if ($products_query->have_posts()) : ?>
                 <div class="table-responsive"><table class="table table-sm mb-0"><thead><tr><th><?php echo esc_html__('Judul', 'velocity-marketplace'); ?></th><th><?php echo esc_html__('Status', 'velocity-marketplace'); ?></th><th></th></tr></thead><tbody>
                 <?php while ($products_query->have_posts()) : $products_query->the_post(); $pid = get_the_ID(); $delete_url = add_query_arg(['tab' => 'seller_products','vmp_delete_product' => $pid,'vmp_nonce' => wp_create_nonce('vmp_delete_product_' . $pid)]); $premium = !empty(get_post_meta($pid, 'premium_request', true)); ?>
-                    <tr><td><a href="<?php echo esc_url(get_permalink($pid)); ?>" target="_blank"><?php the_title(); ?></a><div class="small text-muted"><?php echo esc_html($money((float) get_post_meta($pid, 'price', true))); ?></div><?php if ($premium) : ?><div class="small text-muted"><?php echo esc_html__('Pengajuan premium sedang ditinjau.', 'velocity-marketplace'); ?></div><?php endif; ?></td><td><?php echo esc_html(get_post_status($pid)); ?></td><td class="text-end"><a class="btn btn-outline-dark btn-sm" href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products', 'edit_product' => $pid])); ?>"><?php echo esc_html__('Edit', 'velocity-marketplace'); ?></a> <a class="btn btn-outline-danger btn-sm" href="<?php echo esc_url($delete_url); ?>" onclick="return confirm('<?php echo esc_js(__('Hapus produk ini?', 'velocity-marketplace')); ?>')"><?php echo esc_html__('Hapus', 'velocity-marketplace'); ?></a></td></tr>
+                    <tr><td><a href="<?php echo esc_url(get_permalink($pid)); ?>" target="_blank"><?php the_title(); ?></a><div class="small text-muted"><?php echo esc_html(Settings::currency_symbol() . ' ' . number_format((float) get_post_meta($pid, 'price', true), 0, ',', '.')); ?></div><?php if ($premium) : ?><div class="small text-muted"><?php echo esc_html__('Pengajuan premium sedang ditinjau.', 'velocity-marketplace'); ?></div><?php endif; ?></td><td><?php echo esc_html(get_post_status($pid)); ?></td><td class="text-end"><a class="btn btn-outline-dark btn-sm" href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products', 'edit_product' => $pid])); ?>"><?php echo esc_html__('Edit', 'velocity-marketplace'); ?></a> <a class="btn btn-outline-danger btn-sm" href="<?php echo esc_url($delete_url); ?>" onclick="return confirm('<?php echo esc_js(__('Hapus produk ini?', 'velocity-marketplace')); ?>')"><?php echo esc_html__('Hapus', 'velocity-marketplace'); ?></a></td></tr>
                 <?php endwhile; wp_reset_postdata(); ?>
                 </tbody></table></div>
             <?php else : ?>

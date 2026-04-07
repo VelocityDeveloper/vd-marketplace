@@ -262,12 +262,12 @@ class ReviewRepository
             return ['review_count' => 0, 'rating_average' => 0.0];
         }
 
-        if (!metadata_exists('post', $product_id, 'vmp_review_count') || !metadata_exists('post', $product_id, 'vmp_rating_average')) {
+        if (!metadata_exists('post', $product_id, '_store_review_count') || !metadata_exists('post', $product_id, '_store_rating_average')) {
             return $this->recalculate_product_meta($product_id);
         }
 
-        $review_count = (int) get_post_meta($product_id, 'vmp_review_count', true);
-        $rating_average = (float) get_post_meta($product_id, 'vmp_rating_average', true);
+        $review_count = (int) get_post_meta($product_id, '_store_review_count', true);
+        $rating_average = (float) get_post_meta($product_id, '_store_rating_average', true);
 
         return [
             'review_count' => $review_count,
@@ -297,8 +297,8 @@ class ReviewRepository
         $review_count = isset($stats['review_count']) ? (int) $stats['review_count'] : 0;
         $rating_average = isset($stats['rating_average']) ? round((float) $stats['rating_average'], 2) : 0.0;
 
-        update_post_meta($product_id, 'vmp_review_count', $review_count);
-        update_post_meta($product_id, 'vmp_rating_average', $rating_average);
+        update_post_meta($product_id, '_store_review_count', $review_count);
+        update_post_meta($product_id, '_store_rating_average', $rating_average);
 
         return [
             'review_count' => $review_count,

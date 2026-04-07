@@ -32,6 +32,10 @@
   grid-template-columns: minmax(180px, 280px);
 }
 
+.vmp-media-field--avatar .vmp-media-field__grid--single {
+  grid-template-columns: 150px;
+}
+
 .vmp-media-field__item {
   position: relative;
   border: 1px solid #dee2e6;
@@ -40,11 +44,23 @@
   background: #fff;
 }
 
+.vmp-media-field__frame {
+  width: 100%;
+  background: #fff;
+}
+
 .vmp-media-field__image {
   display: block;
   width: 100%;
   height: 140px;
   object-fit: cover;
+}
+
+.vmp-media-field__image--contain {
+  height: 100%;
+  object-fit: contain;
+  background: #fff;
+  padding: 0.5rem;
 }
 
 .vmp-media-field__remove {
@@ -61,6 +77,34 @@
   border: 1px dashed #ced4da;
   border-radius: 0.75rem;
   background: #f8f9fa;
+}
+
+.vmp-file-link-field__preview {
+  margin-top: 0.75rem;
+}
+
+.vmp-file-link-field__empty {
+  padding: 0.85rem 1rem;
+  border: 1px dashed #ced4da;
+  border-radius: 0.75rem;
+  background: #f8f9fa;
+}
+
+.vmp-file-link-field__summary {
+  padding: 0.85rem 1rem;
+  border: 1px solid #dee2e6;
+  border-radius: 0.75rem;
+  background: #fff;
+}
+
+.vmp-file-link-field__name {
+  font-weight: 600;
+  margin-bottom: 0.25rem;
+  word-break: break-word;
+}
+
+.vmp-file-link-field__link {
+  word-break: break-all;
 }
 
 .vmp-shipping-card {

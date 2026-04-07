@@ -24,10 +24,6 @@ Tujuannya:
   - menyediakan `window.VMPFrontend`
   - berisi helper request, format uang, helper cart, helper wilayah, helper captcha
 
-- `assets/js/frontend-catalog.js`
-  - untuk halaman katalog
-  - register Alpine component `vmpCatalog`
-
 - `assets/js/frontend-cart.js`
   - untuk halaman keranjang
   - register Alpine component `vmpCart`
@@ -63,18 +59,7 @@ Tujuannya:
   - register Alpine component `vmpAdminSettingsPage`
   - tidak dipakai di editor CPT WordPress bawaan
 
-### Placeholder legacy
-
-- `assets/js/frontend.js`
-  - sudah bukan asset aktif
-  - hanya placeholder kompatibilitas internal repository
-  - jangan tambah logic baru ke file ini
-
 ## Mapping Halaman ke Component
-
-- `templates/catalog.php`
-  - `x-data="vmpCatalog(...)"`
-  - file JS utama: `frontend-catalog.js`
 
 - `templates/cart.php`
   - `x-data="vmpCart()"`
@@ -91,12 +76,6 @@ Tujuannya:
 - `templates/seller/profile.php`
   - `x-data="vmpStoreProfileForm(...)"`
   - file JS utama: `frontend-profile.js`
-
-- `templates/single-product.php`
-  - galeri dan tombol add to cart/wishlist global
-  - file JS utama: `frontend-ui.js`
-
-- `templates/profile.php`
 
 - `src/Core/SettingsPage.php`
   - `x-data="vmpAdminSettingsPage()"`
@@ -141,20 +120,6 @@ Kalau helper baru dibutuhkan lintas file, taruh di `frontend-shared.js`.
 Kalau helper hanya dipakai satu file, taruh lokal di file itu saja.
 
 ## Tanggung Jawab Per File
-
-### `frontend-catalog.js`
-
-Tanggung jawab:
-- load katalog dari REST API
-- apply filter dan sorting
-- load wishlist awal
-- toggle wishlist dari listing
-- add to cart dari listing
-
-Jangan taruh:
-- logic checkout
-- logic profil
-- helper global yang dipakai banyak halaman
 
 ### `frontend-cart.js`
 
@@ -228,13 +193,12 @@ Kalau menambah fitur baru, urutannya:
 
 1. tentukan concern fiturnya
 2. pakai file yang sudah ada jika memang concern-nya sama
-3. kalau concern baru, buat file baru daripada menumpuk file lama
+3. kalau concern baru, buat file baru daripada menumpuk file yang tidak relevan
 4. helper lintas halaman masuk `frontend-shared.js`
 5. logic save tetap berakhir di REST controller + service PHP
 
 ## Aturan Praktis
 
-- Jangan tambah logic baru ke `frontend.js`
 - Jangan panggil endpoint REST langsung dengan `fetch` mentah kalau `request()` sudah cukup
 - Jangan membuat helper global baru di `window` kecuali memang entry point Alpine
 - Jangan campur logic dua halaman besar ke file yang sama hanya karena sama-sama pakai Alpine

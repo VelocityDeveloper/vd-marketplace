@@ -45,15 +45,7 @@ class ProductQuery
             }
         }
 
-        if ($filters['sort'] === 'sold_desc') {
-            $args['meta_key'] = 'vmp_sold_count';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = 'DESC';
-        } elseif ($filters['sort'] === 'rating_desc') {
-            $args['meta_key'] = 'vmp_rating_average';
-            $args['orderby'] = 'meta_value_num';
-            $args['order'] = 'DESC';
-        } elseif ($filters['sort'] === 'popular') {
+        if ($filters['sort'] === 'popular') {
             $args['meta_key'] = 'hit';
             $args['orderby'] = 'meta_value_num';
             $args['order'] = 'DESC';
@@ -71,18 +63,11 @@ class ProductQuery
         }
     }
 
-    public function label_options()
-    {
-        return \WpStore\Domain\Product\ProductQuery::label_options();
-    }
-
     public function sort_options()
     {
         $base = \WpStore\Domain\Product\ProductQuery::sort_options();
 
         return array_merge($base, [
-            'sold_desc' => __('Terlaris', 'velocity-marketplace'),
-            'rating_desc' => __('Rating Tertinggi', 'velocity-marketplace'),
             'popular' => __('Paling Banyak Dilihat', 'velocity-marketplace'),
         ]);
     }
@@ -109,15 +94,6 @@ class ProductQuery
                     'value' => (string) $term->name,
                 ];
             }
-        }
-
-        $label_options = $this->label_options();
-        if ($filters['label'] !== '' && isset($label_options[$filters['label']])) {
-            $chips[] = [
-                'key' => 'label',
-                'label' => __('Label', 'velocity-marketplace'),
-                'value' => (string) $label_options[$filters['label']],
-            ];
         }
 
         $store_type_options = [
@@ -186,8 +162,15 @@ class ProductQuery
 
         $users = get_users([
             'fields' => ['ID'],
-            'role__in' => ['vmp_member', 'administrator'],
+            'role__in' => ['vd_member', 'administrator'],
             'number' => -1,
+            'meta_query' => [
+                [
+                    'key' => '_store_is_seller',
+                    'value' => '1',
+                    'compare' => '=',
+                ],
+            ],
         ]);
 
         $author_ids = [];
@@ -243,9 +226,16 @@ class ProductQuery
 
         $users = get_users([
             'fields' => ['ID'],
-            'role__in' => ['vmp_member', 'administrator'],
+            'role__in' => ['vd_member', 'administrator'],
             'number' => -1,
-            'meta_query' => $meta_query,
+            'meta_query' => array_merge([
+                'relation' => 'AND',
+                [
+                    'key' => '_store_is_seller',
+                    'value' => '1',
+                    'compare' => '=',
+                ],
+            ], array_slice($meta_query, 1)),
         ]);
 
         $author_ids = [];

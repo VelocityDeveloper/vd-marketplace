@@ -160,7 +160,6 @@ $message_initial = [
       }
 
       this.dispatchUnread();
-      this.syncQuery();
       this.scrollToBottom();
     },
     request(path, options) {

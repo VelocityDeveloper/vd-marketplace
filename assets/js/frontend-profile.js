@@ -1,18 +1,14 @@
 /* Komponen profil member dan profil toko berbasis lokasi wilayah. */
 (() => {
-  const shared = window.VMPFrontend;
-  if (!shared) {
-    return;
-  }
+  const shared = () => window.VMPFrontend || null;
 
-  const {
-    request,
-    fetchShippingList,
-    formDataToObject,
-    mapProvince,
-    mapCity,
-    mapSubdistrict,
-  } = shared;
+  const requireShared = () => {
+    const current = shared();
+    if (!current) {
+      throw new Error('Frontend helper belum siap.');
+    }
+    return current;
+  };
 
   // Membuat state lokasi bersama yang dipakai form profil member dan toko.
   const createProfileLocationState = (initial = {}) => ({
@@ -133,6 +129,7 @@
     async loadProvinces() {
       this.isLoadingProvinces = true;
       try {
+        const { fetchShippingList, mapProvince } = requireShared();
         const rows = await fetchShippingList('shipping/provinces');
         this.provinces = rows.map(mapProvince);
         this.syncProvinceSelection();
@@ -151,6 +148,7 @@
 
       this.isLoadingCities = true;
       try {
+        const { fetchShippingList, mapCity } = requireShared();
         const rows = await fetchShippingList(
           `shipping/cities?province=${encodeURIComponent(provinceId)}`,
         );
@@ -172,6 +170,7 @@
 
       this.isLoadingSubdistricts = true;
       try {
+        const { fetchShippingList, mapSubdistrict } = requireShared();
         const rows = await fetchShippingList(
           `shipping/subdistricts?city=${encodeURIComponent(cityId)}`,
         );
@@ -267,6 +266,7 @@
         this.saveError = '';
 
         try {
+          const { formDataToObject, request } = requireShared();
           const raw = formDataToObject(formNode);
           const payload = {
             name: String(raw.customer_name || '').trim(),
@@ -300,7 +300,6 @@
   // Komponen profil toko yang menyimpan alamat asal, kurir, dan COD.
   const vmpStoreProfileForm = (initial = {}) => {
     const location = createProfileLocationState(initial);
-
     return {
       ...location,
       saving: false,
@@ -322,12 +321,15 @@
         this.saveError = '';
 
         try {
+          const { formDataToObject, request } = requireShared();
           const raw = formDataToObject(formNode);
           const payload = {
             name: String(raw.store_name || '').trim(),
             phone: String(raw.store_phone || '').trim(),
             whatsapp: String(raw.store_whatsapp || '').trim(),
             address: String(raw.store_address || '').trim(),
+            bank_details: String(raw.store_bank_details || '').trim(),
+            is_seller: !!raw.store_is_seller,
             province_id: String(raw.store_province_id || '').trim(),
             province_name: String(raw.store_province_name || '').trim(),
             city_id: String(raw.store_city_id || '').trim(),
@@ -375,9 +377,18 @@
   window.vmpMemberProfileForm = vmpMemberProfileForm;
   window.vmpStoreProfileForm = vmpStoreProfileForm;
 
-  document.addEventListener('alpine:init', () => {
+  const registerAlpineComponents = () => {
+    if (!window.Alpine || typeof window.Alpine.data !== 'function') {
+      return false;
+    }
+
     Alpine.data('vmpStoreProfileLocation', vmpStoreProfileLocation);
     Alpine.data('vmpMemberProfileForm', vmpMemberProfileForm);
     Alpine.data('vmpStoreProfileForm', vmpStoreProfileForm);
-  });
+    return true;
+  };
+
+  if (!registerAlpineComponents()) {
+    document.addEventListener('alpine:init', registerAlpineComponents, { once: true });
+  }
 })();

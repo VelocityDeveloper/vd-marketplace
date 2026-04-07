@@ -122,8 +122,8 @@ class CouponService
             return;
         }
 
-        $usage_count = (int) get_post_meta($coupon_id, 'store_coupon_usage_count', true);
-        update_post_meta($coupon_id, 'store_coupon_usage_count', $usage_count + 1);
+        $usage_count = (int) get_post_meta($coupon_id, '_store_coupon_usage_count', true);
+        update_post_meta($coupon_id, '_store_coupon_usage_count', $usage_count + 1);
     }
 
     public function normalize($coupon_id)
@@ -136,14 +136,14 @@ class CouponService
         return [
             'id' => $coupon_id,
             'code' => strtoupper((string) get_the_title($coupon_id)),
-            'scope' => (string) get_post_meta($coupon_id, 'store_coupon_scope', true) === 'shipping' ? 'shipping' : 'product',
-            'type' => (string) get_post_meta($coupon_id, 'store_coupon_type', true) === 'percent' ? 'percent' : 'fixed',
-            'amount' => (float) get_post_meta($coupon_id, 'store_coupon_amount', true),
-            'min_purchase' => (float) get_post_meta($coupon_id, 'store_coupon_min_purchase', true),
-            'usage_limit' => (int) get_post_meta($coupon_id, 'store_coupon_usage_limit', true),
-            'usage_count' => (int) get_post_meta($coupon_id, 'store_coupon_usage_count', true),
-            'starts_at' => (string) get_post_meta($coupon_id, 'store_coupon_starts_at', true),
-            'ends_at' => (string) get_post_meta($coupon_id, 'store_coupon_ends_at', true),
+            'scope' => (string) get_post_meta($coupon_id, '_store_coupon_scope', true) === 'shipping' ? 'shipping' : 'product',
+            'type' => (string) get_post_meta($coupon_id, '_store_coupon_type', true) === 'percent' ? 'percent' : 'nominal',
+            'amount' => (float) get_post_meta($coupon_id, '_store_coupon_value', true),
+            'min_purchase' => (float) get_post_meta($coupon_id, '_store_coupon_min_purchase', true),
+            'usage_limit' => (int) get_post_meta($coupon_id, '_store_coupon_usage_limit', true),
+            'usage_count' => (int) get_post_meta($coupon_id, '_store_coupon_usage_count', true),
+            'starts_at' => (string) get_post_meta($coupon_id, '_store_coupon_starts_at', true),
+            'ends_at' => (string) get_post_meta($coupon_id, '_store_coupon_expires_at', true),
             'is_active' => get_post_status($coupon_id) === 'publish',
         ];
     }

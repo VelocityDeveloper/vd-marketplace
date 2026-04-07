@@ -161,20 +161,52 @@ class Settings
         return self::core_page_url('page_checkout', '/checkout/');
     }
 
-    public static function store_profile_url($seller_id = 0)
+    public static function store_profile_page_id()
     {
         $pages = get_option(VMP_PAGES_OPTION, []);
-        $base = '';
         if (is_array($pages) && !empty($pages['toko'])) {
-            $base = get_permalink((int) $pages['toko']);
+            return (int) $pages['toko'];
         }
-        if (!$base) {
-            $base = site_url('/store/');
+
+        return 0;
+    }
+
+    public static function store_profile_base_url()
+    {
+        $page_id = self::store_profile_page_id();
+        if ($page_id > 0) {
+            $url = get_permalink($page_id);
+            if ($url) {
+                return $url;
+            }
         }
+
+        return site_url('/store/');
+    }
+
+    public static function store_profile_base_path()
+    {
+        $page_id = self::store_profile_page_id();
+        if ($page_id > 0) {
+            $uri = trim((string) get_page_uri($page_id), '/');
+            if ($uri !== '') {
+                return $uri;
+            }
+        }
+
+        return 'store';
+    }
+
+    public static function store_profile_url($seller_id = 0)
+    {
+        $base = self::store_profile_base_url();
 
         $seller_id = (int) $seller_id;
         if ($seller_id > 0) {
-            return add_query_arg(['seller' => $seller_id], $base);
+            $seller = get_userdata($seller_id);
+            if ($seller && $seller->user_login !== '') {
+                return trailingslashit($base) . rawurlencode($seller->user_login) . '/';
+            }
         }
 
         return $base;
@@ -230,19 +262,6 @@ class Settings
         $rows = isset($settings['store_bank_accounts']) && is_array($settings['store_bank_accounts'])
             ? $settings['store_bank_accounts']
             : [];
-
-        if (empty($rows)) {
-            $legacy_bank_name = trim((string) ($settings['bank_name'] ?? ''));
-            $legacy_bank_account = preg_replace('/[^0-9]/', '', (string) ($settings['bank_account'] ?? ''));
-            $legacy_bank_holder = trim((string) ($settings['bank_holder'] ?? ''));
-            if ($legacy_bank_name !== '' && $legacy_bank_account !== '' && $legacy_bank_holder !== '') {
-                $rows[] = [
-                    'bank_name' => $legacy_bank_name,
-                    'bank_account' => $legacy_bank_account,
-                    'bank_holder' => $legacy_bank_holder,
-                ];
-            }
-        }
 
         $accounts = [];
         foreach ($rows as $row) {
@@ -313,7 +332,7 @@ class Settings
             self::core_page_id('page_cart'),
             self::core_page_id('page_checkout'),
             self::core_page_id('page_tracking'),
-            !empty($pages['toko']) ? (int) $pages['toko'] : 0,
+            self::store_profile_page_id(),
         ];
 
         return array_values(array_filter(array_unique(array_map('intval', $ids))));

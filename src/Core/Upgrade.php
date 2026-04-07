@@ -54,7 +54,7 @@ class Upgrade
 
         if (!empty($product_ids) && is_array($product_ids)) {
             foreach ($product_ids as $product_id) {
-                update_post_meta((int) $product_id, 'vmp_sold_count', 0);
+                update_post_meta((int) $product_id, '_store_sold_count', 0);
             }
         }
 
@@ -148,7 +148,7 @@ class Upgrade
         }
 
         foreach ($totals as $product_id => $qty) {
-            update_post_meta((int) $product_id, 'vmp_sold_count', max(0, (int) $qty));
+            update_post_meta((int) $product_id, '_store_sold_count', max(0, (int) $qty));
         }
     }
 }

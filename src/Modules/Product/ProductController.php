@@ -84,7 +84,6 @@ class ProductController
             'total' => (int) $query->found_posts,
             'filters' => $filters,
             'sort_options' => $product_query->sort_options(),
-            'label_options' => $product_query->label_options(),
             'marketplace' => [
                 'supports_store_type' => true,
                 'supports_store_location' => true,

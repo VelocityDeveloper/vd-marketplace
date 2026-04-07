@@ -38,42 +38,38 @@ class Assets
 
         self::$frontend_enqueued = true;
 
-        wp_register_script(
-            'alpinejs',
-            'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js',
-            [],
-            null,
-            true
-        );
+        if (!wp_script_is('alpinejs', 'registered')) {
+            wp_register_script(
+                'alpinejs',
+                'https://unpkg.com/alpinejs@3.x.x/dist/cdn.min.js',
+                [],
+                null,
+                true
+            );
+        }
+
+        $profile_bootstrap_in_footer = empty($context['profile']);
 
         wp_enqueue_style(
             'velocity-marketplace-frontend-css',
             VMP_URL . 'assets/css/frontend.css',
             [],
-            VMP_VERSION
+            $this->asset_version('assets/css/frontend.css')
         );
 
         wp_enqueue_script(
             'velocity-marketplace-frontend-shared-js',
             VMP_URL . 'assets/js/frontend-shared.js',
             [],
-            VMP_VERSION,
-            true
-        );
-
-        wp_enqueue_script(
-            'velocity-marketplace-frontend-catalog-js',
-            VMP_URL . 'assets/js/frontend-catalog.js',
-            ['velocity-marketplace-frontend-shared-js'],
-            VMP_VERSION,
-            true
+            $this->asset_version('assets/js/frontend-shared.js'),
+            $profile_bootstrap_in_footer
         );
 
         wp_enqueue_script(
             'velocity-marketplace-frontend-cart-js',
             VMP_URL . 'assets/js/frontend-cart.js',
             $this->frontend_script_dependencies(['velocity-marketplace-frontend-shared-js'], true),
-            VMP_VERSION,
+            $this->asset_version('assets/js/frontend-cart.js'),
             true
         );
 
@@ -81,7 +77,7 @@ class Assets
             'velocity-marketplace-frontend-checkout-js',
             VMP_URL . 'assets/js/frontend-checkout.js',
             ['velocity-marketplace-frontend-shared-js'],
-            VMP_VERSION,
+            $this->asset_version('assets/js/frontend-checkout.js'),
             true
         );
 
@@ -89,33 +85,35 @@ class Assets
             'velocity-marketplace-frontend-profile-js',
             VMP_URL . 'assets/js/frontend-profile.js',
             ['velocity-marketplace-frontend-shared-js'],
-            VMP_VERSION,
-            true
+            $this->asset_version('assets/js/frontend-profile.js'),
+            $profile_bootstrap_in_footer
         );
 
         wp_enqueue_script(
             'velocity-marketplace-frontend-ui-js',
             VMP_URL . 'assets/js/frontend-ui.js',
             $this->frontend_script_dependencies(['velocity-marketplace-frontend-shared-js'], true),
-            VMP_VERSION,
+            $this->asset_version('assets/js/frontend-ui.js'),
             true
         );
 
-        wp_enqueue_script('alpinejs');
+        if (!wp_script_is('alpinejs', 'enqueued')) {
+            wp_enqueue_script('alpinejs');
+        }
 
         if (!empty($context['profile'])) {
             wp_enqueue_style(
                 'velocity-marketplace-dashboard-css',
                 VMP_URL . 'assets/css/dashboard.css',
                 ['velocity-marketplace-frontend-css'],
-                VMP_VERSION
+                $this->asset_version('assets/css/dashboard.css')
             );
 
             wp_enqueue_script(
                 'velocity-marketplace-media-js',
                 VMP_URL . 'assets/js/media.js',
                 [],
-                VMP_VERSION,
+                $this->asset_version('assets/js/media.js'),
                 true
             );
 
@@ -287,6 +285,18 @@ class Assets
         }
 
         return array_values(array_unique($deps));
+    }
+
+    private function asset_version($relative_path)
+    {
+        $relative_path = ltrim(str_replace(['/', '\\'], DIRECTORY_SEPARATOR, (string) $relative_path), DIRECTORY_SEPARATOR);
+        $absolute_path = VMP_PATH . $relative_path;
+
+        if (file_exists($absolute_path)) {
+            return (string) filemtime($absolute_path);
+        }
+
+        return VMP_VERSION;
     }
 }
 

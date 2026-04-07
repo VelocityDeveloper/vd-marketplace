@@ -2,7 +2,6 @@
 
 namespace VelocityMarketplace\Modules\Product;
 
-use VelocityMarketplace\Modules\Review\ReviewRepository;
 use VelocityMarketplace\Modules\Review\RatingRenderer;
 use VelocityMarketplace\Support\Contract;
 
@@ -35,7 +34,6 @@ class ProductData
             ? array_values(array_filter(array_map('absint', (array) $core_product['gallery_ids'])))
             : self::gallery_ids($post_id);
         $image = self::image_url($post_id, 'large', $gallery_ids);
-        $review_summary = (new ReviewRepository())->product_summary($post_id);
         $author_id = (int) get_post_field('post_author', $post_id);
         $seller_city = $author_id > 0 ? (string) get_user_meta($author_id, 'vmp_store_city', true) : '';
         $seller_last_active_at = $author_id > 0 ? (string) get_user_meta($author_id, 'vmp_last_active_at', true) : '';
@@ -46,8 +44,15 @@ class ProductData
                 $seller_last_active_text = sprintf(__('%s yang lalu', 'velocity-marketplace'), human_time_diff($seller_last_active_ts, current_time('timestamp')));
             }
         }
-        $review_count = isset($review_summary['review_count']) ? (int) $review_summary['review_count'] : 0;
-        $rating_average = isset($review_summary['rating_average']) ? (float) $review_summary['rating_average'] : 0.0;
+        $review_count = $core_product !== null && array_key_exists('review_count', $core_product)
+            ? max(0, (int) $core_product['review_count'])
+            : (int) \WpStore\Domain\Product\ProductMeta::get_number($post_id, 'review_count', 0);
+        $rating_average = $core_product !== null && array_key_exists('rating_average', $core_product)
+            ? max(0.0, (float) $core_product['rating_average'])
+            : (float) \WpStore\Domain\Product\ProductMeta::get_number($post_id, 'rating_average', 0);
+        $sold_count = $core_product !== null && array_key_exists('sold_count', $core_product)
+            ? max(0, (int) $core_product['sold_count'])
+            : (int) \WpStore\Domain\Product\ProductMeta::get_number($post_id, 'sold_count', 0);
 
         return [
             'id' => $post_id,
@@ -67,7 +72,7 @@ class ProductData
             'stock' => $core_product !== null && array_key_exists('stock', $core_product) ? $core_product['stock'] : self::meta_number($post_id, 'stock', null),
             'min_order' => $core_product !== null && array_key_exists('min_order', $core_product) ? max(1, (int) $core_product['min_order']) : max(1, (int) self::meta_number($post_id, 'min_order', 1)),
             'weight' => $core_product !== null && array_key_exists('weight_kg', $core_product) ? (float) $core_product['weight_kg'] : self::meta_number($post_id, 'weight', 0),
-            'label' => $core_product !== null && array_key_exists('label', $core_product) ? ProductMeta::normalize_label((string) $core_product['label']) : ProductMeta::get_text($post_id, 'label'),
+            'label' => '',
             'is_premium' => (int) self::meta_number($post_id, 'is_premium', 0) === 1,
             'variant_name' => $variant_name,
             'variant_options' => $variant_options,
@@ -83,7 +88,7 @@ class ProductData
                     'count_class' => 'text-muted',
                 ])
                 : '',
-            'sold_count' => max(0, (int) self::meta_number($post_id, 'vmp_sold_count', 0)),
+            'sold_count' => $sold_count,
         ];
     }
 
@@ -268,8 +273,7 @@ class ProductData
             return;
         }
 
-        $current = (int) get_post_meta($product_id, 'vmp_sold_count', true);
-        update_post_meta($product_id, 'vmp_sold_count', max(0, $current + $qty));
+        \WpStore\Domain\Product\ProductData::increment_sold_count($product_id, $qty);
     }
 
 }
