@@ -156,9 +156,19 @@ class Settings
         return self::core_page_url('page_cart', '/cart/');
     }
 
+    public static function cart_page_id()
+    {
+        return self::core_page_id('page_cart');
+    }
+
     public static function checkout_url()
     {
         return self::core_page_url('page_checkout', '/checkout/');
+    }
+
+    public static function checkout_page_id()
+    {
+        return self::core_page_id('page_checkout');
     }
 
     public static function store_profile_page_id()

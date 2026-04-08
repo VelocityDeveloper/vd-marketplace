@@ -17,6 +17,9 @@ class ProductData
         $core_product = \WpStore\Domain\Product\ProductData::map_post($post_id);
 
         $price = $core_product !== null && array_key_exists('price', $core_product) ? $core_product['price'] : self::resolve_price($post_id);
+        $regular_price = $core_product !== null && array_key_exists('regular_price', $core_product)
+            ? $core_product['regular_price']
+            : \WpStore\Domain\Product\ProductData::resolve_regular_price($post_id);
         $sale_price = $core_product !== null && array_key_exists('sale_price', $core_product) ? $core_product['sale_price'] : self::resolve_sale_price($post_id);
         $variant_name = $core_product !== null && array_key_exists('variant_name', $core_product)
             ? (string) $core_product['variant_name']
@@ -67,6 +70,7 @@ class ProductData
             'seller_last_active_at' => $seller_last_active_at,
             'seller_last_active_text' => $seller_last_active_text,
             'price' => $price,
+            'regular_price' => $regular_price,
             'sale_price' => $sale_price,
             'sku' => $core_product !== null && array_key_exists('sku', $core_product) ? (string) $core_product['sku'] : ProductMeta::get_text($post_id, 'sku'),
             'stock' => $core_product !== null && array_key_exists('stock', $core_product) ? $core_product['stock'] : self::meta_number($post_id, 'stock', null),
@@ -194,12 +198,13 @@ class ProductData
             $price_adjustment = sanitize_text_field((string) $options[$price_adjustment_name]);
         }
 
-        $normalized = [
-            'variant' => $variant,
-            'price_adjustment' => $price_adjustment,
-            $variant_name => $variant,
-            $price_adjustment_name => $price_adjustment,
-        ];
+        $normalized = [];
+        if ($variant !== '') {
+            $normalized[$variant_name] = $variant;
+        }
+        if ($price_adjustment !== '') {
+            $normalized[$price_adjustment_name] = $price_adjustment;
+        }
 
         return $normalized;
     }

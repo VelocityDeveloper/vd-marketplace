@@ -47,6 +47,16 @@
     return data;
   };
 
+  // Menyebarkan update keranjang ke event addon dan core agar UI campuran tetap sinkron.
+  const emitCartUpdated = (payload = {}) => {
+    const detail = Object.assign({}, payload || {}, {
+      __cart_bridge_source: 'vmp',
+    });
+
+    window.dispatchEvent(new CustomEvent('vmp:cart-updated', { detail }));
+    document.dispatchEvent(new CustomEvent('wp-store:cart-updated', { detail }));
+  };
+
   // Menampilkan label status singkat pada tombol lalu mengembalikannya lagi.
   const flashButtonLabel = (button, nextLabel) => {
     if (!button) return;
@@ -202,6 +212,22 @@
     },
   };
 
+  // Menjembatani update dari komponen cart core ke listener marketplace.
+  document.addEventListener('wp-store:cart-updated', (event) => {
+    const detail = event && event.detail ? event.detail : {};
+    if (detail.__cart_bridge_source === 'vmp') {
+      return;
+    }
+
+    window.dispatchEvent(
+      new CustomEvent('vmp:cart-updated', {
+        detail: Object.assign({}, detail, {
+          __cart_bridge_source: 'wp-store',
+        }),
+      }),
+    );
+  });
+
   window.VMPFrontend = {
     cfg,
     currencyCode,
@@ -211,6 +237,7 @@
     placeholder,
     api,
     request,
+    emitCartUpdated,
     flashButtonLabel,
     wishlistIconSvg,
     money,

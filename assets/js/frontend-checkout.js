@@ -1,25 +1,54 @@
 /* Komponen checkout untuk alamat tujuan, ongkir, kupon, dan submit pesanan. */
 (() => {
-  const shared = window.VMPFrontend;
-  if (!shared) {
-    return;
-  }
+  const shared = () => window.VMPFrontend || null;
+  const requireShared = () => {
+    const current = shared();
+    if (!current) {
+      throw new Error('Frontend helper belum siap.');
+    }
 
-  const {
-    cfg,
-    request,
-    customerProfile,
-    defaultPaymentMethod,
-    fetchShippingList,
-    gatherCaptcha,
-    mapProvince,
-    mapCity,
-    mapSubdistrict,
-    cartHelpers,
-  } = shared;
+    return current;
+  };
+  const defaultCartHelpers = {
+    placeholder: '',
+    optionKey(item) {
+      try {
+        return JSON.stringify(item && item.options ? item.options : {});
+      } catch (e) {
+        return '';
+      }
+    },
+    optionText(options) {
+      if (!options || typeof options !== 'object') return '';
+      const lines = [];
+      Object.entries(options).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+
+        const label = String(key || '').trim();
+        const text = String(value || '').trim();
+        if (!label || !text) return;
+
+        lines.push(`${label}: ${text}`);
+      });
+      return lines.join(' | ');
+    },
+    formatPrice(value) {
+      const num = Number(value || 0);
+      return `Rp ${num.toLocaleString('id-ID')}`;
+    },
+  };
 
   // Menyediakan state Alpine utama untuk alur checkout marketplace.
-  const vmpCheckout = () => ({
+  const vmpCheckout = () => {
+    const current = shared();
+    const cfg = current && current.cfg ? current.cfg : {};
+    const cartHelpers = current && current.cartHelpers ? current.cartHelpers : defaultCartHelpers;
+    const defaultPaymentMethod =
+      current && typeof current.defaultPaymentMethod === 'string'
+        ? current.defaultPaymentMethod
+        : 'bank';
+
+    return {
     ...cartHelpers,
     loading: false,
     isLoadingProvinces: false,
@@ -86,6 +115,11 @@
     },
     // Mengisi form checkout dari profil member jika field masih kosong.
     applyCustomerProfileDefaults() {
+      const current = shared();
+      const customerProfile =
+        current && current.customerProfile && typeof current.customerProfile === 'object'
+          ? current.customerProfile
+          : {};
       const pick = (key, fallback = '') =>
         typeof customerProfile[key] === 'string' ? customerProfile[key] : fallback;
 
@@ -181,6 +215,7 @@
     async fetchCart() {
       this.loading = true;
       try {
+        const { request } = requireShared();
         const data = await request('cart', { method: 'GET' });
         this.items = Array.isArray(data.items) ? data.items : [];
         this.subtotal = Number(data.total || 0);
@@ -200,6 +235,7 @@
 
       this.isLoadingProvinces = true;
       try {
+        const { fetchShippingList, mapProvince } = requireShared();
         const rows = await fetchShippingList('shipping/provinces');
         this.provinces = rows.map(mapProvince);
         this.syncProvinceSelection();
@@ -218,6 +254,7 @@
 
       this.isLoadingCities = true;
       try {
+        const { fetchShippingList, mapCity } = requireShared();
         const rows = await fetchShippingList(
           `shipping/cities?province=${encodeURIComponent(provinceId)}`,
         );
@@ -239,6 +276,7 @@
 
       this.isLoadingSubdistricts = true;
       try {
+        const { fetchShippingList, mapSubdistrict } = requireShared();
         const rows = await fetchShippingList(
           `shipping/subdistricts?city=${encodeURIComponent(cityId)}`,
         );
@@ -254,6 +292,7 @@
     // Mengambil context pengiriman per toko dari isi keranjang saat ini.
     async loadCheckoutContext() {
       try {
+        const { request } = requireShared();
         const data = await request('shipping/checkout-context', { method: 'GET' });
         this.shippingGroups = Array.isArray(data.data?.groups)
           ? data.data.groups.map((group) => ({
@@ -359,6 +398,7 @@
       group.loading = true;
       group.message = '';
       try {
+        const { request } = requireShared();
         if (this.isCodPayment()) {
           const canCod =
             !!group.cod_enabled &&
@@ -458,6 +498,7 @@
 
       this.coupon.loading = true;
       try {
+        const { request } = requireShared();
         const data = await request('coupon/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -539,6 +580,7 @@
 
       this.submitting = true;
       try {
+        const { gatherCaptcha, request, emitCartUpdated } = requireShared();
         const formNode = document.getElementById('vmp-checkout-form');
         const captchaFields = gatherCaptcha(formNode);
         const payload = Object.assign(
@@ -562,7 +604,11 @@
         this.subtotal = 0;
         this.total = 0;
         this.shippingGroups = [];
-        window.dispatchEvent(new CustomEvent('vmp:cart-updated'));
+        emitCartUpdated({
+          items: [],
+          total: 0,
+          count: 0,
+        });
 
         if (data.redirect) {
           setTimeout(() => {
@@ -575,10 +621,20 @@
         this.submitting = false;
       }
     },
-  });
+  };
+  };
 
   window.vmpCheckout = vmpCheckout;
-  document.addEventListener('alpine:init', () => {
+  const registerAlpineCheckout = () => {
+    if (!window.Alpine || typeof window.Alpine.data !== 'function') {
+      return false;
+    }
+
     Alpine.data('vmpCheckout', vmpCheckout);
-  });
+    return true;
+  };
+
+  if (!registerAlpineCheckout()) {
+    document.addEventListener('alpine:init', registerAlpineCheckout, { once: true });
+  }
 })();

@@ -206,7 +206,7 @@ if ($product_query->have_posts()) {
                         </a>
                         <div class="card-body d-flex flex-column">
                             <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="fw-semibold text-decoration-none text-dark mb-2"><?php echo esc_html((string) ($item['title'] ?? __('Produk', 'velocity-marketplace'))); ?></a>
-                            <div class="text-danger fw-semibold mb-1"><?php echo esc_html(Settings::currency_symbol() . ' ' . number_format((float) ($item['price'] ?? 0), 0, ',', '.')); ?></div>
+                            <?php echo wps_product_price_html((int) ($item['id'] ?? 0), ['wrapper_class' => 'mb-1', 'sale_group_class' => 'd-flex align-items-baseline gap-2 flex-wrap', 'sale_class' => 'text-danger fw-semibold', 'regular_class' => 'text-muted small', 'price_class' => 'text-danger fw-semibold', 'show_empty' => false]); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
                             <?php if (!empty($item['seller_city'])) : ?>
                                 <div class="small text-muted mb-2"><?php echo esc_html((string) $item['seller_city']); ?></div>
                             <?php endif; ?>

@@ -161,7 +161,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                                 <div class="row g-2" x-show="group.services.length > 0">
                                                     <template x-for="opt in group.services" :key="group.seller_id + ':' + opt.code + ':' + opt.service">
                                                         <div class="col-md-6">
-                                                            <button type="button" class="btn btn-outline-dark w-100 text-start" @click="selectShipping(group, opt)" :class="group.selectedKey === (opt.code + ':' + opt.service) ? 'active' : ''">
+                                                            <button type="button" class="btn btn-outline-dark w-100 text-start vmp-checkout-shipping-option" @click="selectShipping(group, opt)" :class="group.selectedKey === (opt.code + ':' + opt.service) ? 'active' : ''">
                                                                 <div class="fw-semibold" x-text="opt.name + ' ' + opt.service"></div>
                                                                 <div class="small text-muted" x-text="opt.description || '-'"></div>
                                                                 <div class="small text-muted" x-text="opt.etd ? ('<?php echo esc_attr__('Estimasi', 'velocity-marketplace'); ?> ' + opt.etd) : ''"></div>
@@ -214,12 +214,20 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                     <h3 class="h6"><?php echo esc_html__('Ringkasan Pesanan', 'velocity-marketplace'); ?></h3>
                     <div class="small text-muted mb-3" x-text="items.length + ' <?php echo esc_attr__('produk di keranjang', 'velocity-marketplace'); ?>'"></div>
                     <template x-for="item in items" :key="item.id + '-' + optionKey(item)">
-                        <div class="d-flex justify-content-between border-bottom py-2">
-                            <div class="pe-2">
-                                <div class="fw-semibold small" x-text="item.title"></div>
-                                <div class="text-muted vmp-xs" x-text="item.qty + ' x ' + formatPrice(item.price)"></div>
+                        <div class="d-flex justify-content-between gap-3 border-bottom py-2">
+                            <div class="d-flex gap-2 pe-2 flex-grow-1">
+                                <img
+                                    :src="item.image || placeholder"
+                                    alt=""
+                                    class="rounded border flex-shrink-0"
+                                    style="width:56px;height:56px;object-fit:cover;"
+                                >
+                                <div class="min-w-0">
+                                    <div class="fw-semibold small" x-text="item.title"></div>
+                                    <div class="text-muted vmp-xs" x-text="item.qty + ' x ' + formatPrice(item.price)"></div>
+                                </div>
                             </div>
-                            <div class="fw-semibold small" x-text="formatPrice(item.subtotal)"></div>
+                            <div class="fw-semibold small text-nowrap" x-text="formatPrice(item.subtotal)"></div>
                         </div>
                     </template>
                     <div class="d-flex justify-content-between pt-3">

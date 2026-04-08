@@ -48,7 +48,10 @@ class Assets
             );
         }
 
+        $bootstrap_in_footer = empty($context['profile']) && empty($context['cart']) && empty($context['checkout']);
         $profile_bootstrap_in_footer = empty($context['profile']);
+        $cart_page_bootstrap_in_footer = empty($context['cart']);
+        $checkout_page_bootstrap_in_footer = empty($context['checkout']);
 
         wp_enqueue_style(
             'velocity-marketplace-frontend-css',
@@ -62,7 +65,7 @@ class Assets
             VMP_URL . 'assets/js/frontend-shared.js',
             [],
             $this->asset_version('assets/js/frontend-shared.js'),
-            $profile_bootstrap_in_footer
+            $bootstrap_in_footer
         );
 
         wp_enqueue_script(
@@ -70,7 +73,7 @@ class Assets
             VMP_URL . 'assets/js/frontend-cart.js',
             $this->frontend_script_dependencies(['velocity-marketplace-frontend-shared-js'], true),
             $this->asset_version('assets/js/frontend-cart.js'),
-            true
+            $cart_page_bootstrap_in_footer
         );
 
         wp_enqueue_script(
@@ -78,7 +81,7 @@ class Assets
             VMP_URL . 'assets/js/frontend-checkout.js',
             ['velocity-marketplace-frontend-shared-js'],
             $this->asset_version('assets/js/frontend-checkout.js'),
-            true
+            $checkout_page_bootstrap_in_footer
         );
 
         wp_enqueue_script(
@@ -192,6 +195,8 @@ class Assets
             return [
                 'enabled' => false,
                 'profile' => false,
+                'cart' => false,
+                'checkout' => false,
             ];
         }
 
@@ -199,6 +204,8 @@ class Assets
             return [
                 'enabled' => true,
                 'profile' => false,
+                'cart' => false,
+                'checkout' => false,
             ];
         }
 
@@ -207,10 +214,14 @@ class Assets
             $managed_page_ids = Settings::managed_page_ids();
             if ($post && in_array((int) $post->ID, $managed_page_ids, true)) {
                 $profile_page_id = Settings::profile_page_id();
+                $cart_page_id = Settings::cart_page_id();
+                $checkout_page_id = Settings::checkout_page_id();
 
                 return [
                     'enabled' => true,
                     'profile' => $profile_page_id > 0 && (int) $post->ID === $profile_page_id,
+                    'cart' => $cart_page_id > 0 && (int) $post->ID === $cart_page_id,
+                    'checkout' => $checkout_page_id > 0 && (int) $post->ID === $checkout_page_id,
                 ];
             }
 
@@ -255,6 +266,16 @@ class Assets
                 return [
                     'enabled' => $enabled,
                     'profile' => $profile,
+                    'cart' => $this->content_has_any_shortcode($content, [
+                        'wp_store_cart_page',
+                        'store_cart',
+                        'vmp_cart_page',
+                    ]),
+                    'checkout' => $this->content_has_any_shortcode($content, [
+                        'wp_store_checkout',
+                        'store_checkout',
+                        'vmp_checkout',
+                    ]),
                 ];
             }
         }
@@ -262,6 +283,8 @@ class Assets
         return [
             'enabled' => false,
             'profile' => false,
+            'cart' => false,
+            'checkout' => false,
         ];
     }
 

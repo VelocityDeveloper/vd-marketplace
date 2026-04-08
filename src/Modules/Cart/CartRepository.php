@@ -13,6 +13,11 @@ class CartRepository
     {
         $core = $this->core_service();
         $raw_items = $core->get_raw_items();
+        $normalized_raw_items = $this->normalize_raw_items($raw_items);
+        if (wp_json_encode(array_values((array) $raw_items)) !== wp_json_encode($normalized_raw_items)) {
+            $core->write_raw_items($normalized_raw_items);
+        }
+        $raw_items = $normalized_raw_items;
         $items = $this->hydrate_items($raw_items);
         $snapshot = $this->resolve_marketplace_snapshot($core, $raw_items, $items);
 
@@ -63,6 +68,7 @@ class CartRepository
 
     private function cart_key($product_id, $options = [])
     {
+        $options = $this->core_service()->normalize_options(is_array($options) ? $options : []);
         return md5((string) $product_id . '|' . wp_json_encode($options));
     }
 
@@ -99,7 +105,10 @@ class CartRepository
             $seller_url = $seller_id > 0 ? Settings::store_profile_url($seller_id) : '';
 
             $options = ProductData::normalize_options($product_id, $options);
-            $price_adjustment_label = isset($options['price_adjustment']) ? (string) $options['price_adjustment'] : '';
+            $price_adjustment_name = isset($product['price_adjustment_name']) ? (string) $product['price_adjustment_name'] : '';
+            $price_adjustment_label = $price_adjustment_name !== '' && isset($options[$price_adjustment_name])
+                ? (string) $options[$price_adjustment_name]
+                : '';
             $price_adjustment = ProductData::resolve_price_adjustment($product_id, $price_adjustment_label);
             $price = (float) $product['price'] + (float) $price_adjustment;
             $subtotal = $price * $qty;
@@ -163,6 +172,46 @@ class CartRepository
     private function core_service()
     {
         return new \WpStore\Domain\Cart\CartService();
+    }
+
+    private function normalize_raw_items($rows)
+    {
+        $rows = is_array($rows) ? array_values($rows) : [];
+        $normalized = [];
+
+        foreach ($rows as $row) {
+            if (!is_array($row)) {
+                continue;
+            }
+
+            $product_id = isset($row['id']) ? (int) $row['id'] : 0;
+            $qty = isset($row['qty']) ? (int) $row['qty'] : 0;
+            $options = [];
+            if (isset($row['opts']) && is_array($row['opts'])) {
+                $options = $row['opts'];
+            } elseif (isset($row['options']) && is_array($row['options'])) {
+                $options = $row['options'];
+            }
+
+            if ($product_id <= 0 || $qty <= 0 || !Contract::is_product($product_id)) {
+                continue;
+            }
+
+            $options = ProductData::normalize_options($product_id, $options);
+            $key = $this->cart_key($product_id, $options);
+
+            if (!isset($normalized[$key])) {
+                $normalized[$key] = [
+                    'id' => $product_id,
+                    'qty' => 0,
+                    'opts' => $options,
+                ];
+            }
+
+            $normalized[$key]['qty'] += $qty;
+        }
+
+        return array_values($normalized);
     }
 
     private function resolve_marketplace_snapshot($core, $raw_items, $items)

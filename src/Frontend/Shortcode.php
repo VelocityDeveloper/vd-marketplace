@@ -30,9 +30,9 @@ class Shortcode
         add_shortcode('vmp_rating', [$this, 'render_rating']);
         add_shortcode('vmp_review_count', [$this, 'render_review_count']);
         add_shortcode('vmp_sold_count', [$this, 'render_sold_count']);
-        $this->register_shortcode_aliases(['vmp_cart'], 'render_cart');
-        $this->register_shortcode_aliases(['vmp_cart_page'], 'render_cart_page');
-        $this->register_shortcode_aliases(['vmp_checkout'], 'render_checkout');
+        $this->register_shortcode_aliases(['vmp_cart', 'wp_store_cart'], 'render_cart');
+        $this->register_shortcode_aliases(['vmp_cart_page', 'wp_store_cart_page', 'store_cart'], 'render_cart_page');
+        $this->register_shortcode_aliases(['vmp_checkout', 'wp_store_checkout', 'store_checkout'], 'render_checkout');
         $this->register_shortcode_aliases(['vmp_profile'], 'render_profile');
         $this->register_shortcode_aliases(['vmp_tracking'], 'render_tracking');
         add_shortcode('vmp_store_profile', [$this, 'render_store_profile']);
@@ -43,6 +43,8 @@ class Shortcode
 
         add_action('wp_footer', [$this, 'render_cart_drawer_footer'], 30);
         add_action('wp_store_single_after_summary', [$this, 'render_core_single_marketplace_extension'], 20, 2);
+        add_filter('the_content', [$this, 'filter_managed_core_page_content'], 30);
+        add_filter('template_include', [$this, 'override_managed_page_template'], 120);
     }
 
     private function register_shortcode_aliases($tags, $method)
@@ -455,6 +457,58 @@ class Shortcode
         }
 
         return '';
+    }
+
+    public function filter_managed_core_page_content($content)
+    {
+        if (is_admin() || !is_singular('page') || !in_the_loop() || !is_main_query()) {
+            return $content;
+        }
+
+        $page_id = get_queried_object_id();
+        if (!$page_id) {
+            return $content;
+        }
+
+        if ((int) $page_id === Settings::cart_page_id()) {
+            $this->ensure_frontend_assets();
+            return Template::render('cart', []);
+        }
+
+        if ((int) $page_id === Settings::checkout_page_id()) {
+            $this->ensure_frontend_assets();
+            return Template::render('checkout', []);
+        }
+
+        return $content;
+    }
+
+    public function override_managed_page_template($template)
+    {
+        if (is_admin() || !is_singular('page')) {
+            return $template;
+        }
+
+        $page_id = get_queried_object_id();
+        if (!$page_id) {
+            return $template;
+        }
+
+        if ((int) $page_id === Settings::cart_page_id()) {
+            $path = VMP_PATH . 'templates/page-templates/cart.php';
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        if ((int) $page_id === Settings::checkout_page_id()) {
+            $path = VMP_PATH . 'templates/page-templates/checkout.php';
+            if (file_exists($path)) {
+                return $path;
+            }
+        }
+
+        return $template;
     }
 
     public function render_store_profile($atts = [])

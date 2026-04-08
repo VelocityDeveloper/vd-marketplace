@@ -413,8 +413,7 @@ class ShippingController
             ];
 
             if ($origin['province_id'] === '' || $origin['city_id'] === '' || $origin['subdistrict_id'] === '') {
-                $seller = get_userdata($seller_id);
-                $seller_name = $seller && $seller->display_name !== '' ? $seller->display_name : ('Seller #' . $seller_id);
+                $seller_name = $this->seller_name($seller_id);
                 return [
                     'success' => false,
                     'message' => 'Alamat asal toko ' . $seller_name . ' belum lengkap.',
@@ -448,16 +447,14 @@ class ShippingController
             }
 
             if (empty($mapped_couriers)) {
-                $seller = get_userdata($seller_id);
-                $seller_name = $seller && $seller->display_name !== '' ? $seller->display_name : ('Seller #' . $seller_id);
+                $seller_name = $this->seller_name($seller_id);
                 return [
                     'success' => false,
                     'message' => 'Kurir toko ' . $seller_name . ' belum dipilih.',
                 ];
             }
 
-            $seller = get_userdata($seller_id);
-            $group['seller_name'] = $seller && $seller->display_name !== '' ? $seller->display_name : ('Seller #' . $seller_id);
+            $group['seller_name'] = $this->seller_name($seller_id);
             $group['origin'] = $origin;
             $group['couriers'] = $mapped_couriers;
             $group['cod_enabled'] = $cod_enabled;
@@ -491,6 +488,26 @@ class ShippingController
         }
 
         return null;
+    }
+
+    private function seller_name($seller_id)
+    {
+        $seller_id = (int) $seller_id;
+        if ($seller_id <= 0) {
+            return 'Toko';
+        }
+
+        $store_name = (string) get_user_meta($seller_id, 'vmp_store_name', true);
+        if ($store_name !== '') {
+            return $store_name;
+        }
+
+        $seller = get_userdata($seller_id);
+        if ($seller && $seller->display_name !== '') {
+            return (string) $seller->display_name;
+        }
+
+        return 'Toko #' . $seller_id;
     }
 
     private function remote_get($path, $api_key)

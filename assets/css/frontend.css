@@ -40,6 +40,53 @@
   font-size: 0.75rem;
 }
 
+.vmp-checkout-shipping-option.btn {
+  min-height: 138px;
+  padding: 1rem 1rem 0.95rem;
+  border: 1px solid #cfd8e3;
+  border-radius: 1rem;
+  background: #fff;
+  color: #111827;
+  transition: border-color 0.18s ease, box-shadow 0.18s ease, background-color 0.18s ease, transform 0.18s ease;
+}
+
+.vmp-checkout-shipping-option.btn:hover,
+.vmp-checkout-shipping-option.btn:focus-visible {
+  border-color: #3f7ef7;
+  background: #f7faff;
+  color: #111827;
+  box-shadow: 0 10px 24px rgba(63, 126, 247, 0.14);
+  transform: translateY(-1px);
+}
+
+.vmp-checkout-shipping-option.btn.active,
+.vmp-checkout-shipping-option.btn.active:hover,
+.vmp-checkout-shipping-option.btn:active,
+.vmp-checkout-shipping-option.btn:focus {
+  border-color: #3f7ef7 !important;
+  background: linear-gradient(180deg, #eff5ff 0%, #e5efff 100%) !important;
+  color: #0f172a !important;
+  box-shadow: 0 14px 30px rgba(63, 126, 247, 0.18);
+  transform: translateY(-1px);
+}
+
+.vmp-checkout-shipping-option.btn .fw-semibold {
+  color: inherit;
+}
+
+.vmp-checkout-shipping-option.btn .text-muted {
+  color: #667085 !important;
+}
+
+.vmp-checkout-shipping-option.btn.active .text-muted,
+.vmp-checkout-shipping-option.btn:hover .text-muted {
+  color: #516072 !important;
+}
+
+.vmp-checkout-shipping-option.btn .text-danger {
+  color: #e11d48 !important;
+}
+
 .vmp-single-image {
   display: block;
   width: 100%;

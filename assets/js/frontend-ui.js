@@ -1,11 +1,14 @@
 /* Interaksi UI kecil yang tidak bergantung pada satu halaman tertentu. */
 (() => {
-  const shared = window.VMPFrontend;
-  if (!shared) {
-    return;
-  }
+  const shared = () => window.VMPFrontend || null;
+  const requireShared = () => {
+    const current = shared();
+    if (!current) {
+      throw new Error('Frontend helper belum siap.');
+    }
 
-  const { cfg, request, flashButtonLabel, money, wishlistIconSvg } = shared;
+    return current;
+  };
   const bootstrapApi = window.bootstrap || window.justg || null;
 
   const copyText = async (text) => {
@@ -128,7 +131,8 @@
 
         submittedButton.disabled = true;
         try {
-          await request('cart', {
+          const { request, flashButtonLabel, emitCartUpdated } = requireShared();
+          const data = await request('cart', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -138,7 +142,7 @@
             }),
           });
           flashButtonLabel(submittedButton, 'Ditambahkan');
-          window.dispatchEvent(new CustomEvent('vmp:cart-updated'));
+          emitCartUpdated(data);
           closeModal();
         } catch (e) {
           flashButtonLabel(submittedButton, 'Gagal');
@@ -186,6 +190,7 @@
           const label = String(row?.label || '').trim();
           if (!label) return '';
           const amount = Number(row?.amount || 0);
+          const { money } = requireShared();
           const suffix = amount > 0 ? ` (+${money(amount)})` : '';
           return `<option value="${escapeHtml(label)}" ${index === 0 ? 'selected' : ''}>${escapeHtml(label + suffix)}</option>`;
         })
@@ -301,7 +306,8 @@
 
         cartButton.disabled = true;
         try {
-          await request('cart', {
+          const { request, flashButtonLabel, emitCartUpdated } = requireShared();
+          const data = await request('cart', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
@@ -311,7 +317,7 @@
             }),
           });
           flashButtonLabel(cartButton, 'Ditambahkan');
-          window.dispatchEvent(new CustomEvent('vmp:cart-updated'));
+          emitCartUpdated(data);
         } catch (e) {
           flashButtonLabel(cartButton, 'Gagal');
         } finally {
@@ -331,15 +337,18 @@
 
         event.preventDefault();
         try {
+          const { flashButtonLabel } = requireShared();
           await copyText(copyButton.dataset.vmpCopyText || '');
           flashButtonLabel(copyButton, copyButton.dataset.vmpCopySuccess || 'Tersalin');
         } catch (e) {
+          const { flashButtonLabel } = requireShared();
           flashButtonLabel(copyButton, 'Gagal');
         }
         return;
       }
 
       event.preventDefault();
+      const { cfg, request, wishlistIconSvg } = requireShared();
       if (!cfg.isLoggedIn) {
         return;
       }

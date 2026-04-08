@@ -1,12 +1,43 @@
 /* Komponen keranjang untuk load item, ubah qty, hapus, dan kosongkan cart. */
 (() => {
-  const shared = window.VMPFrontend;
-  if (!shared) {
-    return;
-  }
+  const shared = () => window.VMPFrontend || null;
+  const requireShared = () => {
+    const current = shared();
+    if (!current) {
+      throw new Error('Frontend helper belum siap.');
+    }
 
-  const { cfg, request, cartHelpers } = shared;
-  const bootstrapApi = window.bootstrap || window.justg || null;
+    return current;
+  };
+  const bootstrapApi = () => window.bootstrap || window.justg || null;
+  const defaultCartHelpers = {
+    placeholder: '',
+    optionKey(item) {
+      try {
+        return JSON.stringify(item && item.options ? item.options : {});
+      } catch (e) {
+        return '';
+      }
+    },
+    optionText(options) {
+      if (!options || typeof options !== 'object') return '';
+      const lines = [];
+      Object.entries(options).forEach(([key, value]) => {
+        if (value === null || value === undefined) return;
+
+        const label = String(key || '').trim();
+        const text = String(value || '').trim();
+        if (!label || !text) return;
+
+        lines.push(`${label}: ${text}`);
+      });
+      return lines.join(' | ');
+    },
+    formatPrice(value) {
+      const num = Number(value || 0);
+      return `Rp ${num.toLocaleString('id-ID')}`;
+    },
+  };
 
   const syncCartShortcutBadges = (count) => {
     document.querySelectorAll('[data-vmp-cart-trigger]').forEach((trigger) => {
@@ -26,7 +57,12 @@
   };
 
   // Menyediakan state Alpine untuk halaman keranjang dan drawer keranjang.
-  const vmpCart = (config = {}) => ({
+  const vmpCart = (config = {}) => {
+    const current = shared();
+    const cfg = current && current.cfg ? current.cfg : {};
+    const cartHelpers = current && current.cartHelpers ? current.cartHelpers : defaultCartHelpers;
+
+    return {
     ...cartHelpers,
     drawer: !!config.drawer,
     open: false,
@@ -65,8 +101,9 @@
 
       this.panel = panel;
 
-      if (bootstrapApi && bootstrapApi.Offcanvas) {
-        this.offcanvas = bootstrapApi.Offcanvas.getOrCreateInstance(panel);
+      const bootstrap = bootstrapApi();
+      if (bootstrap && bootstrap.Offcanvas) {
+        this.offcanvas = bootstrap.Offcanvas.getOrCreateInstance(panel);
         panel.addEventListener('shown.bs.offcanvas', () => {
           this.open = true;
         });
@@ -131,6 +168,7 @@
       this.loading = true;
       this.message = '';
       try {
+        const { request } = requireShared();
         const data = await request('cart', { method: 'GET' });
         this.items = Array.isArray(data.items) ? data.items : [];
         this.total = Number(data.total || 0);
@@ -158,7 +196,8 @@
     async changeQty(item, qty) {
       if (qty < 0) return;
       try {
-        await request('cart', {
+        const { request, emitCartUpdated } = requireShared();
+        const data = await request('cart', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -168,7 +207,7 @@
             options: item.options || {},
           }),
         });
-        window.dispatchEvent(new CustomEvent('vmp:cart-updated'));
+        emitCartUpdated(data);
       } catch (e) {
         this.message = e.message || 'Jumlah produk tidak dapat diperbarui.';
       }
@@ -180,18 +219,29 @@
     // Mengosongkan seluruh isi keranjang user.
     async clearCart() {
       try {
-        await request('cart', { method: 'DELETE' });
-        window.dispatchEvent(new CustomEvent('vmp:cart-updated'));
+        const { request, emitCartUpdated } = requireShared();
+        const data = await request('cart', { method: 'DELETE' });
+        emitCartUpdated(data);
       } catch (e) {
         this.message = e.message || 'Keranjang tidak dapat dikosongkan.';
       }
     },
-  });
+  };
+  };
 
   window.vmpCart = vmpCart;
-  document.addEventListener('alpine:init', () => {
+  const registerAlpineCart = () => {
+    if (!window.Alpine || typeof window.Alpine.data !== 'function') {
+      return false;
+    }
+
     Alpine.data('vmpCart', vmpCart);
-  });
+    return true;
+  };
+
+  if (!registerAlpineCart()) {
+    document.addEventListener('alpine:init', registerAlpineCart, { once: true });
+  }
 
   document.addEventListener('click', (event) => {
     const trigger = event.target.closest('[data-vmp-cart-trigger]');
