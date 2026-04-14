@@ -57,6 +57,13 @@ Jangan buat source utama kedua untuk domain-domain itu.
 - `src/Frontend/Assets.php`
 - `src/Support/Settings.php`
 
+Fungsi publik kecil yang memang sengaja dibuat untuk dipakai theme, snippet, atau builder diletakkan sebagai wrapper di:
+- `velocity-marketplace.php`
+
+Contoh:
+- `vmp_is_premium_product($post_id)`
+- `vmp_premium_badge_html($args = [])`
+
 ### Seller account dan profile
 - `src/Modules/Account/Account.php`
 - `src/Modules/Profile/ProfileService.php`
@@ -75,6 +82,20 @@ Jangan buat source utama kedua untuk domain-domain itu.
 - `src/Modules/Coupon/CouponService.php`
 - `src/Modules/Order/OrderData.php`
 - `src/Modules/Payment/DuitkuCallbackListener.php`
+
+### Produk premium
+- `src/Modules/Product/PremiumBadge.php`
+- `src/Modules/Product/PremiumRequestAdmin.php`
+
+Fungsi file:
+- `PremiumBadge.php`
+  - sumber utama untuk cek apakah produk premium
+  - sumber utama untuk render badge premium
+  - dipakai oleh fungsi global dan shortcode
+- `PremiumRequestAdmin.php`
+  - halaman admin untuk review pengajuan premium seller
+  - aksi setuju/tolak pengajuan premium
+  - menampilkan count pengajuan di submenu admin
 
 ### Pesan dan notifikasi
 - `src/Modules/Message/MessageController.php`
@@ -157,6 +178,82 @@ Artinya:
 - field tidak didefinisikan ulang manual di addon
 - validasi server tetap mengikuti `ProductSchema` dan `ProductFields` dari core
 - popup validasi di frontend hanya lapisan UX
+
+## Shortcode yang penting
+
+### Produk dan tampilan produk
+- `vmp_products`
+  - grid produk marketplace
+- `vmp_product_card`
+  - card satu produk
+- `vmp_product_gallery`
+  - galeri produk, delegasi ke core
+- `vmp_product_reviews`
+  - ulasan produk, delegasi ke core
+- `vmp_product_seller_card`
+  - info seller pada single produk
+- `vmp_premium_badge`
+  - badge produk premium
+  - atribut:
+    - `post_id`
+    - `text`
+    - `class`
+
+### Interaksi produk
+- `vmp_add_to_cart`
+  - tombol tambah ke keranjang
+- `vmp_add_to_wishlist`
+  - tombol tambah ke wishlist
+- `vmp_rating`
+  - ringkasan rating
+- `vmp_review_count`
+  - jumlah ulasan
+- `vmp_sold_count`
+  - jumlah terjual
+
+### Cart, checkout, account
+- `vmp_cart`
+- `vmp_cart_page`
+- `vmp_checkout`
+- `vmp_profile`
+- `vmp_tracking`
+- `vmp_store_profile`
+
+## Fungsi publik yang penting
+
+### `vmp_is_premium_product($post_id = 0)`
+Fungsinya:
+- cek apakah produk premium
+- return `true` atau `false`
+
+Dipakai saat:
+- theme ingin menentukan style produk premium
+- builder/snippet ingin menampilkan elemen berbeda untuk produk premium
+
+### `vmp_premium_badge_html($args = [])`
+Fungsinya:
+- render HTML badge premium yang siap dipakai di template
+
+Argumen:
+- `post_id`
+  - id produk
+- `text`
+  - teks badge
+- `class`
+  - class HTML badge
+
+Contoh:
+
+```php
+echo vmp_premium_badge_html([
+    'post_id' => $post_id,
+    'text' => 'Premium',
+    'class' => 'badge bg-warning text-dark',
+]);
+```
+
+Kalau produk bukan premium:
+- output kosong
 
 ## Area yang paling sensitif saat diubah
 

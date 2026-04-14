@@ -41,6 +41,24 @@ function vmp_render_dependency_notice()
     echo '<div class="notice notice-error"><p>' . esc_html(vmp_dependency_error_message()) . '</p></div>';
 }
 
+function vmp_is_premium_product($post_id = 0)
+{
+    if (!class_exists('\VelocityMarketplace\Modules\Product\PremiumBadge')) {
+        return false;
+    }
+
+    return \VelocityMarketplace\Modules\Product\PremiumBadge::is_premium($post_id);
+}
+
+function vmp_premium_badge_html($args = [])
+{
+    if (!class_exists('\VelocityMarketplace\Modules\Product\PremiumBadge')) {
+        return '';
+    }
+
+    return \VelocityMarketplace\Modules\Product\PremiumBadge::render(is_array($args) ? $args : []);
+}
+
 spl_autoload_register(function ($class) {
     $prefix = 'VelocityMarketplace\\';
     $base_dir = VMP_PATH . 'src/';

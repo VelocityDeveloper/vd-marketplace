@@ -5,6 +5,7 @@ namespace VelocityMarketplace\Frontend;
 use VelocityMarketplace\Modules\Cart\CartRepository;
 use VelocityMarketplace\Modules\Message\MessageRepository;
 use VelocityMarketplace\Modules\Notification\NotificationRepository;
+use VelocityMarketplace\Modules\Product\PremiumBadge;
 use VelocityMarketplace\Modules\Product\ProductData;
 use VelocityMarketplace\Modules\Product\ProductMeta;
 use VelocityMarketplace\Modules\Product\ProductQuery;
@@ -30,6 +31,7 @@ class Shortcode
         add_shortcode('vmp_rating', [$this, 'render_rating']);
         add_shortcode('vmp_review_count', [$this, 'render_review_count']);
         add_shortcode('vmp_sold_count', [$this, 'render_sold_count']);
+        add_shortcode('vmp_premium_badge', [$this, 'render_premium_badge']);
         $this->register_shortcode_aliases(['vmp_cart', 'wp_store_cart'], 'render_cart');
         $this->register_shortcode_aliases(['vmp_cart_page', 'wp_store_cart_page', 'store_cart'], 'render_cart_page');
         $this->register_shortcode_aliases(['vmp_checkout', 'wp_store_checkout', 'store_checkout'], 'render_checkout');
@@ -214,6 +216,21 @@ class Shortcode
     {
         $this->ensure_frontend_assets();
         return $this->render_core_shortcode('wp_store_product_reviews', $atts);
+    }
+
+    public function render_premium_badge($atts = [])
+    {
+        $atts = shortcode_atts([
+            'post_id' => 0,
+            'text' => __('Premium', 'velocity-marketplace'),
+            'class' => 'badge bg-warning text-dark',
+        ], $atts);
+
+        return PremiumBadge::render([
+            'post_id' => (int) $atts['post_id'],
+            'text' => (string) $atts['text'],
+            'class' => (string) $atts['class'],
+        ]);
     }
 
     public function render_product_seller_card($atts = [])

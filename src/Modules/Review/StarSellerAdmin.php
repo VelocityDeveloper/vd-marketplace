@@ -25,7 +25,7 @@ class StarSellerAdmin
         }
         $note = (string) get_user_meta((int) $user->ID, 'vmp_star_seller_override_note', true);
         ?>
-        <h2>Velocity Marketplace: Star Seller</h2>
+        <h2>VD Marketplace: Star Seller</h2>
         <table class="form-table" role="presentation">
             <tbody>
                 <tr>

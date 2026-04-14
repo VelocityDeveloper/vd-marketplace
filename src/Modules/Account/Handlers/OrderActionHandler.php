@@ -94,6 +94,7 @@ class OrderActionHandler extends BaseActionHandler
         $summary_status = OrderData::summarize_shipping_statuses($shipping_groups, $previous_status !== '' ? $previous_status : 'pending_payment');
         update_post_meta($order_id, 'vmp_status', $summary_status);
         OrderData::sync_core_status($order_id, $summary_status);
+        OrderData::maybe_deduct_stock($order_id, $summary_status);
 
         $profile_url = Settings::profile_url();
         $repo = new NotificationRepository();
@@ -182,6 +183,7 @@ class OrderActionHandler extends BaseActionHandler
         }
         update_post_meta($order_id, 'vmp_status', $summary_status);
         OrderData::sync_core_status($order_id, $summary_status);
+        OrderData::maybe_deduct_stock($order_id, $summary_status);
 
         if ($resi !== '') {
             update_post_meta($order_id, 'vmp_receipt_no', $resi);

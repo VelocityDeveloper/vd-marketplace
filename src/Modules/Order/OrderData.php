@@ -140,6 +140,53 @@ class OrderData
         self::core_service()->update_status((int) $order_id, self::core_status($status));
     }
 
+    public static function stock_should_be_deducted($status)
+    {
+        $status = self::normalize_status($status);
+        return in_array($status, ['processing', 'shipped', 'completed'], true);
+    }
+
+    public static function maybe_deduct_stock($order_id, $status = '')
+    {
+        $order_id = (int) $order_id;
+        if ($order_id <= 0 || get_post_type($order_id) !== 'store_order') {
+            return false;
+        }
+
+        if (metadata_exists('post', $order_id, 'vmp_stock_deducted_at')) {
+            return false;
+        }
+
+        $status = $status !== ''
+            ? self::normalize_status($status)
+            : self::normalize_status((string) get_post_meta($order_id, 'vmp_status', true));
+
+        if (!self::stock_should_be_deducted($status)) {
+            return false;
+        }
+
+        foreach (self::get_items($order_id) as $line) {
+            $product_id = isset($line['product_id']) ? (int) $line['product_id'] : 0;
+            $qty = isset($line['qty']) ? (int) $line['qty'] : 0;
+            if ($product_id <= 0 || $qty <= 0) {
+                continue;
+            }
+
+            $stock = \WpStore\Domain\Product\ProductMeta::get($product_id, 'stock', '');
+            if ($stock === '' || !is_numeric($stock)) {
+                continue;
+            }
+
+            $new_stock = max(0, ((int) $stock) - $qty);
+            update_post_meta($product_id, \WpStore\Domain\Product\ProductMeta::meta_key('stock'), $new_stock);
+        }
+
+        update_post_meta($order_id, 'vmp_stock_deducted_at', current_time('mysql'));
+        update_post_meta($order_id, 'vmp_stock_deducted_status', $status);
+
+        return true;
+    }
+
     public static function sync_core_payment($order_id, array $payment_info)
     {
         self::core_service()->update_payment_data((int) $order_id, $payment_info);

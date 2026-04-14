@@ -313,15 +313,7 @@ class CheckoutController
             $redirect = (string) ($duitku_invoice['payment_url'] ?? $duitku_invoice['paymentUrl'] ?? $redirect);
         }
 
-        foreach ($order_items as $line) {
-            $product_id = (int) $line['product_id'];
-            $qty = (int) $line['qty'];
-            $stock = ProductMeta::get_number($product_id, 'stock', '');
-            if ($stock !== '' && is_numeric($stock)) {
-                $new_stock = max(0, ((int) $stock) - $qty);
-                ProductMeta::update_logical($product_id, 'stock', $new_stock);
-            }
-        }
+        OrderData::maybe_deduct_stock($order_id, (string) get_post_meta($order_id, 'vmp_status', true));
 
         $profile_url = Settings::profile_url();
         $tracking_url = Settings::customer_order_url($invoice);

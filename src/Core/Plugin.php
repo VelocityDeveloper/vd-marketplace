@@ -29,6 +29,9 @@ class Plugin
             $star_seller_admin = new \VelocityMarketplace\Modules\Review\StarSellerAdmin();
             $star_seller_admin->register();
 
+            $premium_request_admin = new \VelocityMarketplace\Modules\Product\PremiumRequestAdmin();
+            $premium_request_admin->register();
+
             $store_bank_admin = new \VelocityMarketplace\Modules\Profile\StoreBankAdmin();
             $store_bank_admin->register();
 

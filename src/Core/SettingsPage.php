@@ -17,8 +17,8 @@ class SettingsPage
     {
         $this->page_hook = add_submenu_page(
             'edit.php?post_type=store_product',
+            __('Pengaturan VD Marketplace', 'velocity-marketplace'),
             __('Pengaturan Marketplace', 'velocity-marketplace'),
-            __('Settings', 'velocity-marketplace'),
             'manage_options',
             'vmp-settings',
             [$this, 'render_page']
@@ -92,7 +92,7 @@ class SettingsPage
         ];
         ?>
         <div class="wrap">
-            <h1><?php echo esc_html__('Pengaturan Velocity Marketplace', 'velocity-marketplace'); ?></h1>
+            <h1><?php echo esc_html__('Pengaturan VD Marketplace', 'velocity-marketplace'); ?></h1>
             <style>
                 .vmp-admin-settings {
                     max-width: 1180px;

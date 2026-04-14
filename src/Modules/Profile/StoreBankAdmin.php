@@ -21,7 +21,7 @@ class StoreBankAdmin
         $is_seller = !empty(get_user_meta((int) $user->ID, '_store_is_seller', true));
         $bank_details = (string) get_user_meta((int) $user->ID, 'vmp_store_bank_details', true);
         ?>
-        <h2><?php echo esc_html__('Velocity Marketplace: Seller', 'velocity-marketplace'); ?></h2>
+        <h2><?php echo esc_html__('VD Marketplace: Seller', 'velocity-marketplace'); ?></h2>
         <table class="form-table" role="presentation">
             <tbody>
                 <tr>
@@ -40,7 +40,7 @@ class StoreBankAdmin
             </tbody>
         </table>
 
-        <h2><?php echo esc_html__('Velocity Marketplace: Rekening Seller', 'velocity-marketplace'); ?></h2>
+        <h2><?php echo esc_html__('VD Marketplace: Rekening Seller', 'velocity-marketplace'); ?></h2>
         <table class="form-table" role="presentation">
             <tbody>
                 <tr>

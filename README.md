@@ -63,6 +63,7 @@ Kalau `VD Store` tidak aktif:
 - `[vmp_product_gallery]`
 - `[vmp_product_reviews]`
 - `[vmp_product_seller_card]`
+- `[vmp_premium_badge]`
 - `[vmp_recently_viewed]`
 - `[vmp_product_filter]`
 - `[vmp_rating]`
@@ -73,6 +74,41 @@ Kalau `VD Store` tidak aktif:
 - `[vmp_profile]`
 - `[vmp_tracking]`
 - `[vmp_store_profile]`
+
+## Helper dan shortcode tambahan
+
+### Badge produk premium
+
+Kalau produk sudah disetujui sebagai premium, kamu bisa tampilkan badge dengan:
+
+- fungsi PHP:
+  - `vmp_is_premium_product($post_id)`
+  - `vmp_premium_badge_html([...])`
+- shortcode:
+  - `[vmp_premium_badge]`
+
+Contoh fungsi PHP:
+
+```php
+if (vmp_is_premium_product($post_id)) {
+    echo vmp_premium_badge_html([
+        'post_id' => $post_id,
+        'text' => 'Premium',
+        'class' => 'badge bg-warning text-dark',
+    ]);
+}
+```
+
+Contoh shortcode:
+
+```text
+[vmp_premium_badge post_id="123" text="Produk Premium" class="badge bg-warning text-dark"]
+```
+
+Parameter yang didukung:
+- `post_id`
+- `text`
+- `class`
 
 ## Catatan
 

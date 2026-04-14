@@ -51,6 +51,7 @@ class DuitkuCallbackListener
         $invoice = sanitize_text_field((string) get_post_meta($order_id, 'vmp_invoice', true));
         update_post_meta($order_id, 'vmp_status', 'processing');
         OrderData::sync_core_status($order_id, 'processing');
+        OrderData::maybe_deduct_stock($order_id, 'processing');
 
         $shipping_groups = get_post_meta($order_id, 'vmp_shipping_groups', true);
         if (is_array($shipping_groups)) {

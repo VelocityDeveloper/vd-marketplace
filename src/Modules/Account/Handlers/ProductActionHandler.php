@@ -15,11 +15,15 @@ class ProductActionHandler extends BaseActionHandler
     public function save_product()
     {
         if (!Account::can_sell()) {
-            $this->redirect_with(['vmp_error' => 'Hanya member marketplace yang bisa menyimpan produk.', 'tab' => 'seller_products']);
+            $this->redirect_product_form([
+                'vmp_error' => 'Hanya member marketplace yang bisa menyimpan produk.',
+            ]);
         }
 
         if (!isset($_POST['vmp_seller_product_nonce']) || !wp_verify_nonce($_POST['vmp_seller_product_nonce'], 'vmp_seller_product')) {
-            $this->redirect_with(['vmp_error' => 'Nonce produk tidak valid.', 'tab' => 'seller_products']);
+            $this->redirect_product_form([
+                'vmp_error' => 'Nonce produk tidak valid.',
+            ]);
         }
 
         if (CaptchaBridge::is_active()) {
@@ -48,10 +52,14 @@ class ProductActionHandler extends BaseActionHandler
         if ($is_edit) {
             $author_id = (int) get_post_field('post_author', $product_id);
             if ($author_id !== $user_id && !current_user_can('manage_options')) {
-                $this->redirect_with(['vmp_error' => 'Tidak punya izin edit produk ini.', 'tab' => 'seller_products']);
+                $this->redirect_product_form([
+                    'vmp_error' => 'Tidak punya izin edit produk ini.',
+                ]);
             }
             if (!Contract::is_product($product_id)) {
-                $this->redirect_with(['vmp_error' => 'Produk tidak ditemukan.', 'tab' => 'seller_products']);
+                $this->redirect_product_form([
+                    'vmp_error' => 'Produk tidak ditemukan.',
+                ]);
             }
         }
 
@@ -61,21 +69,19 @@ class ProductActionHandler extends BaseActionHandler
         $premium_requested = !empty($_POST['premium_request']);
 
         if ($title === '') {
-            $this->redirect_with([
+            $this->redirect_product_form([
                 'vmp_error' => 'Nama Produk wajib diisi.',
                 'vmp_error_field' => 'title',
-                'tab' => 'seller_products',
-            ]);
+            ], $product_id);
         }
 
         $validation = ProductFields::validate_submission('frontend');
         if (is_wp_error($validation)) {
             $error_data = $validation->get_error_data();
-            $this->redirect_with([
+            $this->redirect_product_form([
                 'vmp_error' => $validation->get_error_message(),
                 'vmp_error_field' => is_array($error_data) && !empty($error_data['field']) ? (string) $error_data['field'] : '',
-                'tab' => 'seller_products',
-            ]);
+            ], $product_id);
         }
 
         $status = $is_edit ? get_post_status($product_id) : Settings::seller_product_status();
@@ -93,11 +99,20 @@ class ProductActionHandler extends BaseActionHandler
         ];
         if ($is_edit) {
             $postarr['ID'] = $product_id;
+            $existing_post = get_post($product_id);
+            if ($existing_post instanceof \WP_Post) {
+                // Pertahankan tanggal publish asli saat seller hanya mengedit isi produk.
+                $postarr['post_date'] = (string) $existing_post->post_date;
+                $postarr['post_date_gmt'] = (string) $existing_post->post_date_gmt;
+                $postarr['edit_date'] = true;
+            }
         }
 
         $saved_id = wp_insert_post($postarr, true);
         if (is_wp_error($saved_id) || !$saved_id) {
-            $this->redirect_with(['vmp_error' => 'Gagal menyimpan produk.', 'tab' => 'seller_products']);
+            $this->redirect_product_form([
+                'vmp_error' => 'Gagal menyimpan produk.',
+            ], $product_id);
         }
 
         ProductFields::save($saved_id, 'frontend');
@@ -147,7 +162,7 @@ class ProductActionHandler extends BaseActionHandler
                         'premium',
                         'Pengajuan Iklan Premium',
                         'Ada pengajuan iklan premium baru untuk produk: ' . $title . '.',
-                        admin_url('edit.php?post_type=' . Contract::PRODUCT_POST_TYPE)
+                        admin_url('edit.php?post_type=' . Contract::PRODUCT_POST_TYPE . '&page=vmp-premium-requests')
                     );
                 }
 
@@ -162,10 +177,9 @@ class ProductActionHandler extends BaseActionHandler
             }
         }
 
-        $this->redirect_with([
-            'vmp_notice' => $is_edit ? 'Iklan berhasil diperbarui.' : 'Iklan berhasil dikirim.',
-            'tab' => 'seller_products',
-        ]);
+        $this->redirect_product_form([
+            'vmp_notice' => $is_edit ? 'Produk berhasil diperbarui.' : 'Produk berhasil dikirim.',
+        ], $is_edit ? (int) $saved_id : 0);
     }
 
     public function delete_product()
@@ -185,7 +199,34 @@ class ProductActionHandler extends BaseActionHandler
             $this->redirect_with(['vmp_error' => 'Tidak punya izin hapus produk.', 'tab' => 'seller_products']);
         }
 
-        wp_trash_post($product_id);
-        $this->redirect_with(['vmp_notice' => 'Iklan dipindah ke trash.', 'tab' => 'seller_products']);
+        $result = wp_delete_post($product_id, true);
+
+        if ($result === false || $result === null) {
+            $this->redirect_with([
+                'vmp_error' => 'Iklan gagal dihapus.',
+                'tab' => 'seller_products'
+            ]);
+        }
+
+        $this->redirect_with([
+            'vmp_notice' => 'Iklan berhasil dihapus.',
+            'tab' => 'seller_products'
+        ]);
+    }
+
+    private function redirect_product_form($params = [], $edit_product_id = 0)
+    {
+        $query = array_merge([
+            'tab' => 'seller_products',
+        ], is_array($params) ? $params : []);
+
+        $edit_product_id = (int) $edit_product_id;
+        if ($edit_product_id > 0) {
+            $query['edit_product'] = $edit_product_id;
+        }
+
+        $url = add_query_arg($query, Settings::profile_url());
+        wp_safe_redirect($url);
+        exit;
     }
 }

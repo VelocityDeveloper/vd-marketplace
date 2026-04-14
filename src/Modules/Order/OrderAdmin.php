@@ -243,6 +243,7 @@ class OrderAdmin
             $summary_status = OrderData::summarize_shipping_statuses($shipping_groups, $fallback_status);
             update_post_meta($post_id, 'vmp_status', $summary_status);
             OrderData::sync_core_status($post_id, $summary_status);
+            OrderData::maybe_deduct_stock($post_id, $summary_status);
 
             $first_group = $shipping_groups[0] ?? [];
             $first_receipt = (string) ($first_group['receipt_no'] ?? '');
@@ -271,6 +272,7 @@ class OrderAdmin
             delete_post_meta($post_id, 'vmp_receipt_courier');
             delete_post_meta($post_id, 'vmp_seller_note');
             update_post_meta($post_id, 'vmp_status', $fallback_status);
+            OrderData::maybe_deduct_stock($post_id, $fallback_status);
         }
 
         $service = new StarSellerService();
@@ -302,6 +304,7 @@ class OrderAdmin
         $mapped_status = $this->map_core_status_to_marketplace((string) $core_status);
         $previous_status = (string) get_post_meta($order_id, 'vmp_status', true);
         update_post_meta($order_id, 'vmp_status', $mapped_status);
+        OrderData::maybe_deduct_stock($order_id, $mapped_status);
 
         $shipping_groups = OrderData::shipping_groups($order_id);
         if (!empty($shipping_groups)) {
