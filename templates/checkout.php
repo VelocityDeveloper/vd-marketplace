@@ -49,6 +49,21 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                 <label class="form-label"><?php echo esc_html__('Alamat', 'velocity-marketplace'); ?></label>
                                 <textarea class="form-control" rows="3" x-model.trim="form.address" :required="requiresShipping()"></textarea>
                             </div>
+                            <div class="col-12" x-show="form.dropship && form.dropship.enabled" style="display:none;">
+                                <div class="border rounded p-3 bg-light-subtle">
+                                    <div class="d-flex justify-content-between align-items-start gap-3 flex-wrap">
+                                        <div>
+                                            <div class="fw-semibold mb-2"><?php echo esc_html__('Dropship Aktif', 'velocity-marketplace'); ?></div>
+                                            <div class="small text-muted">
+                                                <div class="fw-semibold text-body" x-text="form.dropship.store_name || '-'"></div>
+                                                <div x-text="form.dropship.phone || '-'"></div>
+                                                <div x-text="form.dropship.address || '-'"></div>
+                                            </div>
+                                        </div>
+                                        <a class="btn btn-sm btn-outline-dark" href="<?php echo esc_url(add_query_arg(['tab' => 'account_profile'], \VelocityMarketplace\Support\Settings::profile_url())); ?>"><?php echo esc_html__('Ubah di Profil', 'velocity-marketplace'); ?></a>
+                                    </div>
+                                </div>
+                            </div>
                             <div class="col-12" x-show="!requiresShipping()">
                                 <div class="alert alert-info py-2 mb-0">
                                     <?php echo esc_html__('Keranjang ini hanya berisi produk digital. Alamat dan ongkir tidak diperlukan.', 'velocity-marketplace'); ?>

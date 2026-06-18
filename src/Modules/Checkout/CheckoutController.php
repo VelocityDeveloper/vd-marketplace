@@ -59,6 +59,13 @@ class CheckoutController
             'address' => sanitize_textarea_field($payload['address'] ?? ''),
             'postal_code' => sanitize_text_field($payload['postal_code'] ?? ''),
         ];
+        $dropship = $this->sanitize_dropship_payload($payload);
+        if (!empty($dropship['enabled'])) {
+            if ($dropship['store_name'] === '' || $dropship['phone'] === '' || $dropship['address'] === '') {
+                return new WP_REST_Response(['message' => 'Nama toko, no HP, dan alamat dropship wajib diisi.'], 400);
+            }
+            $customer['dropship'] = $dropship;
+        }
         $shipping_destination = [
             'province_destination_id' => sanitize_text_field($payload['destination_province_id'] ?? ''),
             'province_destination_name' => sanitize_text_field($payload['destination_province_name'] ?? ''),
@@ -262,6 +269,9 @@ class CheckoutController
 
         update_post_meta($order_id, 'vmp_invoice', $invoice);
         update_post_meta($order_id, 'vmp_customer', $customer);
+        update_post_meta($order_id, 'vmp_dropship', $dropship);
+        update_post_meta($order_id, '_store_order_dropship_enabled', !empty($dropship['enabled']) ? 1 : 0);
+        update_post_meta($order_id, '_store_order_dropship', $dropship);
         update_post_meta($order_id, 'vmp_subtotal', (float) $subtotal);
         update_post_meta($order_id, 'vmp_shipping', $shipping);
         update_post_meta($order_id, 'vmp_shipping_groups', $shipping_groups);
@@ -536,6 +546,19 @@ class CheckoutController
             'courier' => !empty($shipping_groups) ? 'multi_seller' : '',
             'service' => !empty($shipping_groups) ? 'Multi Seller' : '',
             'cost' => $shipping_total,
+        ];
+    }
+
+    private function sanitize_dropship_payload(array $payload)
+    {
+        $raw = isset($payload['dropship']) && is_array($payload['dropship']) ? $payload['dropship'] : [];
+        $enabled = !empty($raw['enabled']);
+
+        return [
+            'enabled' => $enabled,
+            'store_name' => $enabled ? sanitize_text_field((string) ($raw['store_name'] ?? '')) : '',
+            'phone' => $enabled ? sanitize_text_field((string) ($raw['phone'] ?? '')) : '',
+            'address' => $enabled ? sanitize_textarea_field((string) ($raw['address'] ?? '')) : '',
         ];
     }
 }

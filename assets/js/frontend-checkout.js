@@ -87,6 +87,12 @@
       destination_subdistrict_id: '',
       destination_subdistrict_name: '',
       shipping_cost: 0,
+      dropship: {
+        enabled: false,
+        store_name: '',
+        phone: '',
+        address: '',
+      },
     },
     // Menyiapkan profil default, cart, daftar wilayah, dan context pengiriman awal.
     async init() {
@@ -151,6 +157,14 @@
       }
       if (!this.form.destination_subdistrict_name) {
         this.form.destination_subdistrict_name = pick('destination_subdistrict_name');
+      }
+      if (customerProfile.dropship && typeof customerProfile.dropship === 'object') {
+        this.form.dropship = {
+          enabled: !!customerProfile.dropship.enabled,
+          store_name: String(customerProfile.dropship.store_name || ''),
+          phone: String(customerProfile.dropship.phone || ''),
+          address: String(customerProfile.dropship.address || ''),
+        };
       }
     },
     // Memaksa nilai select sinkron setelah option di-render ulang.

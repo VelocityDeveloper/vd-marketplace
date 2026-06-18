@@ -44,6 +44,8 @@ class OrderAdmin
         $payment_token = (string) get_post_meta($order_id, '_store_order_payment_token', true);
         $payment_extra = get_post_meta($order_id, '_store_order_payment_extra', true);
         $payment_extra = is_array($payment_extra) ? $payment_extra : [];
+        $dropship = get_post_meta($order_id, '_store_order_dropship', true);
+        $dropship = is_array($dropship) ? $dropship : [];
         $shipping_groups = OrderData::shipping_groups($order_id);
         ?>
         <table class="form-table" role="presentation">
@@ -86,6 +88,16 @@ class OrderAdmin
                             <?php if (!empty($payment_extra['reference'])) : ?>
                                 <div>Reference: <?php echo esc_html((string) $payment_extra['reference']); ?></div>
                             <?php endif; ?>
+                        </td>
+                    </tr>
+                <?php endif; ?>
+                <?php if (!empty($dropship['enabled'])) : ?>
+                    <tr>
+                        <th scope="row">Dropship</th>
+                        <td>
+                            <div><strong><?php echo esc_html((string) ($dropship['store_name'] ?? '-')); ?></strong></div>
+                            <div><?php echo esc_html((string) ($dropship['phone'] ?? '-')); ?></div>
+                            <div><?php echo nl2br(esc_html((string) ($dropship['address'] ?? '-'))); ?></div>
                         </td>
                     </tr>
                 <?php endif; ?>

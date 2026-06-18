@@ -90,6 +90,15 @@ $status_labels = OrderData::statuses();
                                                 <div><strong><?php echo esc_html__('Pembeli:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($customer['name'] ?? '-'); ?></div>
                                                 <div><strong><?php echo esc_html__('Telepon:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($customer['phone'] ?? '-'); ?></div>
                                                 <div><strong><?php echo esc_html__('Alamat:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($customer['address'] ?? '-'); ?></div>
+                                                <?php $customer_dropship = isset($customer['dropship']) && is_array($customer['dropship']) ? $customer['dropship'] : []; ?>
+                                                <?php if (!empty($customer_dropship['enabled'])) : ?>
+                                                    <div class="mt-2 p-2 border rounded bg-light">
+                                                        <div class="fw-semibold"><?php echo esc_html__('Dropship', 'velocity-marketplace'); ?></div>
+                                                        <div><strong><?php echo esc_html__('Nama Toko:', 'velocity-marketplace'); ?></strong> <?php echo esc_html((string) ($customer_dropship['store_name'] ?? '-')); ?></div>
+                                                        <div><strong><?php echo esc_html__('No HP:', 'velocity-marketplace'); ?></strong> <?php echo esc_html((string) ($customer_dropship['phone'] ?? '-')); ?></div>
+                                                        <div><strong><?php echo esc_html__('Alamat Toko:', 'velocity-marketplace'); ?></strong> <?php echo esc_html((string) ($customer_dropship['address'] ?? '-')); ?></div>
+                                                    </div>
+                                                <?php endif; ?>
                                             </div>
                                             <div class="col-md-6">
                                                 <?php if ($seller_requires_shipping) : ?>

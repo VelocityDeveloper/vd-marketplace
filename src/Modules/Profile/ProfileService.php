@@ -31,6 +31,12 @@ class ProfileService
             'subdistrict_id' => (string) ($primary_address['subdistrict_id'] ?? ''),
             'subdistrict_name' => (string) ($primary_address['subdistrict_name'] ?? ''),
             'postcode' => (string) ($primary_address['postal_code'] ?? ''),
+            'dropship' => [
+                'enabled' => !empty(get_user_meta($user_id, '_store_dropship_enabled', true)),
+                'store_name' => (string) get_user_meta($user_id, '_store_dropship_store_name', true),
+                'phone' => (string) get_user_meta($user_id, '_store_dropship_phone', true),
+                'address' => (string) get_user_meta($user_id, '_store_dropship_address', true),
+            ],
         ];
     }
 
@@ -67,6 +73,7 @@ class ProfileService
             'province_name' => $this->sanitize_text($payload, ['province_name', 'customer_province_name']),
             'postal_code' => $this->sanitize_text($payload, ['postcode', 'customer_postcode']),
         ]);
+        $this->save_dropship_profile($user_id, $payload);
 
         return [
             'message' => 'Profil member berhasil diperbarui.',
@@ -227,6 +234,28 @@ class ProfileService
 
         $value = strtolower((string) $value);
         return in_array($value, ['1', 'true', 'yes', 'on'], true);
+    }
+
+    private function save_dropship_profile($user_id, array $payload)
+    {
+        $has_dropship_payload = false;
+        foreach (['dropship_enabled', 'customer_dropship_enabled', 'dropship_store_name', 'customer_dropship_store_name', 'dropship_phone', 'customer_dropship_phone', 'dropship_address', 'customer_dropship_address'] as $key) {
+            if (array_key_exists($key, $payload)) {
+                $has_dropship_payload = true;
+                break;
+            }
+        }
+
+        if (!$has_dropship_payload) {
+            return;
+        }
+
+        $enabled = $this->to_bool($this->pick_value($payload, ['dropship_enabled', 'customer_dropship_enabled'], ''));
+
+        update_user_meta($user_id, '_store_dropship_enabled', $enabled ? 1 : 0);
+        update_user_meta($user_id, '_store_dropship_store_name', $this->sanitize_text($payload, ['dropship_store_name', 'customer_dropship_store_name']));
+        update_user_meta($user_id, '_store_dropship_phone', $this->sanitize_text($payload, ['dropship_phone', 'customer_dropship_phone']));
+        update_user_meta($user_id, '_store_dropship_address', $this->sanitize_textarea($payload, ['dropship_address', 'customer_dropship_address']));
     }
 
     private function attachment_allowed_for_user($attachment_id, $user_id)

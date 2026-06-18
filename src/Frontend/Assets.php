@@ -168,6 +168,12 @@ class Assets
                 'destination_city_name' => '',
                 'destination_subdistrict_id' => '',
                 'destination_subdistrict_name' => '',
+                'dropship' => [
+                    'enabled' => false,
+                    'store_name' => '',
+                    'phone' => '',
+                    'address' => '',
+                ],
             ];
         }
 
@@ -186,6 +192,12 @@ class Assets
             'destination_city_name' => (string) ($profile['city_name'] ?? ''),
             'destination_subdistrict_id' => (string) ($profile['subdistrict_id'] ?? ''),
             'destination_subdistrict_name' => (string) ($profile['subdistrict_name'] ?? ''),
+            'dropship' => isset($profile['dropship']) && is_array($profile['dropship']) ? $profile['dropship'] : [
+                'enabled' => false,
+                'store_name' => '',
+                'phone' => '',
+                'address' => '',
+            ],
         ];
     }
 

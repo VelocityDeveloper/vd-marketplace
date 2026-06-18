@@ -406,6 +406,17 @@ class EmailTemplateService
         if (!empty($customer['address'])) {
             $rows[] = [$this->label_cell(__('Alamat', 'velocity-marketplace')), $this->value_cell(nl2br(esc_html((string) $customer['address'])))];
         }
+        $dropship = isset($customer['dropship']) && is_array($customer['dropship']) ? $customer['dropship'] : [];
+        if (!empty($dropship['enabled'])) {
+            $dropship_html = '<strong>' . esc_html((string) ($dropship['store_name'] ?? '')) . '</strong>';
+            if (!empty($dropship['phone'])) {
+                $dropship_html .= '<br>' . esc_html((string) $dropship['phone']);
+            }
+            if (!empty($dropship['address'])) {
+                $dropship_html .= '<br>' . nl2br(esc_html((string) $dropship['address']));
+            }
+            $rows[] = [$this->label_cell(__('Dropship', 'velocity-marketplace')), $this->value_cell($dropship_html)];
+        }
 
         if (empty($rows)) {
             return '<p>-</p>';

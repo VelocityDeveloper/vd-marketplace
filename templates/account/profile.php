@@ -11,6 +11,11 @@ $customer_city_id = (string) ($member_profile['city_id'] ?? '');
 $customer_province_id = (string) ($member_profile['province_id'] ?? '');
 $customer_postcode = (string) ($member_profile['postcode'] ?? '');
 $customer_email = (string) ($member_profile['email'] ?? '');
+$customer_dropship = isset($member_profile['dropship']) && is_array($member_profile['dropship']) ? $member_profile['dropship'] : [];
+$customer_dropship_enabled = !empty($customer_dropship['enabled']);
+$customer_dropship_store_name = (string) ($customer_dropship['store_name'] ?? '');
+$customer_dropship_phone = (string) ($customer_dropship['phone'] ?? '');
+$customer_dropship_address = (string) ($customer_dropship['address'] ?? '');
 $location_state = [
     'province_id' => $customer_province_id,
     'province_name' => $customer_province,
@@ -84,6 +89,31 @@ $location_state = [
             </div>
             <div class="col-12">
                 <div class="small text-muted" x-show="locationMessage" x-text="locationMessage"></div>
+            </div>
+            <div class="col-12">
+                <hr class="my-2">
+                <div class="d-flex align-items-center gap-2 mb-3">
+                    <h3 class="h6 mb-0"><?php echo esc_html__('Dropship', 'velocity-marketplace'); ?></h3>
+                </div>
+                <div class="alert alert-info">
+                    <?php echo esc_html__('Toko ini memberikan opsi dropship. Jika Anda mengaktifkan fitur ini, pesanan akan dikirim dengan nama toko dan alamat sesuai data dropship Anda.', 'velocity-marketplace'); ?>
+                </div>
+                <div class="form-check form-switch mb-3">
+                    <input class="form-check-input" type="checkbox" id="customer_dropship_enabled" name="customer_dropship_enabled" value="1" <?php checked($customer_dropship_enabled); ?>>
+                    <label class="form-check-label" for="customer_dropship_enabled"><?php echo esc_html__('Aktifkan Dropship', 'velocity-marketplace'); ?></label>
+                </div>
+            </div>
+            <div class="col-md-6">
+                <label class="form-label"><?php echo esc_html__('Nama Toko', 'velocity-marketplace'); ?></label>
+                <input type="text" name="customer_dropship_store_name" class="form-control" value="<?php echo esc_attr($customer_dropship_store_name); ?>">
+            </div>
+            <div class="col-md-6">
+                <label class="form-label"><?php echo esc_html__('No HP', 'velocity-marketplace'); ?></label>
+                <input type="text" name="customer_dropship_phone" class="form-control" value="<?php echo esc_attr($customer_dropship_phone); ?>">
+            </div>
+            <div class="col-12">
+                <label class="form-label"><?php echo esc_html__('Alamat Toko', 'velocity-marketplace'); ?></label>
+                <textarea name="customer_dropship_address" class="form-control" rows="3"><?php echo esc_textarea($customer_dropship_address); ?></textarea>
             </div>
             <div class="col-12">
                 <button type="submit" class="btn btn-dark" :disabled="saving" x-text="saving ? '<?php echo esc_attr__('Menyimpan...', 'velocity-marketplace'); ?>' : '<?php echo esc_attr__('Simpan Profil', 'velocity-marketplace'); ?>'"><?php echo esc_html__('Simpan Profil', 'velocity-marketplace'); ?></button>
