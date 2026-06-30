@@ -128,9 +128,9 @@ class ProductActionHandler extends BaseActionHandler
         }
 
         if ($brand_id > 0) {
-            wp_set_object_terms($saved_id, [$brand_id], 'brand', false);
+            wp_set_object_terms($saved_id, [$brand_id], Contract::BRAND_TAXONOMY, false);
         } else {
-            wp_set_object_terms($saved_id, [], 'brand', false);
+            wp_set_object_terms($saved_id, [], Contract::BRAND_TAXONOMY, false);
         }
 
         if (array_key_exists('featured_image_id', $_POST)) {

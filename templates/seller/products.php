@@ -24,6 +24,7 @@ $defaults = [
     'title'       => $edit_product ? $edit_product->post_title : '',
     'description' => $edit_product ? $edit_product->post_content : '',
     'category_id' => 0,
+    'brand_id'    => 0,
 ];
 
 if ($edit_product) {
@@ -31,6 +32,12 @@ if ($edit_product) {
 
     if (!is_wp_error($terms) && !empty($terms)) {
         $defaults['category_id'] = (int) $terms[0];
+    }
+
+    $brand_terms = wp_get_post_terms($edit_product_id, \VelocityMarketplace\Support\Contract::BRAND_TAXONOMY, ['fields' => 'ids']);
+
+    if (!is_wp_error($brand_terms) && !empty($brand_terms)) {
+        $defaults['brand_id'] = (int) $brand_terms[0];
     }
 }
 
@@ -41,6 +48,11 @@ $featured_image_url = $featured_image_id > 0
 
 $cats = get_terms([
     'taxonomy'   => 'store_product_cat',
+    'hide_empty' => false,
+]);
+
+$brands = get_terms([
+    'taxonomy'   => \VelocityMarketplace\Support\Contract::BRAND_TAXONOMY,
     'hide_empty' => false,
 ]);
 

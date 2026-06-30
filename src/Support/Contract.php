@@ -8,6 +8,7 @@ class Contract
     const ORDER_POST_TYPE = 'store_order';
     const COUPON_POST_TYPE = 'store_coupon';
     const PRODUCT_TAXONOMY = 'store_product_cat';
+    const BRAND_TAXONOMY = 'brand';
 
     public static function product_post_types()
     {
@@ -26,7 +27,12 @@ class Contract
 
     public static function product_taxonomies()
     {
-        return [self::PRODUCT_TAXONOMY];
+        return [self::PRODUCT_TAXONOMY, self::BRAND_TAXONOMY];
+    }
+
+    public static function brand_taxonomies()
+    {
+        return [self::BRAND_TAXONOMY];
     }
 
     public static function is_product_post_type($post_type)

@@ -231,7 +231,8 @@ class Settings
 
         $invoice = trim((string) $invoice);
         if ($invoice !== '') {
-            return add_query_arg(['order' => $invoice], $base);
+            $query_param = (string) apply_filters('wp_store_tracking_query_param', 'order');
+            return add_query_arg([$query_param => $invoice], $base);
         }
 
         return $base;
@@ -328,6 +329,10 @@ class Settings
 
     public static function courier_labels()
     {
+        if (function_exists('wp_store_courier_labels')) {
+            return wp_store_courier_labels();
+        }
+
         return [
             'jne' => 'JNE',
             'pos' => 'POS Indonesia',
