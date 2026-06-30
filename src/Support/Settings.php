@@ -257,6 +257,10 @@ class Settings
 
     public static function popular_bank_labels()
     {
+        if (function_exists('wp_store_bank_labels')) {
+            return wp_store_bank_labels();
+        }
+
         return [
             'bca' => 'BCA',
             'mandiri' => 'Mandiri',
