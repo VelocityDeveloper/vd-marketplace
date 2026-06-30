@@ -62,7 +62,11 @@ class ShippingController
 
     public static function base_url()
     {
-        return 'https://ongkir.velocitydeveloper.id/api/v3';
+        if (class_exists('\\WpStore\\Api\\RajaOngkirController')) {
+            return \WpStore\Api\RajaOngkirController::get_rajaongkir_base_url();
+        }
+
+        return '';
     }
 
     public function get_provinces(WP_REST_Request $request)
