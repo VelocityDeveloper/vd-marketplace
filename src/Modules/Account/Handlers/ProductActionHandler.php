@@ -123,6 +123,14 @@ class ProductActionHandler extends BaseActionHandler
 
         if ($cat_id > 0) {
             wp_set_object_terms($saved_id, [$cat_id], Contract::PRODUCT_TAXONOMY, false);
+        } else {
+            wp_set_object_terms($saved_id, [], Contract::PRODUCT_TAXONOMY, false);
+        }
+
+        if ($brand_id > 0) {
+            wp_set_object_terms($saved_id, [$brand_id], 'brand', false);
+        } else {
+            wp_set_object_terms($saved_id, [], 'brand', false);
         }
 
         if (array_key_exists('featured_image_id', $_POST)) {

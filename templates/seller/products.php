@@ -111,7 +111,7 @@ $error_message = isset($_GET['vmp_error'])
                     <?php wp_nonce_field('vmp_seller_product', 'vmp_seller_product_nonce'); ?>
 
                     <div class="row g-2">
-                        <div class="col-md-8" data-field-required="1">
+                        <div class="col-12" data-field-required="1">
                             <label class="form-label" for="vmp_product_title">
                                 <?php echo esc_html__('Nama Produk', 'velocity-marketplace'); ?>
                                 <span class="text-danger">*</span>
@@ -133,7 +133,7 @@ $error_message = isset($_GET['vmp_error'])
                             <?php endif; ?>
                         </div>
 
-                        <div class="col-md-4">
+                        <div class="col-md-6">
                             <label class="form-label" for="vmp_category_id">
                                 <?php echo esc_html__('Kategori', 'velocity-marketplace'); ?>
                             </label>
@@ -150,6 +150,29 @@ $error_message = isset($_GET['vmp_error'])
                                             <?php selected((int) $defaults['category_id'], (int) $cat->term_id); ?>
                                         >
                                             <?php echo esc_html($cat->name); ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                <?php endif; ?>
+                            </select>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label class="form-label" for="vmp_brand_id">
+                                <?php echo esc_html__('Brand', 'velocity-marketplace'); ?>
+                            </label>
+
+                            <select name="brand_id" id="vmp_brand_id" class="form-select">
+                                <option value="0">
+                                    <?php echo esc_html__('Pilih brand', 'velocity-marketplace'); ?>
+                                </option>
+
+                                <?php if (!is_wp_error($brands)) : ?>
+                                    <?php foreach ($brands as $brand) : ?>
+                                        <option
+                                            value="<?php echo esc_attr($brand->term_id); ?>"
+                                            <?php selected((int) $defaults['brand_id'], (int) $brand->term_id); ?>
+                                        >
+                                            <?php echo esc_html($brand->name); ?>
                                         </option>
                                     <?php endforeach; ?>
                                 <?php endif; ?>
