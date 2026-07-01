@@ -301,6 +301,15 @@ class OrderActionHandler extends BaseActionHandler
             $this->redirect_with(['vmp_error' => 'Order bukan milik akun ini.', 'tab' => $redirect_tab]);
         }
 
+        $pay_now_total = (float) get_post_meta($order_id, 'vmp_pay_now_total', true);
+        if (metadata_exists('post', $order_id, 'vmp_pay_now_total') && $pay_now_total <= 0) {
+            $this->redirect_with([
+                'vmp_error' => 'Pesanan ini dibayar seluruhnya saat diterima dan tidak memerlukan bukti transfer.',
+                'tab' => $redirect_tab,
+                'invoice' => (string) get_post_meta($order_id, 'vmp_invoice', true),
+            ]);
+        }
+
         if (empty($_FILES['transfer_proof']) || empty($_FILES['transfer_proof']['tmp_name'])) {
             $this->redirect_with([
                 'vmp_error' => 'File bukti transfer belum dipilih.',
@@ -335,7 +344,7 @@ class OrderActionHandler extends BaseActionHandler
         if (!empty($shipping_groups)) {
             foreach ($shipping_groups as &$shipping_group) {
                 $group_status = OrderData::shipping_group_status($shipping_group, $current_status !== '' ? $current_status : 'pending_payment');
-                if (in_array($group_status, ['cancelled', 'completed', 'refunded'], true)) {
+                if (OrderData::is_cod_group($shipping_group) || in_array($group_status, ['cancelled', 'completed', 'refunded'], true)) {
                     continue;
                 }
                 $shipping_group['status'] = 'pending_verification';
@@ -346,10 +355,16 @@ class OrderActionHandler extends BaseActionHandler
 
         $invoice = (string) get_post_meta($order_id, 'vmp_invoice', true);
         $notif = new NotificationRepository();
+        $cod_seller_ids = [];
+        foreach ($shipping_groups as $shipping_group) {
+            if (is_array($shipping_group) && OrderData::is_cod_group($shipping_group)) {
+                $cod_seller_ids[] = (int) ($shipping_group['seller_id'] ?? 0);
+            }
+        }
         $seller_ids = [];
         foreach (OrderData::get_items($order_id) as $line) {
             $seller_id = isset($line['seller_id']) ? (int) $line['seller_id'] : 0;
-            if ($seller_id > 0) {
+            if ($seller_id > 0 && !in_array($seller_id, $cod_seller_ids, true)) {
                 $seller_ids[] = $seller_id;
             }
         }
@@ -371,4 +386,3 @@ class OrderActionHandler extends BaseActionHandler
         ]);
     }
 }
-

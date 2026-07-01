@@ -27,10 +27,58 @@ Kalau `VD Store` tidak aktif:
 - halaman toko publik seller
 - checkout multi-seller
 - shipping per toko
+- COD per seller berbasis area kota/kabupaten
 - status order seller
 - pesan buyer dan seller
 - notifikasi seller
 - template email marketplace untuk admin dan pembeli
+- badge dan filter `Star Seller`
+
+## COD per seller
+
+COD tersedia sebagai pilihan pengiriman pada kartu seller jika seller aktif melayani kota tujuan. Satu checkout dapat menggabungkan seller COD dan seller prepaid.
+
+- `Total Pesanan` tetap mencakup seluruh grup seller
+- `Bayar Sekarang` hanya mencakup grup non-COD
+- `Bayar saat diterima` mencakup grup dengan pengiriman COD
+- payment method global hanya digunakan untuk nilai `Bayar Sekarang`
+
+## Star Seller
+
+Fitur `Star Seller` sudah tersedia.
+
+Status ini dihitung otomatis dari performa seller, lalu bisa dioverride manual oleh admin.
+
+### Syarat lolos otomatis
+
+Seller harus memenuhi semua syarat ini:
+- minimal `10` order selesai
+- minimal `5` rating
+- rata-rata rating minimal `4.7`
+- rasio order `cancelled + refunded` maksimal `5%`
+
+### Cara hitung
+
+- order selesai dihitung dari status `completed`
+- order gagal dihitung dari status `cancelled` dan `refunded`
+- cancel rate dihitung dari total order final:
+  - `completed + cancelled + refunded`
+- rating seller diambil dari review seller yang tersimpan di marketplace
+
+### Override admin
+
+Admin bisa mengatur mode:
+- `auto`
+- `force_on`
+- `force_off`
+
+### Lokasi tampilan
+
+Badge `Star Seller` dipakai di:
+- kartu seller pada produk
+- halaman toko publik seller
+- dashboard seller
+- filter produk berdasarkan tipe toko
 
 ## Cara pakai singkat
 

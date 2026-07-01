@@ -80,14 +80,7 @@ class CheckoutController
             : [];
         $active_payment_methods = Settings::payment_methods();
 
-        $payment_method = sanitize_key($payload['payment_method'] ?? $active_payment_methods[0]);
-        if (!in_array($payment_method, $active_payment_methods, true)) {
-            return new WP_REST_Response(['message' => 'Metode pembayaran tidak tersedia.'], 400);
-        }
-        if ($payment_method === 'bank' && empty(Settings::bank_accounts())) {
-            return new WP_REST_Response(['message' => 'Rekening tujuan transfer belum tersedia. Silakan hubungi admin marketplace.'], 400);
-        }
-
+        $payment_method = sanitize_key($payload['payment_method'] ?? ($active_payment_methods[0] ?? 'bank'));
         $default_order_status = OrderData::normalize_status(Settings::default_order_status());
 
         $notes = sanitize_textarea_field($payload['notes'] ?? '');
@@ -173,8 +166,7 @@ class CheckoutController
             }
         }
 
-        $order_status = $payment_method === 'cod' ? 'processing' : $default_order_status;
-        $shipping_groups = $this->build_shipping_groups($submitted_shipping_groups, $shipping_destination, $shipping_context_data, $order_items, $payment_method, $order_status);
+        $shipping_groups = $this->build_shipping_groups($submitted_shipping_groups, $shipping_destination, $shipping_context_data, $order_items, $payment_method, $default_order_status);
         if (is_wp_error($shipping_groups)) {
             return new WP_REST_Response([
                 'message' => $shipping_groups->get_error_message(),
@@ -208,6 +200,28 @@ class CheckoutController
             $coupon_discount = (float) ($coupon_preview['discount'] ?? 0);
         }
 
+        $payment_totals = $this->apply_group_payment_totals(
+            $shipping_groups,
+            $subtotal,
+            $shipping_total,
+            $coupon_product_discount,
+            $coupon_shipping_discount
+        );
+        $shipping_groups = $payment_totals['groups'];
+        $total = (float) $payment_totals['grand_total'];
+        $pay_now_total = (float) $payment_totals['pay_now_total'];
+        $cod_due_total = (float) $payment_totals['cod_due_total'];
+        $has_cod_groups = $cod_due_total > 0 || !empty($payment_totals['has_cod_groups']);
+        $effective_payment_method = $pay_now_total <= 0 && $has_cod_groups ? 'cod' : $payment_method;
+        $order_status = $pay_now_total <= 0 && $has_cod_groups ? 'processing' : $default_order_status;
+
+        if ($pay_now_total > 0 && !in_array($effective_payment_method, $active_payment_methods, true)) {
+            return new WP_REST_Response(['message' => 'Metode pembayaran non-COD tidak tersedia.'], 400);
+        }
+        if ($pay_now_total > 0 && $effective_payment_method === 'bank' && empty(Settings::bank_accounts())) {
+            return new WP_REST_Response(['message' => 'Rekening tujuan transfer belum tersedia. Silakan hubungi admin marketplace.'], 400);
+        }
+
         $shipping = [
             'groups' => $shipping_groups,
             'cost' => (float) $shipping_total,
@@ -224,7 +238,6 @@ class CheckoutController
             $shipping['service'] = (string) ($shipping_groups[0]['service'] ?? '');
         }
 
-        $total = max(0, ($subtotal - $coupon_product_discount) + ($shipping_total - $coupon_shipping_discount));
         $invoice = $this->generate_invoice();
         $user_id = is_user_logged_in() ? get_current_user_id() : 0;
         $primary_shipping = $this->resolve_core_shipping_summary($shipping_groups, $shipping_total);
@@ -245,7 +258,7 @@ class CheckoutController
             'postal_code' => $customer['postal_code'],
             'notes' => $notes,
             'items' => $order_items,
-            'payment_method' => OrderData::core_payment_method($payment_method),
+            'payment_method' => OrderData::core_payment_method($effective_payment_method),
             'status' => OrderData::core_status($order_status),
             'shipping_courier' => $primary_shipping['courier'],
             'shipping_service' => $primary_shipping['service'],
@@ -278,9 +291,12 @@ class CheckoutController
         update_post_meta($order_id, 'vmp_shipping_groups', $shipping_groups);
         update_post_meta($order_id, 'vmp_shipping_total', (float) $shipping_total);
         update_post_meta($order_id, 'vmp_total', (float) $total);
+        update_post_meta($order_id, 'vmp_pay_now_total', (float) $pay_now_total);
+        update_post_meta($order_id, 'vmp_cod_due_total', (float) $cod_due_total);
         update_post_meta($order_id, 'vmp_total_weight', (float) $total_weight);
-        update_post_meta($order_id, 'vmp_payment_method', $payment_method);
-        update_post_meta($order_id, 'vmp_bank_accounts', $payment_method === 'bank' ? Settings::bank_accounts() : []);
+        update_post_meta($order_id, 'vmp_payment_method', $effective_payment_method);
+        update_post_meta($order_id, 'vmp_online_payment_method', $pay_now_total > 0 ? $payment_method : '');
+        update_post_meta($order_id, 'vmp_bank_accounts', $pay_now_total > 0 && $effective_payment_method === 'bank' ? Settings::bank_accounts() : []);
         update_post_meta($order_id, 'vmp_status', $order_status);
         update_post_meta($order_id, 'vmp_notes', $notes);
         update_post_meta($order_id, 'vmp_created_at', current_time('mysql'));
@@ -293,7 +309,7 @@ class CheckoutController
         OrderData::sync_core_status($order_id, $order_status);
 
         $redirect = $this->resolve_tracking_url($invoice);
-        if ($payment_method === 'duitku') {
+        if ($effective_payment_method === 'duitku' && $pay_now_total > 0) {
             $duitku_invoice = (new PaymentService())->initialize_order_payment($order_id, 'duitku', [
                 'order_number' => $invoice,
                 'name' => $customer['name'],
@@ -303,10 +319,14 @@ class CheckoutController
                 'postal_code' => $customer['postal_code'],
                 'city_name' => $shipping_destination['city_destination_name'],
                 'user_id' => $user_id,
-                'items' => $order_items,
+                'items' => [[
+                    'title' => 'Pembayaran non-COD ' . $invoice,
+                    'price' => $pay_now_total,
+                    'qty' => 1,
+                ]],
                 'return_url' => Settings::tracking_url((string) $invoice),
                 'expiry_period' => 60,
-            ], $total);
+            ], $pay_now_total);
             if (is_wp_error($duitku_invoice)) {
                 wp_delete_post($order_id, true);
 
@@ -324,7 +344,21 @@ class CheckoutController
             $redirect = (string) ($duitku_invoice['payment_url'] ?? $duitku_invoice['paymentUrl'] ?? $redirect);
         }
 
-        OrderData::maybe_deduct_stock($order_id, (string) get_post_meta($order_id, 'vmp_status', true));
+        // Grup COD langsung diproses. Stok seller COD dikurangi sekarang,
+        // sedangkan stok grup prepaid dikurangi setelah pembayaran terverifikasi.
+        if ($has_cod_groups) {
+            $cod_seller_ids = [];
+            foreach ($shipping_groups as $shipping_group) {
+                if (is_array($shipping_group) && OrderData::is_cod_group($shipping_group)) {
+                    $cod_seller_ids[] = (int) ($shipping_group['seller_id'] ?? 0);
+                }
+            }
+            if (!empty(array_filter($cod_seller_ids))) {
+                OrderData::maybe_deduct_stock_for_sellers($order_id, $cod_seller_ids, 'processing');
+            }
+        } else {
+            OrderData::maybe_deduct_stock($order_id, (string) get_post_meta($order_id, 'vmp_status', true));
+        }
 
         $profile_url = Settings::profile_url();
         $tracking_url = Settings::customer_order_url($invoice);
@@ -382,6 +416,8 @@ class CheckoutController
             'order_id' => (int) $order_id,
             'invoice' => $invoice,
             'total' => (float) $total,
+            'pay_now_total' => (float) $pay_now_total,
+            'cod_due_total' => (float) $cod_due_total,
             'coupon_discount' => (float) $coupon_discount,
             'coupon_scope' => (string) $coupon_scope,
             'coupon_product_discount' => (float) $coupon_product_discount,
@@ -496,7 +532,6 @@ class CheckoutController
         }
 
         $items_by_seller = [];
-        $items_by_key = [];
         foreach ($order_items as $line) {
             $seller_id = isset($line['seller_id']) ? (int) $line['seller_id'] : 0;
             if ($seller_id <= 0) {
@@ -506,10 +541,6 @@ class CheckoutController
                 $items_by_seller[$seller_id] = [];
             }
             $items_by_seller[$seller_id][] = $line;
-            $cart_key = isset($line['cart_key']) ? (string) $line['cart_key'] : '';
-            if ($cart_key !== '') {
-                $items_by_key[$cart_key] = $line;
-            }
         }
 
         $submitted_map = [];
@@ -549,6 +580,7 @@ class CheckoutController
                 ? array_values(array_filter(array_map('strval', $context_group['cod_city_ids'])))
                 : [];
             $is_cod_available = !empty($context_group['cod_enabled'])
+                && in_array('cod', Settings::payment_methods(), true)
                 && !empty($destination['city_destination_id'])
                 && in_array((string) $destination['city_destination_id'], $cod_city_ids, true);
 
@@ -560,31 +592,38 @@ class CheckoutController
                     'seller_id' => $seller_id,
                     'courier' => 'cod',
                     'courier_name' => 'COD',
-                    'service' => 'COD',
-                    'description' => 'Bayar di tempat / temu langsung',
+                    'service' => 'Bayar di Tempat',
+                    'description' => 'Produk toko ini dibayar saat diterima',
                     'cost' => 0,
                     'etd' => 'Sesuai kesepakatan',
                 ];
             }
 
-            if ($payment_method !== 'cod' && (($selection['courier'] ?? '') === '' || ($selection['service'] ?? '') === '')) {
+            if (($selection['courier'] ?? '') === '' || ($selection['service'] ?? '') === '') {
                 return new \WP_Error('invalid_shipping_selection', 'Pilihan ongkir per toko belum lengkap.');
             }
 
-            $group_items = [];
+            $is_cod_selection = sanitize_key((string) ($selection['courier'] ?? '')) === 'cod';
+            if ($is_cod_selection) {
+                if (!$is_cod_available) {
+                    return new \WP_Error('cod_not_available', 'COD tidak tersedia untuk salah satu toko di kota tujuan yang dipilih.');
+                }
+                // Nilai opsi COD ditetapkan server agar biaya tidak dapat dimanipulasi dari payload.
+                $selection = [
+                    'seller_id' => $seller_id,
+                    'courier' => 'cod',
+                    'courier_name' => 'COD',
+                    'service' => 'Bayar di Tempat',
+                    'description' => 'Produk toko ini dibayar saat diterima',
+                    'cost' => 0,
+                    'etd' => 'Sesuai kesepakatan',
+                ];
+            }
+
             $context_item_keys = isset($context_group['item_keys']) && is_array($context_group['item_keys'])
                 ? array_values(array_filter(array_map('strval', $context_group['item_keys'])))
                 : [];
-            if (!empty($context_item_keys)) {
-                foreach ($context_item_keys as $item_key) {
-                    if (isset($items_by_key[$item_key])) {
-                        $group_items[] = $items_by_key[$item_key];
-                    }
-                }
-            }
-            if (empty($group_items)) {
-                $group_items = array_values($items_by_seller[$seller_id] ?? []);
-            }
+            $group_items = array_values($items_by_seller[$seller_id] ?? []);
 
             $result[] = [
                 'seller_id' => $seller_id,
@@ -605,7 +644,9 @@ class CheckoutController
                 'cod_enabled' => !empty($context_group['cod_enabled']),
                 'cod_city_ids' => $cod_city_ids,
                 'cod_city_names' => isset($context_group['cod_city_names']) && is_array($context_group['cod_city_names']) ? array_values($context_group['cod_city_names']) : [],
-                'status' => $initial_status,
+                'is_cod' => $is_cod_selection,
+                'payment_type' => $is_cod_selection ? 'cod' : 'prepaid',
+                'status' => $is_cod_selection ? 'processing' : $initial_status,
                 'receipt_no' => '',
                 'receipt_courier' => '',
                 'seller_note' => '',
@@ -613,6 +654,61 @@ class CheckoutController
         }
 
         return $result;
+    }
+
+    /**
+     * Menempelkan pembagian diskon dan nominal pembayaran ke setiap grup seller.
+     * COD diturunkan dari courier agar payment method global tetap mewakili
+     * pembayaran online untuk bagian order lainnya.
+     */
+    private function apply_group_payment_totals(array $groups, $subtotal, $shipping_total, $product_discount, $shipping_discount)
+    {
+        $subtotal = max(0, (float) $subtotal);
+        $shipping_total = max(0, (float) $shipping_total);
+        $product_discount = min($subtotal, max(0, (float) $product_discount));
+        $shipping_discount = min($shipping_total, max(0, (float) $shipping_discount));
+        $grand_total = max(0, ($subtotal - $product_discount) + ($shipping_total - $shipping_discount));
+        $cod_due_total = 0.0;
+        $has_cod_groups = false;
+
+        foreach ($groups as $index => $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+
+            $group_subtotal = max(0, (float) ($group['subtotal'] ?? 0));
+            $group_shipping = max(0, (float) ($group['cost'] ?? 0));
+            $group_product_discount = $subtotal > 0
+                ? round($product_discount * ($group_subtotal / $subtotal), 2)
+                : 0.0;
+            $group_shipping_discount = $shipping_total > 0
+                ? round($shipping_discount * ($group_shipping / $shipping_total), 2)
+                : 0.0;
+            $group_total = max(0, $group_subtotal + $group_shipping - $group_product_discount - $group_shipping_discount);
+            $is_cod = sanitize_key((string) ($group['courier'] ?? '')) === 'cod';
+
+            $groups[$index]['is_cod'] = $is_cod;
+            $groups[$index]['payment_type'] = $is_cod ? 'cod' : 'prepaid';
+            $groups[$index]['product_discount'] = (float) $group_product_discount;
+            $groups[$index]['shipping_discount'] = (float) $group_shipping_discount;
+            $groups[$index]['discount_total'] = (float) ($group_product_discount + $group_shipping_discount);
+            $groups[$index]['total'] = (float) $group_total;
+
+            if ($is_cod) {
+                $has_cod_groups = true;
+                $cod_due_total += $group_total;
+            }
+        }
+
+        $cod_due_total = min($grand_total, max(0, round($cod_due_total, 2)));
+
+        return [
+            'groups' => array_values($groups),
+            'grand_total' => (float) round($grand_total, 2),
+            'pay_now_total' => (float) round(max(0, $grand_total - $cod_due_total), 2),
+            'cod_due_total' => (float) $cod_due_total,
+            'has_cod_groups' => $has_cod_groups,
+        ];
     }
 
     private function resolve_core_shipping_summary(array $shipping_groups, $shipping_total)
@@ -647,5 +743,3 @@ class CheckoutController
         ];
     }
 }
-
-

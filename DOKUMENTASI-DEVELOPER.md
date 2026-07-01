@@ -16,6 +16,69 @@ Yang ditambah oleh addon:
 - pesan buyer dan seller
 - notifikasi seller
 - metrik seller
+- status `Star Seller`
+
+## Star Seller
+
+Fitur `Star Seller` ada di modul review dan dipusatkan di:
+- `src/Modules/Review/StarSellerService.php`
+- `src/Modules/Review/StarSellerAdmin.php`
+
+### Rule otomatis
+
+Seller otomatis lolos `Star Seller` jika memenuhi semua rule berikut:
+- `completed_orders >= 10`
+- `rating_count >= 5`
+- `rating_average >= 4.7`
+- `cancel_rate <= 5%`
+
+Implementasi konstanta ada di:
+- `MIN_COMPLETED_ORDERS = 10`
+- `MIN_RATING_AVERAGE = 4.7`
+- `MIN_RATING_COUNT = 5`
+- `MAX_CANCEL_RATE = 5.0`
+
+### Cara hitung order
+
+Service membaca `store_order`, lalu hanya menghitung order yang memang punya item dari seller itu.
+
+Status yang dipakai:
+- `completed` → menambah completed order
+- `cancelled` dan `refunded` → menambah cancelled order
+
+Cancel rate dihitung dari:
+- `(cancelled_orders / (completed_orders + cancelled_orders)) * 100`
+
+### Cara hitung rating
+
+Rating diambil dari `ReviewRepository::seller_rating_stats($seller_id)`.
+
+Field yang dipakai:
+- `rating_average`
+- `rating_count`
+
+### Override admin
+
+Admin bisa override hasil otomatis dengan user meta:
+- `vmp_star_seller_override = auto`
+- `vmp_star_seller_override = force_on`
+- `vmp_star_seller_override = force_off`
+
+Meta hasil yang disimpan:
+- `vmp_completed_order_count`
+- `vmp_cancelled_order_count`
+- `vmp_cancel_rate`
+- `vmp_rating_average`
+- `vmp_rating_count`
+- `vmp_star_seller_auto`
+- `vmp_is_star_seller`
+
+### Kapan direfresh
+
+Recalculate dipanggil saat:
+- review seller / produk berubah
+- order seller diperbarui
+- admin melakukan override
 
 ## Dependency
 
@@ -77,6 +140,17 @@ Contoh:
 - `src/Modules/Checkout/CheckoutController.php`
 - `templates/cart.php`
 - `templates/checkout.php`
+
+COD marketplace:
+- profil seller menyimpan `vmp_cod_enabled`, `vmp_cod_city_ids`, `vmp_cod_city_names`
+- `ShippingController` membawa metadata COD seller ke checkout context
+- frontend menambahkan `courier = cod` ke pilihan pengiriman masing-masing seller yang melayani kota tujuan
+- buyer dapat memilih COD untuk satu seller dan kurir reguler untuk seller lain dalam checkout yang sama
+- `CheckoutController` memvalidasi kelayakan COD per shipping group dan tidak mempercayai biaya dari payload
+- `vmp_total` tetap menyimpan nilai seluruh order; `vmp_pay_now_total` menyimpan nominal pembayaran global dan `vmp_cod_due_total` menyimpan nominal yang dibayar saat diterima
+- diskon produk dan ongkir dialokasikan proporsional ke shipping group agar `vmp_total = vmp_pay_now_total + vmp_cod_due_total`
+- status awal grup COD adalah `processing`; grup prepaid mengikuti status pembayaran global
+- stok grup COD dikurangi saat order dibuat, sedangkan stok grup prepaid dikurangi setelah pembayaran terverifikasi
 
 ### Coupon, order, payment
 - `src/Modules/Coupon/CouponService.php`

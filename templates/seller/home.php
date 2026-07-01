@@ -49,6 +49,10 @@ $status_labels = OrderData::statuses();
                             $seller_items = OrderData::seller_items($order_id, $current_user_id);
                             $seller_total = OrderData::seller_total($order_id, $current_user_id);
                             $seller_shipping = OrderData::seller_shipping_group($order_id, $current_user_id);
+                            $seller_is_cod = is_array($seller_shipping) && OrderData::is_cod_group($seller_shipping);
+                            $seller_order_total = is_array($seller_shipping) && isset($seller_shipping['total'])
+                                ? (float) $seller_shipping['total']
+                                : $seller_total + (float) ($seller_shipping['cost'] ?? 0);
                             $transfer_proof_id = (int) get_post_meta($order_id, 'vmp_transfer_proof_id', true);
                             $transfer_proof_url = $transfer_proof_id > 0 ? wp_get_attachment_url($transfer_proof_id) : '';
                             $receipt_no = (string) (($seller_shipping['receipt_no'] ?? '') ?: get_post_meta($order_id, 'vmp_receipt_no', true));
@@ -79,7 +83,8 @@ $status_labels = OrderData::statuses();
                                         <span class="d-flex flex-wrap align-items-center gap-2">
                                             <span class="fw-semibold"><?php echo esc_html($invoice_meta); ?></span>
                                             <span class="badge <?php echo esc_attr($status_badge_class($seller_status)); ?>"><?php echo esc_html(OrderData::status_label($seller_status)); ?></span>
-                                            <span class="text-muted small"><?php echo esc_html($money($seller_total)); ?></span>
+                                            <span class="text-muted small"><?php echo esc_html($money($seller_order_total)); ?></span>
+                                            <?php if ($seller_is_cod) : ?><span class="badge bg-success"><?php echo esc_html__('COD', 'velocity-marketplace'); ?></span><?php endif; ?>
                                         </span>
                                     </button>
                                 </h2>
@@ -105,13 +110,14 @@ $status_labels = OrderData::statuses();
                                                     <div><strong><?php echo esc_html__('Kurir:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($receipt_courier !== '' ? $receipt_courier : '-'); ?></div>
                                                     <div><strong><?php echo esc_html__('Nomor Resi:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($receipt_no !== '' ? $receipt_no : '-'); ?></div>
                                                     <div><strong><?php echo esc_html__('Pengiriman untuk Toko Ini:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($money((float) ($seller_shipping['cost'] ?? 0))); ?></div>
+                                                    <div><strong><?php echo esc_html__('Pembayaran:', 'velocity-marketplace'); ?></strong> <?php echo esc_html($seller_is_cod ? __('Dibayar saat diterima (COD)', 'velocity-marketplace') : __('Dibayar di muka', 'velocity-marketplace')); ?></div>
                                                 <?php else : ?>
                                                     <div><strong><?php echo esc_html__('Jenis Pesanan:', 'velocity-marketplace'); ?></strong> <?php echo esc_html__('Produk Digital', 'velocity-marketplace'); ?></div>
                                                     <div><strong><?php echo esc_html__('Pemenuhan untuk Toko Ini:', 'velocity-marketplace'); ?></strong> <?php echo esc_html__('Tidak memerlukan pengiriman.', 'velocity-marketplace'); ?></div>
                                                 <?php endif; ?>
-                                                <?php if ($transfer_proof_url) : ?>
+                                                <?php if (!$seller_is_cod && $transfer_proof_url) : ?>
                                                     <a href="<?php echo esc_url($transfer_proof_url); ?>" class="btn btn-sm btn-outline-primary mt-2" target="_blank"><?php echo esc_html__('Lihat Bukti Pembayaran', 'velocity-marketplace'); ?></a>
-                                                <?php else : ?>
+                                                <?php elseif (!$seller_is_cod) : ?>
                                                     <div class="small text-muted mt-1"><?php echo esc_html__('Bukti pembayaran belum diunggah.', 'velocity-marketplace'); ?></div>
                                                 <?php endif; ?>
                                                 <?php $buyer_contact_id = isset($customer['user_id']) ? (int) $customer['user_id'] : \VelocityMarketplace\Modules\Order\OrderData::buyer_id($order_id); ?>

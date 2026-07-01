@@ -320,10 +320,24 @@ class EmailTemplateService
         $customer = is_array($customer) ? $customer : [];
         $items = OrderData::get_items($order_id);
         $total = (float) get_post_meta($order_id, 'vmp_total', true);
+        $pay_now_total = metadata_exists('post', $order_id, 'vmp_pay_now_total')
+            ? (float) get_post_meta($order_id, 'vmp_pay_now_total', true)
+            : $total;
+        $cod_due_total = (float) get_post_meta($order_id, 'vmp_cod_due_total', true);
+        $payment_method = (string) get_post_meta($order_id, 'vmp_payment_method', true);
         $status = (string) get_post_meta($order_id, 'vmp_status', true);
         $bank_accounts = get_post_meta($order_id, 'vmp_bank_accounts', true);
-        if (!is_array($bank_accounts) || empty($bank_accounts)) {
+        if ($pay_now_total > 0 && $payment_method === 'bank' && (!is_array($bank_accounts) || empty($bank_accounts))) {
             $bank_accounts = Settings::bank_accounts();
+        }
+        if ($pay_now_total <= 0 || $payment_method !== 'bank') {
+            $bank_accounts = [];
+        }
+
+        $payment_summary = $this->money($total);
+        if ($cod_due_total > 0) {
+            $payment_summary .= ' (bayar sekarang ' . $this->money($pay_now_total)
+                . ', bayar saat diterima ' . $this->money($cod_due_total) . ')';
         }
 
         $store_name = (string) get_bloginfo('name');
@@ -339,7 +353,7 @@ class EmailTemplateService
             '[detail-pesanan]' => $this->render_order_items($items),
             '[data-pemesan]' => $this->render_customer_data($customer),
             '[nama-pemesan]' => esc_html((string) ($customer['name'] ?? '')),
-            '[total-order]' => esc_html($this->money($total)),
+            '[total-order]' => esc_html($payment_summary),
             '[nomor-rekening]' => $this->render_bank_accounts($bank_accounts),
             '[status]' => esc_html(OrderData::status_label($status)),
             '[link]' => '<a href="' . esc_url($tracking_url) . '">' . esc_html($tracking_url) . '</a>',

@@ -148,6 +148,11 @@ class OrderData
 
     public static function maybe_deduct_stock($order_id, $status = '')
     {
+        return self::maybe_deduct_stock_for_sellers($order_id, [], $status);
+    }
+
+    public static function maybe_deduct_stock_for_sellers($order_id, array $seller_ids = [], $status = '')
+    {
         $order_id = (int) $order_id;
         if ($order_id <= 0 || get_post_type($order_id) !== 'store_order') {
             return false;
@@ -165,26 +170,54 @@ class OrderData
             return false;
         }
 
-        foreach (self::get_items($order_id) as $line) {
+        $seller_ids = array_values(array_unique(array_filter(array_map('intval', $seller_ids))));
+        $deducted_lines = get_post_meta($order_id, 'vmp_stock_deducted_lines', true);
+        $deducted_lines = is_array($deducted_lines) ? array_fill_keys(array_map('strval', $deducted_lines), true) : [];
+        $items = self::get_items($order_id);
+        $eligible_line_count = 0;
+        $did_deduct = false;
+
+        foreach ($items as $index => $line) {
             $product_id = isset($line['product_id']) ? (int) $line['product_id'] : 0;
             $qty = isset($line['qty']) ? (int) $line['qty'] : 0;
             if ($product_id <= 0 || $qty <= 0) {
                 continue;
             }
 
-            $stock = \WpStore\Domain\Product\ProductMeta::get($product_id, 'stock', '');
-            if ($stock === '' || !is_numeric($stock)) {
+            $eligible_line_count++;
+            $seller_id = isset($line['seller_id']) ? (int) $line['seller_id'] : 0;
+            if (!empty($seller_ids) && !in_array($seller_id, $seller_ids, true)) {
                 continue;
             }
 
-            $new_stock = max(0, ((int) $stock) - $qty);
-            update_post_meta($product_id, \WpStore\Domain\Product\ProductMeta::meta_key('stock'), $new_stock);
+            $line_key = trim((string) ($line['cart_key'] ?? ''));
+            if ($line_key === '') {
+                $line_key = md5($product_id . '|' . $index . '|' . wp_json_encode($line['options'] ?? []));
+            }
+            if (isset($deducted_lines[$line_key])) {
+                continue;
+            }
+
+            $stock = \WpStore\Domain\Product\ProductMeta::get($product_id, 'stock', '');
+            if ($stock !== '' && is_numeric($stock)) {
+                $new_stock = max(0, ((int) $stock) - $qty);
+                update_post_meta($product_id, \WpStore\Domain\Product\ProductMeta::meta_key('stock'), $new_stock);
+            }
+
+            $deducted_lines[$line_key] = true;
+            $did_deduct = true;
         }
 
-        update_post_meta($order_id, 'vmp_stock_deducted_at', current_time('mysql'));
-        update_post_meta($order_id, 'vmp_stock_deducted_status', $status);
+        if ($did_deduct) {
+            update_post_meta($order_id, 'vmp_stock_deducted_lines', array_keys($deducted_lines));
+            update_post_meta($order_id, 'vmp_stock_deducted_status', $status);
+        }
 
-        return true;
+        if ($eligible_line_count > 0 && count($deducted_lines) >= $eligible_line_count) {
+            update_post_meta($order_id, 'vmp_stock_deducted_at', current_time('mysql'));
+        }
+
+        return $did_deduct;
     }
 
     public static function sync_core_payment($order_id, array $payment_info)
@@ -306,7 +339,20 @@ class OrderData
             return self::normalize_status($statuses[0]);
         }
 
+        foreach (['pending_payment', 'pending_verification', 'processing', 'shipped'] as $priority_status) {
+            if (in_array($priority_status, $statuses, true)) {
+                return $priority_status;
+            }
+        }
+
         return 'processing';
+    }
+
+    public static function is_cod_group(array $group)
+    {
+        return !empty($group['is_cod'])
+            || sanitize_key((string) ($group['payment_type'] ?? '')) === 'cod'
+            || sanitize_key((string) ($group['courier'] ?? '')) === 'cod';
     }
 
     public static function infer_missing_group_status(array $group, $global_status = 'pending_payment', $payment_method = '', $has_transfer_proof = false)
@@ -321,6 +367,10 @@ class OrderData
 
         if (!empty($group['receipt_no'])) {
             return 'shipped';
+        }
+
+        if (self::is_cod_group($group)) {
+            return 'processing';
         }
 
         if ($has_transfer_proof || $global_status === 'pending_verification') {

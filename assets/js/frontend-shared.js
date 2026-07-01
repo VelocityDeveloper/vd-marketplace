@@ -180,9 +180,12 @@
     return payload;
   };
 
+  const prepaidPaymentMethods = paymentMethods.filter(
+    (method) => typeof method === 'string' && method !== 'cod',
+  );
   const defaultPaymentMethod =
-    paymentMethods.length > 0 && typeof paymentMethods[0] === 'string'
-      ? paymentMethods[0]
+    prepaidPaymentMethods.length > 0
+      ? prepaidPaymentMethods[0]
       : 'bank';
 
   // Helper tampilan yang dipakai bersama oleh komponen cart dan checkout.

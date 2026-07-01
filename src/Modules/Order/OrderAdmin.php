@@ -44,6 +44,8 @@ class OrderAdmin
         $payment_token = (string) get_post_meta($order_id, '_store_order_payment_token', true);
         $payment_extra = get_post_meta($order_id, '_store_order_payment_extra', true);
         $payment_extra = is_array($payment_extra) ? $payment_extra : [];
+        $pay_now_total = (float) get_post_meta($order_id, 'vmp_pay_now_total', true);
+        $cod_due_total = (float) get_post_meta($order_id, 'vmp_cod_due_total', true);
         $dropship = get_post_meta($order_id, '_store_order_dropship', true);
         $dropship = is_array($dropship) ? $dropship : [];
         $shipping_groups = OrderData::shipping_groups($order_id);
@@ -65,6 +67,14 @@ class OrderAdmin
                 <tr>
                     <th scope="row">Payment Method Core</th>
                     <td><?php echo esc_html($payment !== '' ? strtoupper($payment) : '-'); ?></td>
+                </tr>
+                <tr>
+                    <th scope="row">Bayar Sekarang</th>
+                    <td><?php echo esc_html($this->money($pay_now_total)); ?></td>
+                </tr>
+                <tr>
+                    <th scope="row">Bayar saat Diterima</th>
+                    <td><?php echo esc_html($this->money($cod_due_total)); ?></td>
                 </tr>
                 <?php if ($payment_url !== '') : ?>
                     <tr>
@@ -142,6 +152,10 @@ class OrderAdmin
                             <tr>
                                 <th scope="row">Layanan</th>
                                 <td><?php echo esc_html((string) ($group['service'] ?? '-')); ?></td>
+                            </tr>
+                            <tr>
+                                <th scope="row">Jenis Pembayaran</th>
+                                <td><?php echo esc_html(OrderData::is_cod_group($group) ? 'COD / Bayar saat diterima' : 'Dibayar di muka'); ?></td>
                             </tr>
                             <tr>
                                 <th scope="row">Ongkir</th>
@@ -322,6 +336,9 @@ class OrderAdmin
         if (!empty($shipping_groups)) {
             foreach ($shipping_groups as $index => $group) {
                 if (!is_array($group)) {
+                    continue;
+                }
+                if (OrderData::is_cod_group($group) && in_array($mapped_status, ['pending_payment', 'pending_verification'], true)) {
                     continue;
                 }
                 $shipping_groups[$index]['status'] = $mapped_status;

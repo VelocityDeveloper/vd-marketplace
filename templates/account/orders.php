@@ -44,6 +44,12 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
         $invoice_meta = (string) get_post_meta($order_id, 'vmp_invoice', true);
         $items = OrderData::get_items($order_id);
         $total = (float) get_post_meta($order_id, 'vmp_total', true);
+        $pay_now_total = metadata_exists('post', $order_id, 'vmp_pay_now_total')
+            ? (float) get_post_meta($order_id, 'vmp_pay_now_total', true)
+            : $total;
+        $cod_due_total = metadata_exists('post', $order_id, 'vmp_cod_due_total')
+            ? (float) get_post_meta($order_id, 'vmp_cod_due_total', true)
+            : 0.0;
         $status = (string) get_post_meta($order_id, 'vmp_status', true);
         $payment = (string) get_post_meta($order_id, 'vmp_payment_method', true);
         $shipping = get_post_meta($order_id, 'vmp_shipping', true);
@@ -105,12 +111,12 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                 </div>
             </div>
             <div class="small text-muted mt-2"><?php echo esc_html__('Catatan Pesanan:', 'velocity-marketplace'); ?> <?php echo esc_html($notes !== '' ? $notes : '-'); ?></div>
-            <?php if ($payment === 'duitku' && $gateway_payment_url !== '' && $gateway_status !== 'paid') : ?>
+            <?php if ($pay_now_total > 0 && $payment === 'duitku' && $gateway_payment_url !== '' && $gateway_status !== 'paid') : ?>
                 <div class="mt-3">
                     <a href="<?php echo esc_url($gateway_payment_url); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-primary"><?php echo esc_html__('Lanjutkan Pembayaran Duitku', 'velocity-marketplace'); ?></a>
                 </div>
             <?php endif; ?>
-            <?php if ($payment === 'qris') : ?>
+            <?php if ($pay_now_total > 0 && $payment === 'qris') : ?>
                 <div class="mt-4 border-top pt-3">
                     <h3 class="h6 mb-2"><?php echo esc_html__('Pembayaran QRIS', 'velocity-marketplace'); ?></h3>
                     <div class="small text-muted mb-3"><?php echo esc_html($qris['label']); ?></div>
@@ -156,7 +162,11 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                                 }
                             }
                             $group_shipping_cost = (float) ($shipping_group['cost'] ?? 0);
-                            $group_total = $group_subtotal + $group_shipping_cost;
+                            $group_discount = (float) ($shipping_group['discount_total'] ?? 0);
+                            $group_total = isset($shipping_group['total'])
+                                ? (float) $shipping_group['total']
+                                : max(0, $group_subtotal + $group_shipping_cost - $group_discount);
+                            $group_is_cod = OrderData::is_cod_group($shipping_group);
                             $group_received_at = (string) ($shipping_group['received_at'] ?? '');
                             $group_timeline_steps = OrderData::timeline_steps($group_status, $group_received_at);
                             $waybill_data = null;
@@ -172,12 +182,15 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                                     <div class="d-flex justify-content-between align-items-start flex-wrap gap-3 mb-3">
                                         <div>
                                             <div class="fw-semibold"><?php echo esc_html($group_seller_name !== '' ? $group_seller_name : __('Toko', 'velocity-marketplace')); ?></div>
-                                            <div class="small text-muted mt-1">
+                                             <div class="small text-muted mt-1">
                                                 <?php echo esc_html((string) ($shipping_group['courier_name'] ?? strtoupper((string) ($shipping_group['courier'] ?? '-')))); ?>
                                                 <?php if (!empty($shipping_group['service'])) : ?>
                                                     <?php echo esc_html(' - ' . (string) $shipping_group['service']); ?>
                                                 <?php endif; ?>
-                                            </div>
+                                             </div>
+                                             <?php if ($group_is_cod) : ?>
+                                                 <span class="badge bg-success mt-2"><?php echo esc_html__('Bayar saat diterima (COD)', 'velocity-marketplace'); ?></span>
+                                             <?php endif; ?>
                                             <div class="small text-muted d-flex flex-wrap align-items-center gap-2">
                                                 <span><?php echo esc_html(sprintf(__('Resi: %s', 'velocity-marketplace'), ($group_receipt_no !== '' ? $group_receipt_no : '-'))); ?></span>
                                                 <?php if ($group_receipt_no !== '') : ?>
@@ -256,10 +269,16 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                                             <span><?php echo esc_html__('Subtotal Produk', 'velocity-marketplace'); ?></span>
                                             <strong><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($group_subtotal, 0, ',', '.'))); ?></strong>
                                         </div>
-                                        <div class="vmp-order-group__summary-row">
-                                            <span><?php echo esc_html__('Ongkir', 'velocity-marketplace'); ?></span>
-                                            <strong><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($group_shipping_cost, 0, ',', '.'))); ?></strong>
-                                        </div>
+                                         <div class="vmp-order-group__summary-row">
+                                             <span><?php echo esc_html__('Ongkir', 'velocity-marketplace'); ?></span>
+                                             <strong><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($group_shipping_cost, 0, ',', '.'))); ?></strong>
+                                         </div>
+                                         <?php if ($group_discount > 0) : ?>
+                                             <div class="vmp-order-group__summary-row text-success">
+                                                 <span><?php echo esc_html__('Diskon', 'velocity-marketplace'); ?></span>
+                                                 <strong>-<?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($group_discount, 0, ',', '.'))); ?></strong>
+                                             </div>
+                                         <?php endif; ?>
                                         <div class="vmp-order-group__summary-row vmp-order-group__summary-row--total">
                                             <span><?php echo esc_html__('Total Toko', 'velocity-marketplace'); ?></span>
                                             <strong><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($group_total, 0, ',', '.'))); ?></strong>
@@ -344,13 +363,23 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                             <strong>-<?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($coupon_discount, 0, ',', '.'))); ?></strong>
                         </div>
                     <?php endif; ?>
-                    <div class="vmp-order-group__summary-row vmp-order-group__summary-row--total">
-                        <span><?php echo esc_html__('Total Bayar', 'velocity-marketplace'); ?></span>
+                     <div class="vmp-order-group__summary-row vmp-order-group__summary-row--total">
+                        <span><?php echo esc_html__('Total Pesanan', 'velocity-marketplace'); ?></span>
                         <strong class="text-danger"><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($total, 0, ',', '.'))); ?></strong>
+                     </div>
+                    <?php if ($cod_due_total > 0) : ?>
+                        <div class="vmp-order-group__summary-row">
+                            <span><?php echo esc_html__('Bayar saat diterima (COD)', 'velocity-marketplace'); ?></span>
+                            <strong><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($cod_due_total, 0, ',', '.'))); ?></strong>
+                        </div>
+                    <?php endif; ?>
+                    <div class="vmp-order-group__summary-row vmp-order-group__summary-row--total">
+                        <span><?php echo esc_html__('Bayar Sekarang', 'velocity-marketplace'); ?></span>
+                        <strong class="text-danger"><?php echo esc_html(sprintf(__('Rp %s', 'velocity-marketplace'), number_format($pay_now_total, 0, ',', '.'))); ?></strong>
                     </div>
                 </div>
             </div>
-            <?php if ($payment === 'bank' && !empty($bank_accounts)) : ?>
+            <?php if ($pay_now_total > 0 && $payment === 'bank' && !empty($bank_accounts)) : ?>
                 <div class="border rounded p-3 mt-3 bg-light-subtle">
                     <div class="fw-semibold mb-2"><?php echo esc_html__('Rekening Tujuan Transfer', 'velocity-marketplace'); ?></div>
                     <div class="small text-muted mb-3"><?php echo esc_html__('Transfer pembayaran ke salah satu rekening berikut sebelum mengunggah bukti pembayaran.', 'velocity-marketplace'); ?></div>
@@ -484,6 +513,7 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
             <?php endif; ?>
         </div></div>
 
+        <?php if ($pay_now_total > 0 && in_array($payment, ['bank', 'qris'], true)) : ?>
         <div class="card border-0 shadow-sm"><div class="card-body">
             <h3 class="h6 mb-2"><?php echo esc_html__('Unggah Bukti Transfer', 'velocity-marketplace'); ?></h3>
             <form method="post" enctype="multipart/form-data" class="row g-2">
@@ -496,6 +526,7 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                 <div class="col-md-4"><button type="submit" class="btn btn-dark w-100"><?php echo esc_html__('Unggah Bukti Transfer', 'velocity-marketplace'); ?></button></div>
             </form>
         </div></div>
+        <?php endif; ?>
         <?php wp_reset_postdata(); ?>
     <?php else : ?>
         <div class="table-responsive border rounded"><table class="table table-sm table-hover mb-0"><thead class="table-light"><tr><th><?php echo esc_html__('Invoice', 'velocity-marketplace'); ?></th><th><?php echo esc_html__('Tanggal', 'velocity-marketplace'); ?></th><th><?php echo esc_html__('Status', 'velocity-marketplace'); ?></th><th class="text-end"><?php echo esc_html__('Total', 'velocity-marketplace'); ?></th><th class="text-end"><?php echo esc_html__('Aksi', 'velocity-marketplace'); ?></th></tr></thead><tbody>

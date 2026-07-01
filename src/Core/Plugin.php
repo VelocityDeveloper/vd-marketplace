@@ -38,6 +38,7 @@ class Plugin
             $settings_page = new SettingsPage();
             $settings_page->register();
         }
+
     }
 
     private function load_api()
