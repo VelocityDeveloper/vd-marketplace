@@ -2,6 +2,7 @@
 
 namespace VelocityMarketplace\Modules\Checkout;
 
+use VelocityMarketplace\Modules\Profile\ProfileService;
 use WpStore\Domain\Order\OrderService;
 use WpStore\Domain\Payment\PaymentService;
 use VelocityMarketplace\Modules\Captcha\CaptchaBridge;
@@ -397,6 +398,90 @@ class CheckoutController
     private function resolve_tracking_url($invoice)
     {
         return Settings::customer_order_url((string) $invoice);
+    }
+
+    private function dispatch_whatsapp_notifications($order_id, $invoice, array $customer, array $order_items, array $shipping_groups, $total, $payment_method, $tracking_url)
+    {
+        if (!function_exists('vd_store_whatsapp_gateway_send_message') || !function_exists('vd_store_whatsapp_gateway_should_send_to_seller')) {
+            return;
+        }
+
+        if (!vd_store_whatsapp_gateway_should_send_to_seller()) {
+            return;
+        }
+
+        $profile_service = new ProfileService();
+        foreach ($shipping_groups as $group) {
+            if (!is_array($group)) {
+                continue;
+            }
+
+            $seller_id = isset($group['seller_id']) ? (int) $group['seller_id'] : 0;
+            if ($seller_id <= 0) {
+                continue;
+            }
+
+            $store_profile = $profile_service->get_store_profile($seller_id);
+            $seller_phone = trim((string) ($store_profile['whatsapp'] ?? ''));
+            if ($seller_phone === '') {
+                $seller_phone = trim((string) ($store_profile['phone'] ?? ''));
+            }
+            if ($seller_phone === '') {
+                continue;
+            }
+
+            $seller_items = isset($group['items']) && is_array($group['items']) ? $group['items'] : [];
+            $lines = [];
+            foreach ($seller_items as $seller_item) {
+                if (!is_array($seller_item)) {
+                    continue;
+                }
+                $title = trim((string) ($seller_item['title'] ?? 'Produk'));
+                $qty = max(1, (int) ($seller_item['qty'] ?? 1));
+                $subtotal = isset($seller_item['subtotal']) ? (float) $seller_item['subtotal'] : 0;
+                $line = '- ' . ($title !== '' ? $title : 'Produk') . ' x' . $qty;
+                if ($subtotal > 0) {
+                    $line .= ' = Rp ' . number_format($subtotal, 0, ',', '.');
+                }
+                $lines[] = $line;
+            }
+
+            $seller_name = trim((string) ($group['seller_name'] ?? ($store_profile['name'] ?? '')));
+            $message = "Ada order baru untuk toko " . ($seller_name !== '' ? $seller_name : ('Seller #' . $seller_id)) . ".\n\n"
+                . "Order: #" . $invoice . "\n"
+                . "Pembeli: " . (trim((string) ($customer['name'] ?? '')) !== '' ? trim((string) ($customer['name'] ?? '')) : '-') . "\n"
+                . "Telepon: " . (trim((string) ($customer['phone'] ?? '')) !== '' ? trim((string) ($customer['phone'] ?? '')) : '-') . "\n"
+                . "Metode: " . strtoupper((string) $payment_method) . "\n"
+                . "Total Toko: Rp " . number_format((float) ($group['subtotal'] ?? 0), 0, ',', '.') . "\n\n"
+                . "Detail:\n" . (!empty($lines) ? implode("\n", $lines) : '-') . "\n\n"
+                . "Lihat pesanan: " . $tracking_url;
+
+            vd_store_whatsapp_gateway_send_message([
+                'to' => $seller_phone,
+                'message' => $message,
+                'source' => 'velocity-marketplace',
+                'event' => 'seller_new_order',
+                'subject_type' => 'order',
+                'subject_id' => (int) $order_id,
+                'context' => [
+                    'order_number' => (string) $invoice,
+                    'customer_name' => (string) ($customer['name'] ?? ''),
+                    'phone' => (string) ($customer['phone'] ?? ''),
+                    'payment_method' => (string) $payment_method,
+                    'total' => (float) $total,
+                    'seller_id' => (int) $seller_id,
+                    'seller_name' => (string) $seller_name,
+                    'seller_store_name' => (string) ($store_profile['name'] ?? ''),
+                    'seller_total' => (float) ($group['subtotal'] ?? 0),
+                    'order_url' => (string) $tracking_url,
+                    'items_raw' => $seller_items,
+                ],
+                'meta' => [
+                    'seller_id' => (int) $seller_id,
+                    'invoice' => (string) $invoice,
+                ],
+            ]);
+        }
     }
 
     private function build_shipping_groups($submitted_groups, $destination, $context_data, $order_items, $payment_method, $initial_status = 'pending_payment')

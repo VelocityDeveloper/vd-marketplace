@@ -212,11 +212,63 @@ class OrderActionHandler extends BaseActionHandler
             (new EmailTemplateService())->send_customer_status_update($order_id, $summary_status);
         }
 
+        $this->dispatch_whatsapp_buyer_status_update($order_id, $seller_id, $seller_name, $status, $invoice);
+
         $this->refresh_star_seller_for_order($order_id);
 
         $this->redirect_with([
             'vmp_notice' => 'Order berhasil diperbarui.',
             'tab' => 'seller_home',
+        ]);
+    }
+
+    private function dispatch_whatsapp_buyer_status_update($order_id, $seller_id, $seller_name, $status, $invoice)
+    {
+        if (!function_exists('vd_store_whatsapp_gateway_send_message') || !function_exists('vd_store_whatsapp_gateway_should_send_to_buyer')) {
+            return;
+        }
+
+        if (!vd_store_whatsapp_gateway_should_send_to_buyer()) {
+            return;
+        }
+
+        $buyer_phone = trim((string) get_post_meta((int) $order_id, '_store_order_phone', true));
+        if ($buyer_phone === '') {
+            $customer = get_post_meta((int) $order_id, 'vmp_customer', true);
+            if (is_array($customer)) {
+                $buyer_phone = trim((string) ($customer['phone'] ?? ''));
+            }
+        }
+
+        if ($buyer_phone === '') {
+            return;
+        }
+
+        $label = OrderData::status_label((string) $status);
+        $store_name = $seller_name !== '' ? $seller_name : ('Seller #' . (int) $seller_id);
+        $message = 'Update pesanan untuk toko ' . $store_name . ".\n\n"
+            . 'Invoice: #' . (string) $invoice . "\n"
+            . 'Status: ' . $label . "\n\n"
+            . 'Silakan cek detail pesanan di akun Anda.';
+
+        vd_store_whatsapp_gateway_send_message([
+            'to' => $buyer_phone,
+            'message' => $message,
+            'source' => 'velocity-marketplace',
+            'event' => 'buyer_order_status_updated',
+            'subject_type' => 'order',
+            'subject_id' => (int) $order_id,
+            'context' => [
+                'order_number' => (string) $invoice,
+                'seller_id' => (int) $seller_id,
+                'seller_name' => (string) $seller_name,
+                'status' => (string) $status,
+                'status_label' => (string) $label,
+            ],
+            'meta' => [
+                'seller_id' => (int) $seller_id,
+                'invoice' => (string) $invoice,
+            ],
         ]);
     }
 
