@@ -96,15 +96,17 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     </template>
                                 </select>
                             </div>
-                            <div class="col-md-6" x-show="payNowTotal > 0 || !hasCodSelection()">
-                                <label class="form-label"><?php echo esc_html__('Pembayaran Non-COD', 'velocity-marketplace'); ?></label>
+                            <div class="col-md-6">
+                                <label class="form-label"><?php echo esc_html__('Pembayaran', 'velocity-marketplace'); ?></label>
                                 <select class="form-select" x-model="form.payment_method" @change="onPaymentMethodChange()">
-                                    <template x-for="method in availablePaymentMethods()" :key="method">
-                                        <option :value="method" x-text="paymentLabel(method)"></option>
-                                    </template>
+                                    <?php foreach ($active_payment_methods as $method) :
+                                        $label = isset($payment_labels[$method]) ? $payment_labels[$method] : strtoupper($method);
+                                        ?>
+                                        <option value="<?php echo esc_attr($method); ?>"><?php echo esc_html($label); ?></option>
+                                    <?php endforeach; ?>
                                 </select>
                             </div>
-                            <div class="col-12" x-show="form.payment_method === 'bank' && payNowTotal > 0">
+                            <div class="col-12" x-show="form.payment_method === 'bank'">
                                 <?php if (empty($bank_accounts)) : ?>
                                     <div class="alert alert-warning mb-0">
                                         <?php echo esc_html__('Rekening tujuan transfer belum tersedia. Silakan hubungi admin marketplace atau pilih metode pembayaran lain.', 'velocity-marketplace'); ?>
@@ -129,7 +131,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     </div>
                                 <?php endif; ?>
                             </div>
-                            <div class="col-12" x-show="form.payment_method === 'qris' && payNowTotal > 0">
+                            <div class="col-12" x-show="form.payment_method === 'qris'">
                                 <div class="border rounded p-3 bg-light-subtle">
                                     <div class="fw-semibold mb-2"><?php echo esc_html__('Pembayaran QRIS', 'velocity-marketplace'); ?></div>
                                     <div class="small text-muted mb-3"><?php echo esc_html($qris['label']); ?></div>
@@ -172,8 +174,8 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                                 </div>
                                                 <div class="small text-muted mb-2" x-show="group.loading"><?php echo esc_html__('Memuat opsi pengiriman...', 'velocity-marketplace'); ?></div>
                                                 <div class="small text-danger mb-2" x-show="group.message" x-text="group.message"></div>
-                                                <div class="small text-success mb-2" x-show="canGroupUseCod(group)">
-                                                    <?php echo esc_html__('Opsi COD tersedia untuk tujuan:', 'velocity-marketplace'); ?>
+                                                <div class="small text-muted mb-2" x-show="form.payment_method === 'cod' && group.cod_enabled">
+                                                    <?php echo esc_html__('COD tersedia untuk tujuan:', 'velocity-marketplace'); ?>
                                                     <span x-text="group.cod_city_names.length ? group.cod_city_names.join(', ') : '-'"></span>
                                                 </div>
                                                 <div class="row g-2" x-show="group.services.length > 0">
@@ -261,19 +263,12 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                         <strong class="text-success" x-text="'- ' + formatPrice(coupon.applied ? coupon.applied.discount : 0)"></strong>
                     </div>
                     <div class="d-flex justify-content-between pt-2">
-                        <span><?php echo esc_html__('Total Pesanan', 'velocity-marketplace'); ?></span>
+                        <span><?php echo esc_html__('Total Bayar', 'velocity-marketplace'); ?></span>
                         <strong class="text-danger" x-text="formatPrice(total)"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between pt-2" x-show="codDueTotal > 0">
-                        <span><?php echo esc_html__('Bayar saat diterima (COD)', 'velocity-marketplace'); ?></span>
-                        <strong x-text="formatPrice(codDueTotal)"></strong>
-                    </div>
-                    <div class="d-flex justify-content-between pt-2 border-top mt-2">
-                        <span><?php echo esc_html__('Bayar Sekarang', 'velocity-marketplace'); ?></span>
-                        <strong class="text-danger" x-text="formatPrice(payNowTotal)"></strong>
                     </div>
                 </div>
             </div>
         </div>
     </div>
 </div>
+

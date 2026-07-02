@@ -9,7 +9,7 @@ use VelocityMarketplace\Support\Contract;
 
 class Upgrade
 {
-    const DB_VERSION = '2.1.0';
+    const DB_VERSION = '2.0.0';
 
     public function register()
     {
@@ -150,10 +150,5 @@ class Upgrade
         foreach ($totals as $product_id => $qty) {
             update_post_meta((int) $product_id, '_store_sold_count', max(0, (int) $qty));
         }
-    }
-
-    public static function get_db_version()
-    {
-        return self::DB_VERSION;
     }
 }

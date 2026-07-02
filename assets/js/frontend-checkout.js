@@ -58,8 +58,6 @@
     items: [],
     subtotal: 0,
     total: 0,
-    payNowTotal: 0,
-    codDueTotal: 0,
     provinces: [],
     cities: [],
     subdistricts: [],
@@ -118,53 +116,14 @@
           this.shippingGroups.map((group) => this.loadShippingOptions(group)),
         );
       }
-      this.normalizePaymentMethod();
     },
-    // Mengecek apakah setidaknya satu toko dipilih menggunakan pengiriman COD.
-    hasCodSelection() {
-      return this.shippingGroups.some(
-        (group) => String(group?.selected?.courier || '') === 'cod',
-      );
-    },
-    // Mengecek apakah toko mendukung COD untuk kota tujuan yang aktif.
-    canGroupUseCod(group) {
-      const codFeatureEnabled = Array.isArray(cfg.paymentMethods)
-        && cfg.paymentMethods.includes('cod');
-      const cityId = String(this.form.destination_city_id || '');
-      const codCityIds = Array.isArray(group?.cod_city_ids)
-        ? group.cod_city_ids.map((id) => String(id || ''))
-        : [];
-      return codFeatureEnabled && !!cityId && !!group?.cod_enabled && codCityIds.includes(cityId);
+    // Mengecek apakah metode pembayaran aktif saat ini adalah COD.
+    isCodPayment() {
+      return String(this.form.payment_method || '') === 'cod';
     },
     // Mengembalikan true jika keranjang masih punya item fisik yang butuh ongkir.
     requiresShipping() {
       return Array.isArray(this.shippingGroups) && this.shippingGroups.length > 0;
-    },
-    availablePaymentMethods() {
-      const raw = Array.isArray(cfg.paymentMethods) && cfg.paymentMethods.length > 0
-        ? [...cfg.paymentMethods]
-        : ['bank', 'qris', 'duitku', 'paypal'];
-      return raw.filter((method) => method !== 'cod');
-    },
-    normalizePaymentMethod() {
-      const methods = this.availablePaymentMethods();
-      if (methods.length === 0) {
-        return;
-      }
-
-      if (!methods.includes(String(this.form.payment_method || ''))) {
-        this.form.payment_method = methods[0];
-      }
-    },
-    paymentLabel(method) {
-      const labels = {
-        bank: 'Transfer Bank',
-        qris: 'QRIS',
-        duitku: 'Duitku',
-        paypal: 'PayPal',
-      };
-
-      return labels[String(method || '')] || String(method || '').toUpperCase();
     },
     // Mengisi form checkout dari profil member jika field masih kosong.
     applyCustomerProfileDefaults() {
@@ -285,8 +244,6 @@
         this.items = [];
         this.subtotal = 0;
         this.total = 0;
-        this.payNowTotal = 0;
-        this.codDueTotal = 0;
         this.errorMessage = e.message || 'Keranjang tidak dapat dimuat.';
       } finally {
         this.loading = false;
@@ -377,7 +334,6 @@
         if (!this.requiresShipping()) {
           this.form.shipping_cost = 0;
         }
-        this.normalizePaymentMethod();
         this.shippingContextMessage = '';
       } catch (e) {
         this.shippingGroups = [];
@@ -398,7 +354,6 @@
       this.form.shipping_cost = 0;
       this.form.postal_code = '';
       this.subdistricts = [];
-      this.normalizePaymentMethod();
       this.resetSellerShippingSelections();
       if (!this.requiresShipping()) {
         return;
@@ -419,7 +374,6 @@
       this.form.destination_subdistrict_id = '';
       this.form.destination_subdistrict_name = '';
       this.form.shipping_cost = 0;
-      this.normalizePaymentMethod();
       this.resetSellerShippingSelections();
       if (!this.requiresShipping()) {
         return;
@@ -435,7 +389,6 @@
 
       this.form.destination_subdistrict_name = selected ? selected.subdistrict_name : '';
       this.form.shipping_cost = 0;
-      this.normalizePaymentMethod();
       this.resetSellerShippingSelections();
       this.recalculateTotal();
 
@@ -445,10 +398,16 @@
         );
       }
     },
-    // Metode pembayaran global hanya berlaku untuk nominal yang tidak dibayar COD.
+    // Memuat ulang opsi pengiriman saat metode pembayaran mempengaruhi ongkir, seperti COD.
     async onPaymentMethodChange() {
-      this.normalizePaymentMethod();
+      this.form.shipping_cost = 0;
+      this.resetSellerShippingSelections();
       this.recalculateTotal();
+      if (this.requiresShipping() && this.form.destination_subdistrict_id) {
+        await Promise.all(
+          this.shippingGroups.map((group) => this.loadShippingOptions(group)),
+        );
+      }
     },
     // Mengosongkan pilihan layanan kirim semua toko sebelum dihitung ulang.
     resetSellerShippingSelections() {
@@ -469,6 +428,33 @@
       group.message = '';
       try {
         const { request } = requireShared();
+        if (this.isCodPayment()) {
+          const canCod =
+            !!group.cod_enabled &&
+            group.cod_city_ids.includes(String(this.form.destination_city_id || ''));
+
+          if (!canCod) {
+            group.services = [];
+            group.selectedKey = '';
+            group.selected = null;
+            group.message = 'Layanan COD tidak tersedia untuk kota tujuan ini.';
+            return;
+          }
+
+          const codOption = {
+            code: 'cod',
+            name: 'COD',
+            service: 'COD',
+            description: 'Bayar di tempat / temu langsung',
+            cost: 0,
+            etd: 'Sesuai kesepakatan',
+          };
+          group.services = [codOption];
+          group.message = '';
+          this.selectShipping(group, codOption);
+          return;
+        }
+
         const data = await request('shipping/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
@@ -478,38 +464,18 @@
           }),
         });
 
-        const regularServices = Array.isArray(data.data?.services)
+        group.services = Array.isArray(data.data?.services)
           ? data.data.services
           : [];
-        group.services = this.withCodShippingOption(group, regularServices);
         if (group.services.length === 0) {
           group.message = 'Belum ada layanan pengiriman yang tersedia.';
         }
       } catch (e) {
-        group.services = this.withCodShippingOption(group, []);
-        group.message = group.services.length > 0
-          ? 'Kurir reguler tidak dapat dimuat. Opsi COD tetap tersedia.'
-          : (e.message || 'Ongkir tidak dapat dihitung.');
+        group.services = [];
+        group.message = e.message || 'Ongkir tidak dapat dihitung.';
       } finally {
         group.loading = false;
       }
-    },
-    // Menambahkan COD sebagai opsi kirim hanya untuk toko dan kota yang memenuhi syarat.
-    withCodShippingOption(group, services) {
-      const result = Array.isArray(services) ? [...services] : [];
-      if (!this.canGroupUseCod(group)) {
-        return result;
-      }
-
-      result.push({
-        code: 'cod',
-        name: 'COD',
-        service: 'Bayar di Tempat',
-        description: 'Produk toko ini dibayar saat diterima',
-        cost: 0,
-        etd: 'Sesuai kesepakatan',
-      });
-      return result;
     },
     // Menyimpan layanan kirim terpilih untuk satu toko dan hitung total baru.
     selectShipping(group, opt) {
@@ -532,35 +498,11 @@
         return sum + Number(group?.selected?.cost || 0);
       }, 0);
       const couponDiscount = Number(this.coupon?.applied?.discount || 0);
-      const productDiscount = Number(this.coupon?.applied?.product_discount || 0);
-      const shippingDiscount = Number(this.coupon?.applied?.shipping_discount || 0);
-      const codGroups = this.shippingGroups.filter(
-        (group) => String(group?.selected?.courier || '') === 'cod',
-      );
-      const codSubtotal = codGroups.reduce(
-        (sum, group) => sum + Number(group?.subtotal || 0),
-        0,
-      );
-      const codShipping = codGroups.reduce(
-        (sum, group) => sum + Number(group?.selected?.cost || 0),
-        0,
-      );
-      const allocatedCodProductDiscount = Number(this.subtotal || 0) > 0
-        ? productDiscount * (codSubtotal / Number(this.subtotal || 0))
-        : 0;
-      const allocatedCodShippingDiscount = shippingTotal > 0
-        ? shippingDiscount * (codShipping / shippingTotal)
-        : 0;
       this.form.shipping_cost = shippingTotal;
       this.total = Math.max(
         0,
         Number(this.subtotal || 0) + shippingTotal - couponDiscount,
       );
-      this.codDueTotal = Math.max(
-        0,
-        codSubtotal + codShipping - allocatedCodProductDiscount - allocatedCodShippingDiscount,
-      );
-      this.payNowTotal = Math.max(0, this.total - this.codDueTotal);
     },
     // Menentukan label diskon berdasarkan scope kupon yang aktif.
     couponLabel() {
@@ -692,8 +634,6 @@
         this.items = [];
         this.subtotal = 0;
         this.total = 0;
-        this.payNowTotal = 0;
-        this.codDueTotal = 0;
         this.shippingGroups = [];
         emitCartUpdated({
           items: [],
