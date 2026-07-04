@@ -33,6 +33,7 @@ class EmailTemplateService
                 '<p><strong>Kode pesanan:</strong> [kode-pesanan]<br><strong>Waktu pesanan:</strong> [tanggal-order]</p>',
                 '<p><strong>Berikut konfirmasi pesanan Anda:</strong></p>',
                 '[detail-pesanan]',
+                '[digital-downloads]',
                 '<p><strong>Total pembayaran:</strong> [total-order]</p>',
                 '<p><strong>Silakan transfer ke rekening berikut:</strong></p>',
                 '[nomor-rekening]',
@@ -47,6 +48,7 @@ class EmailTemplateService
                 '<p>Terima kasih telah berbelanja di <strong>[nama-toko]</strong>.</p>',
                 '<p>Status pesanan <strong>#[kode-pesanan]</strong> sekarang menjadi <strong>[status]</strong>.</p>',
                 '<p>Lihat detail pesanan di [link]</p>',
+                '[digital-downloads]',
                 '<p>Hormat kami,<br>[nama-toko]<br>[alamat-toko]</p>',
                 '</div>',
             ]),
@@ -213,8 +215,11 @@ class EmailTemplateService
         }
 
         $subject = sprintf(__('Pesanan %s berhasil dibuat', 'velocity-marketplace'), (string) ($context['[kode-pesanan]'] ?? ''));
+        $template = $this->template('customer_order');
+        $body = $this->render_template($template, $context);
+        $body = $this->maybe_append_digital_downloads($order_id, $template, $body, $context);
 
-        return $this->send_html_email($to, $subject, $this->render_email_shell($subject, $this->render_template($this->template('customer_order'), $context)));
+        return $this->send_html_email($to, $subject, $this->render_email_shell($subject, $body));
     }
 
     public function send_customer_status_update($order_id, $status)
@@ -232,8 +237,11 @@ class EmailTemplateService
             (string) ($context['[kode-pesanan]'] ?? ''),
             (string) ($context['[status]'] ?? '')
         );
+        $template = $this->template('status_update');
+        $body = $this->render_template($template, $context);
+        $body = $this->maybe_append_digital_downloads($order_id, $template, $body, $context);
 
-        return $this->send_html_email($to, $subject, $this->render_email_shell($subject, $this->render_template($this->template('status_update'), $context)));
+        return $this->send_html_email($to, $subject, $this->render_email_shell($subject, $body));
     }
 
     public function render_template($template, array $context)
@@ -343,6 +351,7 @@ class EmailTemplateService
         $store_name = (string) get_bloginfo('name');
         $store_address = home_url('/');
         $tracking_url = Settings::customer_order_url($invoice);
+        $digital_downloads = OrderData::digital_downloads($order_id, $items);
 
         $context = [
             '__customer_email' => (string) ($customer['email'] ?? ''),
@@ -351,6 +360,7 @@ class EmailTemplateService
             '[kode-pesanan]' => esc_html($invoice),
             '[tanggal-order]' => esc_html($created_at),
             '[detail-pesanan]' => $this->render_order_items($items),
+            '[digital-downloads]' => $this->render_digital_downloads($digital_downloads),
             '[data-pemesan]' => $this->render_customer_data($customer),
             '[nama-pemesan]' => esc_html((string) ($customer['name'] ?? '')),
             '[total-order]' => esc_html($payment_summary),
@@ -403,6 +413,71 @@ class EmailTemplateService
         $html .= '</tbody></table>';
 
         return $html;
+    }
+
+    private function render_digital_downloads(array $downloads)
+    {
+        if (empty($downloads)) {
+            return '';
+        }
+
+        $html = '<div style="margin:20px 0 0;padding:16px;border:1px solid #bfdbfe;background:#eff6ff;border-radius:12px;">';
+        $html .= '<div style="font-size:15px;line-height:1.5;font-weight:700;color:#1e3a8a;">' . esc_html__('Link File Digital', 'velocity-marketplace') . '</div>';
+        $html .= '<div style="margin-top:4px;font-size:13px;line-height:1.6;color:#1d4ed8;">' . esc_html__('Klik tautan di bawah untuk mengunduh file digital pesanan Anda.', 'velocity-marketplace') . '</div>';
+        $html .= '<div style="margin-top:12px;display:block;">';
+
+        foreach ($downloads as $download) {
+            if (!is_array($download)) {
+                continue;
+            }
+
+            $title = esc_html((string) ($download['title'] ?? ''));
+            $qty = max(1, (int) ($download['qty'] ?? 1));
+            $url = esc_url((string) ($download['url'] ?? ''));
+            if ($url === '') {
+                continue;
+            }
+
+            $html .= '<div style="margin-top:10px;padding:12px;border:1px solid #bfdbfe;background:#ffffff;border-radius:10px;">';
+            $html .= '<div style="font-size:14px;line-height:1.5;font-weight:600;color:#1e3a8a;">' . $title . '</div>';
+            if ($qty > 1) {
+                $html .= '<div style="margin-top:2px;font-size:12px;line-height:1.5;color:#2563eb;">' . esc_html(sprintf(__('Jumlah: %d', 'velocity-marketplace'), $qty)) . '</div>';
+            }
+            $html .= '<div style="margin-top:8px;"><a href="' . $url . '" target="_blank" rel="noopener noreferrer" style="display:inline-block;padding:10px 14px;background:#2563eb;color:#ffffff;text-decoration:none;border-radius:8px;font-size:13px;font-weight:600;">' . esc_html__('Unduh File', 'velocity-marketplace') . '</a></div>';
+            $html .= '</div>';
+        }
+
+        $html .= '</div></div>';
+
+        return $html;
+    }
+
+    private function maybe_append_digital_downloads($order_id, $template, $body, array $context = [])
+    {
+        $template = (string) $template;
+        $body = (string) $body;
+        $downloads = OrderData::digital_downloads($order_id);
+        if (empty($downloads)) {
+            return $body;
+        }
+
+        if (strpos($template, '[digital-downloads]') !== false || strpos($body, 'Link File Digital') !== false) {
+            return $body;
+        }
+
+        $download_html = $this->render_digital_downloads($downloads);
+        if ($download_html === '') {
+            return $body;
+        }
+
+        $separator = '<div style="margin-top:20px;"></div>';
+        if (strpos($body, '</div>') !== false) {
+            $body .= $separator . $download_html;
+        } else {
+            $body .= $download_html;
+        }
+
+        return $body;
     }
 
     private function render_customer_data(array $customer)

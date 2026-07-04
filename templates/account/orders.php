@@ -84,6 +84,7 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
         if (!is_array($shipping)) {
             $shipping = [];
         }
+        $digital_downloads = OrderData::digital_downloads($order_id, $items);
         $completed_seller_ids = [];
         foreach ($shipping_groups as $shipping_group) {
             $group_seller_id = isset($shipping_group['seller_id']) ? (int) $shipping_group['seller_id'] : 0;
@@ -111,6 +112,36 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                 </div>
             </div>
             <div class="small text-muted mt-2"><?php echo esc_html__('Catatan Pesanan:', 'velocity-marketplace'); ?> <?php echo esc_html($notes !== '' ? $notes : '-'); ?></div>
+            <?php if (!empty($digital_downloads)) : ?>
+                <div class="mt-3 border rounded p-3 bg-primary-subtle">
+                    <div class="fw-semibold text-primary-emphasis"><?php echo esc_html__('Link File Digital', 'velocity-marketplace'); ?></div>
+                    <div class="small text-primary-emphasis mt-1"><?php echo esc_html__('Klik tombol di bawah untuk mengunduh file digital pesanan Anda.', 'velocity-marketplace'); ?></div>
+                    <div class="mt-3 d-grid gap-2">
+                        <?php foreach ($digital_downloads as $download) : ?>
+                            <?php
+                            if (!is_array($download)) {
+                                continue;
+                            }
+                            $download_title = isset($download['title']) ? (string) $download['title'] : '';
+                            $download_qty = isset($download['qty']) ? max(1, (int) $download['qty']) : 1;
+                            $download_url = isset($download['url']) ? esc_url((string) $download['url']) : '';
+                            if ($download_url === '') {
+                                continue;
+                            }
+                            ?>
+                            <div class="border rounded p-3 bg-white">
+                                <div class="fw-semibold"><?php echo esc_html($download_title); ?></div>
+                                <?php if ($download_qty > 1) : ?>
+                                    <div class="small text-muted"><?php echo esc_html(sprintf(__('Jumlah: %d', 'velocity-marketplace'), $download_qty)); ?></div>
+                                <?php endif; ?>
+                                <div class="mt-2">
+                                    <a href="<?php echo $download_url; ?>" target="_blank" rel="noopener noreferrer" class="btn btn-sm btn-primary"><?php echo esc_html__('Unduh File', 'velocity-marketplace'); ?></a>
+                                </div>
+                            </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endif; ?>
             <?php if ($pay_now_total > 0 && $payment === 'duitku' && $gateway_payment_url !== '' && $gateway_status !== 'paid') : ?>
                 <div class="mt-3">
                     <a href="<?php echo esc_url($gateway_payment_url); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-primary"><?php echo esc_html__('Lanjutkan Pembayaran Duitku', 'velocity-marketplace'); ?></a>

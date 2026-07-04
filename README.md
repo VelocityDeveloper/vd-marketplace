@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.0`
+Versi: `1.0.1`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 

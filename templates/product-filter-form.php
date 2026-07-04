@@ -6,6 +6,55 @@ $categories = isset($categories) && is_array($categories) ? $categories : get_te
     'taxonomy' => 'store_product_cat',
     'hide_empty' => false,
 ]);
+$category_tree = [];
+foreach ((array) $categories as $category) {
+    if (!is_object($category) || empty($category->term_id)) {
+        continue;
+    }
+
+    $parent_id = isset($category->parent) ? (int) $category->parent : 0;
+    if (!isset($category_tree[$parent_id])) {
+        $category_tree[$parent_id] = [];
+    }
+    $category_tree[$parent_id][] = $category;
+}
+$sort_terms = static function (&$terms) {
+    if (!is_array($terms)) {
+        $terms = [];
+        return;
+    }
+
+    usort($terms, static function ($a, $b) {
+        $a_name = is_object($a) ? (string) ($a->name ?? '') : '';
+        $b_name = is_object($b) ? (string) ($b->name ?? '') : '';
+        return strcasecmp($a_name, $b_name);
+    });
+};
+$render_category_options = static function ($parent_id, $depth = 0) use (&$render_category_options, &$category_tree, $sort_terms) {
+    $parent_id = (int) $parent_id;
+    $depth = max(0, (int) $depth);
+    $html = '';
+
+    if (empty($category_tree[$parent_id])) {
+        return $html;
+    }
+
+    $terms = $category_tree[$parent_id];
+    $sort_terms($terms);
+
+    foreach ($terms as $category) {
+        if (!is_object($category) || empty($category->term_id)) {
+            continue;
+        }
+
+        $indent = $depth > 0 ? str_repeat('&nbsp;&nbsp;&nbsp;', $depth) : '';
+        $label = $indent . esc_html((string) $category->name);
+        $html .= '<option value="' . esc_attr((string) $category->term_id) . '" ' . selected((int) ($filters['cat'] ?? 0), (int) $category->term_id, false) . '>' . $label . '</option>';
+        $html .= $render_category_options((int) $category->term_id, $depth + 1);
+    }
+
+    return $html;
+};
 $product_query = new ProductQuery();
 $sort_options = isset($sort_options) && is_array($sort_options) ? $sort_options : $product_query->sort_options();
 $action_url = isset($action_url) && is_string($action_url) && $action_url !== '' ? $action_url : get_post_type_archive_link('store_product');
@@ -31,10 +80,7 @@ $form_class = isset($form_class) ? (string) $form_class : '';
         <label class="form-label small mb-1"><?php echo esc_html__('Kategori', 'velocity-marketplace'); ?></label>
         <select name="product_cat" class="form-select form-select-sm">
             <option value=""><?php echo esc_html__('Semua Kategori', 'velocity-marketplace'); ?></option>
-            <?php foreach ((array) $categories as $category) : ?>
-                <?php if (!is_object($category) || empty($category->term_id)) { continue; } ?>
-                <option value="<?php echo esc_attr((string) $category->term_id); ?>" <?php selected((int) ($filters['cat'] ?? 0), (int) $category->term_id); ?>><?php echo esc_html((string) $category->name); ?></option>
-            <?php endforeach; ?>
+            <?php echo $render_category_options(0); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
         </select>
     </div>
 

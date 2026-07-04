@@ -120,6 +120,114 @@ class OrderData
         return is_array($items) ? $items : [];
     }
 
+    public static function digital_downloads($order_id, $items = null)
+    {
+        if (function_exists('wp_store_get_order_digital_downloads')) {
+            return wp_store_get_order_digital_downloads($order_id, $items);
+        }
+
+        $order_id = (int) $order_id;
+        if ($order_id <= 0 || get_post_type($order_id) !== 'store_order') {
+            return [];
+        }
+
+        if (!is_array($items)) {
+            $items = self::get_items($order_id);
+        }
+        $items = is_array($items) ? $items : [];
+
+        $downloads = [];
+        $seen = [];
+
+        foreach ($items as $line) {
+            if (!is_array($line)) {
+                continue;
+            }
+
+            $product_id = isset($line['product_id']) ? (int) $line['product_id'] : 0;
+            if ($product_id <= 0 || get_post_type($product_id) !== 'store_product') {
+                continue;
+            }
+
+            $is_digital = self::is_digital_item($line);
+            if (!$is_digital) {
+                continue;
+            }
+
+            $url = self::digital_file_url($line, $product_id);
+            if ($url === '') {
+                continue;
+            }
+
+            $title = isset($line['title']) && $line['title'] !== ''
+                ? sanitize_text_field((string) $line['title'])
+                : get_the_title($product_id);
+            $qty = isset($line['qty']) ? max(1, (int) $line['qty']) : 1;
+            $key = $product_id . '|' . md5($url);
+            if (isset($seen[$key])) {
+                continue;
+            }
+
+            $seen[$key] = true;
+            $downloads[] = [
+                'product_id' => $product_id,
+                'title' => $title,
+                'qty' => $qty,
+                'url' => $url,
+            ];
+        }
+
+        return $downloads;
+    }
+
+    public static function is_digital_item(array $line)
+    {
+        $product_id = isset($line['product_id']) ? (int) $line['product_id'] : 0;
+        if (array_key_exists('is_digital', $line)) {
+            return !empty($line['is_digital']);
+        }
+
+        if ($product_id <= 0) {
+            return false;
+        }
+
+        return sanitize_key((string) get_post_meta($product_id, '_store_product_type', true)) === 'digital'
+            || !empty(get_post_meta($product_id, '_store_is_digital', true))
+            || (class_exists('\WpStore\Domain\Product\ProductData') && \WpStore\Domain\Product\ProductData::is_digital($product_id));
+    }
+
+    public static function digital_file_url(array $line, $product_id = 0)
+    {
+        if (!empty($line['digital_file'])) {
+            $file = $line['digital_file'];
+            if (is_numeric($file)) {
+                $file = wp_get_attachment_url((int) $file);
+            }
+            $file = is_string($file) ? trim($file) : '';
+            if ($file !== '') {
+                return esc_url_raw($file);
+            }
+        }
+
+        if (!empty($line['download_url'])) {
+            return esc_url_raw((string) $line['download_url']);
+        }
+
+        $product_id = (int) $product_id;
+        if ($product_id > 0) {
+            $file = \WpStore\Domain\Product\ProductMeta::get($product_id, 'digital_file', '');
+            if (is_numeric($file)) {
+                $file = wp_get_attachment_url((int) $file);
+            }
+            $file = is_string($file) ? trim($file) : '';
+            if ($file !== '') {
+                return esc_url_raw($file);
+            }
+        }
+
+        return '';
+    }
+
     public static function buyer_id($order_id)
     {
         return (int) get_post_meta((int) $order_id, '_store_order_user_id', true);

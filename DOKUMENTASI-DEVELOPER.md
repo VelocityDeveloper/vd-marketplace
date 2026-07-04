@@ -359,5 +359,5 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.0`
+- plugin version: `1.0.1`
 - constant: `VMP_VERSION`
