@@ -95,14 +95,14 @@ jobs:
         run: |
           set -euo pipefail
 
-          PLUGIN_DIR="build/velocity-marketplace"
-          ZIP_PATH="dist/velocity-marketplace-${VERSION}.zip"
+          PLUGIN_DIR="build/vd-marketplace"
+          ZIP_PATH="dist/vd-marketplace-${VERSION}.zip"
 
           mkdir -p "$PLUGIN_DIR" dist
           cp -R assets src templates vd-marketplace.php "$PLUGIN_DIR/"
           (
             cd build
-            zip -qr "../${ZIP_PATH}" velocity-marketplace
+            zip -qr "../${ZIP_PATH}" vd-marketplace
           )
 
           unzip -t "$ZIP_PATH"
@@ -115,6 +115,6 @@ jobs:
           VERSION: ${{ steps.version.outputs.version }}
         run: |
           gh release create "v${VERSION}" \
-            "dist/velocity-marketplace-${VERSION}.zip" \
+            "dist/vd-marketplace-${VERSION}.zip" \
             --title "v${VERSION}" \
             --generate-notes
