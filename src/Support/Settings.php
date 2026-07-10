@@ -106,6 +106,9 @@ class Settings
             if ($normalized === 'duitku' && !DuitkuGateway::is_available()) {
                 continue;
             }
+            if ($normalized === 'cod' && !self::shipping_allow_cod()) {
+                continue;
+            }
             $filtered[] = $normalized;
         }
 
@@ -253,6 +256,55 @@ class Settings
     {
         $settings = self::core_settings();
         return trim((string) ($settings['rajaongkir_api_key'] ?? ''));
+    }
+
+    public static function shipping_mode()
+    {
+        if (function_exists('wp_store_shipping_mode')) {
+            return (string) wp_store_shipping_mode();
+        }
+
+        $settings = self::core_settings();
+        $mode = isset($settings['shipping_mode']) ? sanitize_key((string) $settings['shipping_mode']) : '';
+        if (!in_array($mode, ['normal', 'free', 'off'], true)) {
+            $mode = !empty($settings['disable_shipping']) ? 'off' : 'normal';
+        }
+
+        return $mode;
+    }
+
+    public static function shipping_collect_address()
+    {
+        if (function_exists('wp_store_shipping_collect_address')) {
+            return (bool) wp_store_shipping_collect_address();
+        }
+
+        $settings = self::core_settings();
+        return !isset($settings['collect_address']) || (string) $settings['collect_address'] !== '0';
+    }
+
+    public static function shipping_allow_cod()
+    {
+        if (function_exists('wp_store_shipping_allow_cod')) {
+            return (bool) wp_store_shipping_allow_cod();
+        }
+
+        $settings = self::core_settings();
+        $allow = !isset($settings['allow_cod']) || (string) $settings['allow_cod'] !== '0';
+        if (self::shipping_mode() === 'off') {
+            $allow = false;
+        }
+
+        return $allow;
+    }
+
+    public static function shipping_disabled()
+    {
+        if (function_exists('wp_store_shipping_disabled')) {
+            return (bool) wp_store_shipping_disabled();
+        }
+
+        return self::shipping_mode() === 'off';
     }
 
     public static function popular_bank_labels()

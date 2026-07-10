@@ -62,6 +62,10 @@
     cities: [],
     subdistricts: [],
     shippingGroups: [],
+    shippingMode: String((cfg && cfg.shippingMode) || 'normal'),
+    shippingCollectAddress: !!(cfg && cfg.shippingCollectAddress),
+    shippingAllowCod: !!(cfg && cfg.shippingAllowCod),
+    shippingDisabled: !!(cfg && cfg.shippingDisabled),
     coupon: {
       code: '',
       applied: null,
@@ -99,7 +103,7 @@
       this.applyCustomerProfileDefaults();
       await this.fetchCart();
       await this.loadCheckoutContext();
-      if (this.requiresShipping()) {
+      if (this.shouldShowDestinationFields()) {
         await this.loadProvinces();
         this.syncProvinceSelection();
         if (this.form.destination_province_id) {
@@ -121,9 +125,49 @@
     isCodPayment() {
       return String(this.form.payment_method || '') === 'cod';
     },
+    isShippingOff() {
+      return this.shippingDisabled || this.shippingMode === 'off';
+    },
+    isShippingFree() {
+      return this.shippingMode === 'free';
+    },
+    hasPhysicalItems() {
+      if (!Array.isArray(this.items) || this.items.length === 0) return false;
+      return this.items.some((item) => !item.is_digital);
+    },
     // Mengembalikan true jika keranjang masih punya item fisik yang butuh ongkir.
     requiresShipping() {
-      return Array.isArray(this.shippingGroups) && this.shippingGroups.length > 0;
+      return !this.isShippingOff() && Array.isArray(this.shippingGroups) && this.shippingGroups.length > 0;
+    },
+    shouldCollectAddress() {
+      return this.hasPhysicalItems() && (!this.shouldHideShipping() || !!this.shippingCollectAddress);
+    },
+    // Menentukan apakah UI ongkir harus disembunyikan.
+    shouldHideShipping() {
+      return this.isShippingOff() || !this.requiresShipping();
+    },
+    shouldShowAddressFields() {
+      return this.shouldCollectAddress();
+    },
+    shouldShowDestinationFields() {
+      return this.shouldCollectAddress() || !this.shouldHideShipping();
+    },
+    shouldShowShippingOptions() {
+      return !this.shouldHideShipping();
+    },
+    // Menyediakan pesan status ketika ongkir memang tidak dipakai.
+    shippingStatusMessage() {
+      if (this.isShippingOff()) {
+        return this.shouldCollectAddress()
+          ? 'Ongkos kirim dinonaktifkan oleh toko. Alamat tetap dikumpulkan sebagai data pesanan.'
+          : 'Ongkos kirim dinonaktifkan oleh toko.';
+      }
+      if (!this.requiresShipping()) {
+        return this.shippingContextMessage
+          ? this.shippingContextMessage
+          : 'Keranjang ini hanya berisi produk digital. Alamat dan ongkir tidak diperlukan.';
+      }
+      return '';
     },
     // Mengisi form checkout dari profil member jika field masih kosong.
     applyCustomerProfileDefaults() {
@@ -311,6 +355,12 @@
     },
     // Mengambil context pengiriman per toko dari isi keranjang saat ini.
     async loadCheckoutContext() {
+      if (this.isShippingOff()) {
+        this.shippingGroups = [];
+        this.form.shipping_cost = 0;
+        this.shippingContextMessage = 'Ongkos kirim dinonaktifkan oleh toko.';
+        return;
+      }
       try {
         const { request } = requireShared();
         const data = await request('shipping/checkout-context', { method: 'GET' });
@@ -355,7 +405,7 @@
       this.form.postal_code = '';
       this.subdistricts = [];
       this.resetSellerShippingSelections();
-      if (!this.requiresShipping()) {
+      if (!this.shouldShowDestinationFields()) {
         return;
       }
       await this.loadCities(this.form.destination_province_id);
@@ -375,7 +425,7 @@
       this.form.destination_subdistrict_name = '';
       this.form.shipping_cost = 0;
       this.resetSellerShippingSelections();
-      if (!this.requiresShipping()) {
+      if (!this.shouldShowDestinationFields()) {
         return;
       }
       await this.loadSubdistricts(this.form.destination_city_id);
@@ -400,6 +450,10 @@
     },
     // Memuat ulang opsi pengiriman saat metode pembayaran mempengaruhi ongkir, seperti COD.
     async onPaymentMethodChange() {
+      if ((!this.shippingAllowCod || this.isShippingOff() || !this.requiresShipping()) && this.isCodPayment()) {
+        this.form.payment_method = defaultPaymentMethod;
+        return;
+      }
       this.form.shipping_cost = 0;
       this.resetSellerShippingSelections();
       this.recalculateTotal();
@@ -544,8 +598,10 @@
           (this.shippingGroups.length === 0 || this.shippingGroups.some((group) => !group.selected))
         ) {
           this.coupon.applied = null;
-          this.coupon.message = this.shippingGroups.length === 0
-            ? 'Voucher ongkir tidak bisa dipakai karena keranjang tidak memerlukan pengiriman.'
+          this.coupon.message = this.shouldHideShipping()
+            ? 'Voucher ongkir tidak bisa dipakai saat ongkos kirim dinonaktifkan.'
+            : this.shippingGroups.length === 0
+              ? 'Voucher ongkir tidak bisa dipakai karena keranjang tidak memerlukan pengiriman.'
             : 'Voucher ongkir baru dapat diterapkan setelah layanan pengiriman dipilih untuk setiap toko.';
           this.recalculateTotal();
           return;
@@ -583,6 +639,10 @@
       this.errorMessage = '';
       this.successMessage = '';
 
+      if ((!this.shippingAllowCod || this.isShippingOff() || !this.requiresShipping()) && this.isCodPayment()) {
+        this.form.payment_method = defaultPaymentMethod;
+      }
+
       if (!this.form.name || !this.form.phone) {
         this.errorMessage = 'Nama dan telepon wajib diisi.';
         return;
@@ -591,16 +651,14 @@
         this.errorMessage = 'Keranjang kosong.';
         return;
       }
-      if (this.requiresShipping() && !this.form.address) {
+      if (this.shouldCollectAddress() && !this.form.address) {
         this.errorMessage = 'Alamat wajib diisi.';
         return;
       }
-      if (
-        this.requiresShipping() &&
+      if (this.shouldShowDestinationFields() &&
         (!this.form.destination_province_id ||
           !this.form.destination_city_id ||
-          !this.form.destination_subdistrict_id)
-      ) {
+          !this.form.destination_subdistrict_id)) {
         this.errorMessage = 'Provinsi, kota, dan kecamatan tujuan wajib dipilih.';
         return;
       }
@@ -623,6 +681,24 @@
           },
           captchaFields,
         );
+        if (!this.shouldCollectAddress()) {
+          payload.address = '';
+          payload.postal_code = '';
+        }
+        if (!this.shouldShowDestinationFields()) {
+          payload.destination_province_id = '';
+          payload.destination_province_name = '';
+          payload.destination_city_id = '';
+          payload.destination_city_name = '';
+          payload.destination_subdistrict_id = '';
+          payload.destination_subdistrict_name = '';
+        }
+        if (this.isShippingOff()) {
+          payload.shipping_cost = 0;
+          payload.shipping_groups = [];
+          payload.shipping_courier = '';
+          payload.shipping_service = '';
+        }
 
         const data = await request('checkout', {
           method: 'POST',

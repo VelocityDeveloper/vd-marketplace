@@ -52,6 +52,10 @@ class CheckoutController
         if (empty($items)) {
             return new WP_REST_Response(['message' => 'Keranjang kosong.'], 400);
         }
+        $shipping_mode = Settings::shipping_mode();
+        $shipping_disabled = $shipping_mode === 'off';
+        $collect_address = Settings::shipping_collect_address();
+        $allow_cod = Settings::shipping_allow_cod();
 
         $customer = [
             'name' => sanitize_text_field($payload['name'] ?? ''),
@@ -86,8 +90,8 @@ class CheckoutController
         $notes = sanitize_textarea_field($payload['notes'] ?? '');
         $coupon_code = sanitize_text_field((string) ($payload['coupon_code'] ?? ''));
 
-        if ($customer['name'] === '' || $customer['phone'] === '' || $customer['address'] === '') {
-            return new WP_REST_Response(['message' => 'Nama, telepon, dan alamat wajib diisi.'], 400);
+        if ($customer['name'] === '' || $customer['phone'] === '') {
+            return new WP_REST_Response(['message' => 'Nama dan telepon wajib diisi.'], 400);
         }
         if ($customer['email'] !== '' && !is_email($customer['email'])) {
             return new WP_REST_Response(['message' => 'Email tidak valid.'], 400);
@@ -147,8 +151,18 @@ class CheckoutController
             return new WP_REST_Response(['message' => 'Keranjang tidak valid.'], 400);
         }
 
-        if ($payment_method === 'cod' && !$requires_shipping) {
-            return new WP_REST_Response(['message' => 'COD tidak tersedia untuk keranjang yang hanya berisi produk digital.'], 400);
+        $requires_shipping = $requires_shipping && !$shipping_disabled;
+        $address_required = $requires_shipping || ($collect_address && $shipping_disabled);
+
+        if ($address_required && $customer['address'] === '') {
+            return new WP_REST_Response(['message' => 'Alamat wajib diisi.'], 400);
+        }
+        if ($address_required && ($shipping_destination['province_destination_id'] === '' || $shipping_destination['city_destination_id'] === '' || $shipping_destination['subdistrict_destination_id'] === '')) {
+            return new WP_REST_Response(['message' => 'Provinsi, kota, dan kecamatan tujuan wajib diisi.'], 400);
+        }
+
+        if ($payment_method === 'cod' && (!$allow_cod || !$requires_shipping)) {
+            return new WP_REST_Response(['message' => 'COD tidak tersedia tanpa ongkos kirim.'], 400);
         }
 
         if ($requires_shipping && ($shipping_destination['province_destination_id'] === '' || $shipping_destination['city_destination_id'] === '' || $shipping_destination['subdistrict_destination_id'] === '')) {

@@ -140,6 +140,13 @@ Contoh:
 - `src/Modules/Checkout/CheckoutController.php`
 - `templates/cart.php`
 - `templates/checkout.php`
+- checkout membaca mode shipping dari core:
+  - `normal` = ongkir dihitung seperti biasa
+  - `free` = layanan tetap muncul, biaya dipaksa `0`
+  - `off` = ongkir disembunyikan
+- alamat checkout beserta dropdown provinsi, kota, dan kecamatan tetap dikumpulkan jika `collect_address` aktif di core
+- COD hanya ditampilkan jika `shippingAllowCod` aktif dan mode shipping bukan `off`
+- frontend menerima `shippingMode`, `shippingCollectAddress`, `shippingAllowCod`, dan `shippingDisabled` lewat `vmpSettings`
 
 COD marketplace:
 - profil seller menyimpan `vmp_cod_enabled`, `vmp_cod_city_ids`, `vmp_cod_city_names`
@@ -147,6 +154,7 @@ COD marketplace:
 - frontend menambahkan `courier = cod` ke pilihan pengiriman masing-masing seller yang melayani kota tujuan
 - buyer dapat memilih COD untuk satu seller dan kurir reguler untuk seller lain dalam checkout yang sama
 - `CheckoutController` memvalidasi kelayakan COD per shipping group dan tidak mempercayai biaya dari payload
+- COD tetap boleh dipakai saat ongkir gratis, tetapi tidak saat mode shipping `off`
 - `vmp_total` tetap menyimpan nilai seluruh order; `vmp_pay_now_total` menyimpan nominal pembayaran global dan `vmp_cod_due_total` menyimpan nominal yang dibayar saat diterima
 - diskon produk dan ongkir dialokasikan proporsional ke shipping group agar `vmp_total = vmp_pay_now_total + vmp_cod_due_total`
 - status awal grup COD adalah `processing`; grup prepaid mengikuti status pembayaran global
@@ -258,6 +266,12 @@ Helper ini dipakai untuk:
 - item digital tetap ikut order
 - shipping hanya dihitung dari item fisik
 
+### Mode shipping
+- `normal` mengikuti kalkulasi ongkir seller
+- `free` tetap membentuk shipping group tapi semua biaya jadi `0`
+- `off` menghilangkan shipping group dan hanya menyisakan data alamat plus dropdown lokasi jika core meminta alamat
+- `collect_address` tidak mematikan alamat pada mode `normal`; produk fisik tetap wajib alamat dan lokasi tujuan
+
 ## Form seller produk
 
 Form seller produk mengikuti schema dari core `VD Store`.
@@ -359,5 +373,5 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.1`
+- plugin version: `1.0.2`
 - constant: `VMP_VERSION`

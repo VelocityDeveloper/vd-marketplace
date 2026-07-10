@@ -226,6 +226,19 @@ class ShippingController
 
     public function calculate_cost(WP_REST_Request $request)
     {
+        $shipping_mode = Settings::shipping_mode();
+        if ($shipping_mode === 'off') {
+            return new WP_REST_Response([
+                'success' => true,
+                'data' => [
+                    'seller_id' => 0,
+                    'weight_grams' => 0,
+                    'services' => [],
+                    'shipping_disabled' => true,
+                ],
+            ], 200);
+        }
+
         $params = $request->get_json_params();
         if (!is_array($params)) {
             $params = [];
@@ -284,7 +297,7 @@ class ShippingController
 
         $api_key = Settings::shipping_api_key();
         $origin_subdistrict = (string) ($seller_group['origin']['subdistrict_id'] ?? '');
-        $cache_key = 'vmp_shipping_cost_' . md5($seller_id . '|' . $origin_subdistrict . '|' . $destination_subdistrict . '|' . $weight . '|' . $courier);
+        $cache_key = 'vmp_shipping_cost_' . md5($shipping_mode . '|' . $seller_id . '|' . $origin_subdistrict . '|' . $destination_subdistrict . '|' . $weight . '|' . $courier);
         $cached = get_transient($cache_key);
         if ($cached !== false) {
             return new WP_REST_Response($cached, 200);
@@ -324,6 +337,24 @@ class ShippingController
                 }
 
                 $services = array_merge($services, $this->map_services($single));
+            }
+        }
+
+        if ($shipping_mode === 'free') {
+            $services = array_map(static function ($row) {
+                $row['cost'] = 0;
+                return $row;
+            }, $services);
+
+            if (empty($services)) {
+                $services = [[
+                    'courier' => $courier !== '' ? $courier : 'free',
+                    'name' => 'Free Shipping',
+                    'service' => 'FREE',
+                    'description' => 'Gratis ongkir',
+                    'cost' => 0,
+                    'etd' => '',
+                ]];
             }
         }
 
@@ -378,6 +409,16 @@ class ShippingController
 
     private function resolve_checkout_context()
     {
+        if (Settings::shipping_disabled()) {
+            return [
+                'success' => true,
+                'data' => [
+                    'groups' => [],
+                    'shipping_disabled' => true,
+                ],
+            ];
+        }
+
         $api_key = Settings::shipping_api_key();
         if ($api_key === '') {
             return [

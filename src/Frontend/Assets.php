@@ -134,6 +134,8 @@ class Assets
         $currency_symbol = Settings::currency_symbol();
         $payment_methods = Settings::payment_methods();
         $customer_profile = $this->customer_profile_payload();
+        $shipping_disabled = Settings::shipping_disabled();
+        $shipping_mode = Settings::shipping_mode();
 
         wp_localize_script('velocity-marketplace-frontend-shared-js', 'vmpSettings', [
             'restUrl' => esc_url_raw(rest_url('velocity-marketplace/v1/')),
@@ -150,6 +152,10 @@ class Assets
             'canManageOptions' => current_user_can('manage_options'),
             'noImageUrl' => esc_url_raw(ProductData::no_image_url()),
             'customerProfile' => $customer_profile,
+            'shippingMode' => $shipping_mode,
+            'shippingCollectAddress' => Settings::shipping_collect_address(),
+            'shippingAllowCod' => Settings::shipping_allow_cod(),
+            'shippingDisabled' => $shipping_disabled,
         ]);
     }
 

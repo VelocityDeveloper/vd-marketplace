@@ -41,13 +41,13 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                 <label class="form-label"><?php echo esc_html__('Email', 'velocity-marketplace'); ?></label>
                                 <input type="email" class="form-control" x-model.trim="form.email" placeholder="<?php echo esc_attr__('Opsional', 'velocity-marketplace'); ?>">
                             </div>
-                            <div class="col-md-6">
+                            <div class="col-md-6" x-show="shouldCollectAddress()">
                                 <label class="form-label"><?php echo esc_html__('Kode Pos', 'velocity-marketplace'); ?></label>
                                 <input type="text" class="form-control" x-model.trim="form.postal_code">
                             </div>
-                            <div class="col-12">
+                            <div class="col-12" x-show="shouldCollectAddress()">
                                 <label class="form-label"><?php echo esc_html__('Alamat', 'velocity-marketplace'); ?></label>
-                                <textarea class="form-control" rows="3" x-model.trim="form.address" :required="requiresShipping()"></textarea>
+                                <textarea class="form-control" rows="3" x-model.trim="form.address" :required="shouldCollectAddress()"></textarea>
                             </div>
                             <div class="col-12" x-show="form.dropship && form.dropship.enabled" style="display:none;">
                                 <div class="border rounded p-3 bg-light-subtle">
@@ -64,12 +64,12 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     </div>
                                 </div>
                             </div>
-                            <div class="col-12" x-show="!requiresShipping()">
+                            <div class="col-12" x-show="shouldHideShipping()">
                                 <div class="alert alert-info py-2 mb-0">
-                                    <?php echo esc_html__('Keranjang ini hanya berisi produk digital. Alamat dan ongkir tidak diperlukan.', 'velocity-marketplace'); ?>
+                                    <span x-text="shippingStatusMessage()"></span>
                                 </div>
                             </div>
-                            <div class="col-md-4" x-show="requiresShipping()">
+                            <div class="col-md-4" x-show="shouldShowDestinationFields()">
                                 <label class="form-label"><?php echo esc_html__('Provinsi', 'velocity-marketplace'); ?></label>
                                 <select class="form-select" x-ref="provinceSelect" x-model="form.destination_province_id" @change="onProvinceChange()" :disabled="isLoadingProvinces">
                                     <option value=""><?php echo esc_html__('Pilih provinsi', 'velocity-marketplace'); ?></option>
@@ -78,7 +78,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     </template>
                                 </select>
                             </div>
-                            <div class="col-md-4" x-show="requiresShipping()">
+                            <div class="col-md-4" x-show="shouldShowDestinationFields()">
                                 <label class="form-label"><?php echo esc_html__('Kota/Kabupaten', 'velocity-marketplace'); ?></label>
                                 <select class="form-select" x-ref="citySelect" x-model="form.destination_city_id" @change="onCityChange()" :disabled="!form.destination_province_id || isLoadingCities">
                                     <option value=""><?php echo esc_html__('Pilih kota atau kabupaten', 'velocity-marketplace'); ?></option>
@@ -87,7 +87,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     </template>
                                 </select>
                             </div>
-                            <div class="col-md-4" x-show="requiresShipping()">
+                            <div class="col-md-4" x-show="shouldShowDestinationFields()">
                                 <label class="form-label"><?php echo esc_html__('Kecamatan', 'velocity-marketplace'); ?></label>
                                 <select class="form-select" x-ref="subdistrictSelect" x-model="form.destination_subdistrict_id" @change="onSubdistrictChange()" :disabled="!form.destination_city_id || isLoadingSubdistricts">
                                     <option value=""><?php echo esc_html__('Pilih kecamatan', 'velocity-marketplace'); ?></option>
@@ -146,10 +146,10 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     <?php endif; ?>
                                 </div>
                             </div>
-                            <div class="col-12" x-show="requiresShipping() && shippingContextMessage">
+                            <div class="col-12" x-show="shouldShowShippingOptions() && shippingContextMessage">
                                 <div class="alert alert-warning py-2 mb-0" x-text="shippingContextMessage"></div>
                             </div>
-                            <div class="col-12" x-show="requiresShipping()">
+                            <div class="col-12" x-show="shouldShowShippingOptions()">
                                 <label class="form-label"><?php echo esc_html__('Pilih Layanan Pengiriman per Toko', 'velocity-marketplace'); ?></label>
                                 <div class="row g-3">
                                     <template x-for="group in shippingGroups" :key="group.seller_id">
@@ -271,4 +271,3 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
         </div>
     </div>
 </div>
-
