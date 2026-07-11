@@ -5,6 +5,7 @@ use VelocityMarketplace\Support\Settings;
 
 global $wp;
 
+$mode = isset($mode) && $mode === 'form' ? 'form' : 'list';
 $current_page_url = home_url($wp->request);
 
 $product_captcha_html = \VelocityMarketplace\Modules\Captcha\CaptchaBridge::render();
@@ -80,8 +81,9 @@ $error_message = isset($_GET['vmp_error'])
     : '';
 ?>
 
+<?php if ($mode === 'form') : ?>
 <div class="row g-3">
-    <div class="col-lg-7">
+    <div class="col-12">
         <?php if ($notice_message !== '') : ?>
             <div class="alert alert-success">
                 <?php echo esc_html($notice_message); ?>
@@ -312,32 +314,40 @@ $error_message = isset($_GET['vmp_error'])
                             ?>
                         </button>
 
-                        <?php if ($edit_product) : ?>
-                            <a
-                                href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products'], get_permalink())); ?>"
-                                class="btn btn-outline-secondary btn-sm"
-                            >
-                                <?php echo esc_html__('Batal', 'velocity-marketplace'); ?>
-                            </a>
-                        <?php endif; ?>
+                        <a
+                            href="<?php echo esc_url(add_query_arg(['tab' => 'seller_products'], $current_page_url)); ?>"
+                            class="btn btn-outline-secondary btn-sm"
+                        >
+                            <?php echo esc_html($edit_product ? __('Batal', 'velocity-marketplace') : __('Kembali ke Produk', 'velocity-marketplace')); ?>
+                        </a>
                     </div>
                 </form>
             </div>
         </div>
     </div>
+</div>
+<?php endif; ?>
 
-    <div class="col-lg-5">
-        <div class="card border-0 shadow-sm sticky-top">
+<?php if ($mode === 'list') : ?>
+<div class="row g-3">
+    <div class="col-12">
+        <div class="card border-0 shadow-sm">
             <div class="card-body">
-                <h3 class="h6 mb-2">
-                    <?php echo esc_html__('Daftar Produk', 'velocity-marketplace'); ?>
-                </h3>
+                <div class="d-flex flex-wrap align-items-center justify-content-between gap-2 mb-3">
+                    <h3 class="h6 mb-0">
+                        <?php echo esc_html__('Daftar Produk', 'velocity-marketplace'); ?>
+                    </h3>
+                    <a href="<?php echo esc_url(add_query_arg(['tab' => 'seller_product_form'], $current_page_url)); ?>" class="btn btn-primary btn-sm">
+                        <?php echo esc_html__('Tambah Produk', 'velocity-marketplace'); ?>
+                    </a>
+                </div>
 
                 <?php if ($products_query->have_posts()) : ?>
                     <div class="table-responsive">
-                        <table class="table table-sm mb-0">
+                        <table class="table table-sm mb-0 vmp-seller-products-table">
                             <thead>
                                 <tr>
+                                    <th class="vmp-seller-products-table__thumbnail"><?php echo esc_html__('Gambar', 'velocity-marketplace'); ?></th>
                                     <th><?php echo esc_html__('Judul', 'velocity-marketplace'); ?></th>
                                     <th><?php echo esc_html__('Status', 'velocity-marketplace'); ?></th>
                                     <th></th>
@@ -361,6 +371,17 @@ $error_message = isset($_GET['vmp_error'])
                                     ?>
 
                                     <tr>
+                                        <td class="vmp-seller-products-table__thumbnail">
+                                            <?php if (has_post_thumbnail($pid)) : ?>
+                                                <?php echo get_the_post_thumbnail($pid, [64, 64], [
+                                                    'class' => 'vmp-seller-product-thumbnail',
+                                                    'loading' => 'lazy',
+                                                    'alt' => '',
+                                                ]); // phpcs:ignore WordPress.Security.EscapeOutput.OutputNotEscaped ?>
+                                            <?php else : ?>
+                                                <span class="vmp-seller-product-thumbnail vmp-seller-product-thumbnail--empty" aria-hidden="true">&mdash;</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <td>
                                             <a href="<?php echo esc_url(get_permalink($pid)); ?>" target="_blank">
                                                 <?php the_title(); ?>
@@ -398,7 +419,7 @@ $error_message = isset($_GET['vmp_error'])
                                             <a
                                                 class="btn btn-outline-dark btn-sm m-1"
                                                 href="<?php echo esc_url(add_query_arg([
-                                                    'tab'          => 'seller_products',
+                                                    'tab'          => 'seller_product_form',
                                                     'edit_product' => $pid,
                                                 ], $current_page_url)); ?>"
                                             >
@@ -451,3 +472,4 @@ $error_message = isset($_GET['vmp_error'])
         </div>
     </div>
 </div>
+<?php endif; ?>

@@ -276,6 +276,7 @@ class Account
         $tabs['messages'] = [
             'key' => 'messages',
             'label' => __('Pesan', 'velocity-marketplace'),
+            'icon_html' => $this->profile_tab_icon('messages'),
             'priority' => 50,
             'badge_binding' => 'messageUnreadCount',
             'badge_initial' => $message_count,
@@ -284,6 +285,7 @@ class Account
         $tabs['notifications'] = [
             'key' => 'notifications',
             'label' => __('Notifikasi', 'velocity-marketplace'),
+            'icon_html' => $this->profile_tab_icon('notifications'),
             'priority' => 60,
             'badge_binding' => 'notificationUnreadCount',
             'badge_initial' => $notification_count,
@@ -293,6 +295,7 @@ class Account
             $tabs['seller_profile'] = [
                 'key' => 'seller_profile',
                 'label' => __('Profil Toko', 'velocity-marketplace'),
+                'icon_html' => $this->profile_tab_icon('store'),
                 'priority' => 100,
             ];
         }
@@ -301,21 +304,45 @@ class Account
             $tabs['seller_home'] = [
                 'key' => 'seller_home',
                 'label' => __('Beranda Toko', 'velocity-marketplace'),
+                'icon_html' => $this->profile_tab_icon('home'),
                 'priority' => 110,
             ];
             $tabs['seller_report'] = [
                 'key' => 'seller_report',
                 'label' => __('Laporan', 'velocity-marketplace'),
+                'icon_html' => $this->profile_tab_icon('report'),
                 'priority' => 120,
             ];
             $tabs['seller_products'] = [
                 'key' => 'seller_products',
                 'label' => __('Produk', 'velocity-marketplace'),
+                'icon_html' => $this->profile_tab_icon('products'),
                 'priority' => 130,
+            ];
+            $tabs['seller_product_form'] = [
+                'key' => 'seller_product_form',
+                'label' => __('Tambah Produk', 'velocity-marketplace'),
+                'icon_html' => $this->profile_tab_icon('add'),
+                'priority' => 140,
             ];
         }
 
         return $tabs;
+    }
+
+    private function profile_tab_icon($name)
+    {
+        $icons = [
+            'messages' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="M21 11.5a8.4 8.4 0 0 1-9 8.4 9.6 9.6 0 0 1-4.4-1.1L3 20l1.3-4A8.6 8.6 0 1 1 21 11.5Z"/><path d="M8 12h.01M12 12h.01M16 12h.01"/></svg>',
+            'notifications' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 7-3 9h18c0-2-3-2-3-9"/><path d="M10 21h4"/></svg>',
+            'store' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="M3 9l2-5h14l2 5"/><path d="M5 9v11h14V9"/><path d="M3 9h18"/><path d="M9 20v-6h6v6"/></svg>',
+            'home' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="m3 11 9-8 9 8"/><path d="M5 10v10h14V10"/><path d="M9 20v-6h6v6"/></svg>',
+            'report' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="M4 20V10"/><path d="M10 20V4"/><path d="M16 20v-7"/><path d="M22 20H2"/></svg>',
+            'products' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="m21 8-9 5-9-5 9-5 9 5Z"/><path d="m3 8 9 5 9-5"/><path d="M3 8v8l9 5 9-5V8"/></svg>',
+            'add' => '<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" class="wps-mr-2" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg>',
+        ];
+
+        return $icons[$name] ?? '';
     }
 
     public function extend_core_profile_panels($panels, $context = [])
@@ -360,6 +387,11 @@ class Account
                 'key' => 'seller_products',
                 'priority' => 130,
                 'render_callback' => [$this, 'render_core_seller_products_panel'],
+            ];
+            $panels['seller_product_form'] = [
+                'key' => 'seller_product_form',
+                'priority' => 140,
+                'render_callback' => [$this, 'render_core_seller_product_form_panel'],
             ];
         }
 
@@ -504,6 +536,24 @@ class Account
         return \VelocityMarketplace\Frontend\Template::render('seller/products', [
             'current_user_id' => $user_id,
             'profile_complete' => $this->profile_complete($user_id),
+            'mode' => 'list',
+        ]);
+    }
+
+    public function render_core_seller_product_form_panel($context = [])
+    {
+        $user_id = isset($context['user_id']) ? (int) $context['user_id'] : get_current_user_id();
+        if (!self::can_sell($user_id)) {
+            return $this->render_inactive_seller_panel(
+                __('Tambah Produk', 'velocity-marketplace'),
+                __('Aktifkan seller di tab Profil Toko untuk mulai menambahkan produk.', 'velocity-marketplace')
+            );
+        }
+
+        return \VelocityMarketplace\Frontend\Template::render('seller/products', [
+            'current_user_id' => $user_id,
+            'profile_complete' => $this->profile_complete($user_id),
+            'mode' => 'form',
         ]);
     }
 

@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.2`
+Versi: `1.0.3`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 
@@ -35,12 +35,12 @@ Kalau `VD Store` tidak aktif:
 - template email marketplace untuk admin dan pembeli
 - badge dan filter `Star Seller`
 
-## Ringkasan update 1.0.2
+## Ringkasan update 1.0.3
 
-- Menyesuaikan checkout marketplace dengan mode ongkir VD Store.
-- Mode gratis ongkir menampilkan biaya kirim Rp0.
-- Mode ongkir nonaktif menyembunyikan kalkulasi ongkir dan menonaktifkan COD efektif.
-- COD per seller tetap mengikuti pengaturan seller, dengan gate global dari VD Store.
+- Menambahkan icon SVG pada navigasi dashboard seller.
+- Memisahkan daftar produk seller dan form tambah/edit produk.
+- Menambahkan thumbnail pada daftar produk seller.
+- Menyesuaikan dashboard seller dengan sidebar profil VD Store.
 
 ## COD per seller
 

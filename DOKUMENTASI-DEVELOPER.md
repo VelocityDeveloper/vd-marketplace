@@ -276,6 +276,11 @@ Helper ini dipakai untuk:
 
 Form seller produk mengikuti schema dari core `VD Store`.
 
+Dashboard seller memisahkan daftar dan form produk:
+- tab `Produk` menampilkan daftar, edit, dan hapus produk
+- tab `Tambah Produk` menampilkan form tambah atau edit produk
+- setelah simpan, seller kembali ke tab `Produk`; validasi gagal tetap kembali ke form
+
 Artinya:
 - field tidak didefinisikan ulang manual di addon
 - validasi server tetap mengikuti `ProductSchema` dan `ProductFields` dari core
@@ -373,5 +378,5 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.2`
+- plugin version: `1.0.3`
 - constant: `VMP_VERSION`

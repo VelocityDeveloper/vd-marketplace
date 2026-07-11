@@ -14,6 +14,8 @@ class ProductActionHandler extends BaseActionHandler
 {
     public function save_product()
     {
+        $product_id = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
+
         if (!Account::can_sell()) {
             $this->redirect_product_form([
                 'vmp_error' => 'Hanya member marketplace yang bisa menyimpan produk.',
@@ -29,10 +31,9 @@ class ProductActionHandler extends BaseActionHandler
         if (CaptchaBridge::is_active()) {
             $verify = CaptchaBridge::verify_request();
             if (empty($verify['success'])) {
-                $this->redirect_with([
+                $this->redirect_product_form([
                     'vmp_error' => $verify['message'] !== '' ? $verify['message'] : 'Captcha tidak valid.',
-                    'tab' => 'seller_products',
-                ]);
+                ], $product_id);
             }
         }
 
@@ -46,7 +47,6 @@ class ProductActionHandler extends BaseActionHandler
             ]);
         }
 
-        $product_id = isset($_POST['product_id']) ? (int) $_POST['product_id'] : 0;
         $is_edit = $product_id > 0;
 
         if ($is_edit) {
@@ -185,9 +185,10 @@ class ProductActionHandler extends BaseActionHandler
             }
         }
 
-        $this->redirect_product_form([
+        $this->redirect_with([
             'vmp_notice' => $is_edit ? 'Produk berhasil diperbarui.' : 'Produk berhasil dikirim.',
-        ], $is_edit ? (int) $saved_id : 0);
+            'tab' => 'seller_products',
+        ]);
     }
 
     public function delete_product()
@@ -225,7 +226,7 @@ class ProductActionHandler extends BaseActionHandler
     private function redirect_product_form($params = [], $edit_product_id = 0)
     {
         $query = array_merge([
-            'tab' => 'seller_products',
+            'tab' => 'seller_product_form',
         ], is_array($params) ? $params : []);
 
         $edit_product_id = (int) $edit_product_id;

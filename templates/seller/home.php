@@ -25,7 +25,7 @@ $status_badge_class = static function ($status) {
 $status_labels = OrderData::statuses();
 ?>
     <div class="row g-3">
-        <div class="col-lg-4">
+        <div class="col-lg-3 col-md-4">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
                 <h3 class="h6 mb-2"><?php echo esc_html__('Ringkasan Toko', 'velocity-marketplace'); ?></h3>
                 <div class="mb-2"><?php echo esc_html__('Label:', 'velocity-marketplace'); ?> <?php echo !empty($seller_summary['is_star_seller']) ? '<span class="badge bg-warning text-dark">' . esc_html__('Star Seller', 'velocity-marketplace') . '</span>' : '<span class="badge bg-secondary">' . esc_html__('Toko Aktif', 'velocity-marketplace') . '</span>'; ?></div>
@@ -35,7 +35,7 @@ $status_labels = OrderData::statuses();
                 <?php if (!$profile_complete) : ?><div class="alert alert-warning py-2 mt-2 mb-0"><?php echo esc_html__('Lengkapi profil toko sebelum menambahkan produk baru.', 'velocity-marketplace'); ?></div><?php endif; ?>
             </div></div>
         </div>
-        <div class="col-lg-8">
+        <div class="col-lg-9 col-md-8">
             <div class="card border-0 shadow-sm h-100"><div class="card-body">
                 <h3 class="h6 mb-2"><?php echo esc_html__('Pesanan Masuk', 'velocity-marketplace'); ?></h3>
                 <?php if (empty($seller_order_ids)) : ?>
