@@ -334,6 +334,8 @@ class OrderActionHandler extends BaseActionHandler
         update_post_meta($order_id, 'vmp_transfer_proof_id', (int) $attach_id);
         update_post_meta($order_id, 'vmp_transfer_uploaded_at', current_time('mysql'));
 
+        (new EmailTemplateService())->send_admin_transfer_proof_uploaded($order_id);
+
         $current_status = (string) get_post_meta($order_id, 'vmp_status', true);
         if (!in_array($current_status, ['cancelled', 'completed', 'refunded'], true)) {
             update_post_meta($order_id, 'vmp_status', 'pending_verification');

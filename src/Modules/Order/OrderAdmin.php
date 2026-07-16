@@ -46,6 +46,9 @@ class OrderAdmin
         $payment_extra = is_array($payment_extra) ? $payment_extra : [];
         $pay_now_total = (float) get_post_meta($order_id, 'vmp_pay_now_total', true);
         $cod_due_total = (float) get_post_meta($order_id, 'vmp_cod_due_total', true);
+        $transfer_proof_id = (int) get_post_meta($order_id, 'vmp_transfer_proof_id', true);
+        $transfer_proof_url = $transfer_proof_id > 0 ? (string) wp_get_attachment_url($transfer_proof_id) : '';
+        $transfer_uploaded_at = (string) get_post_meta($order_id, 'vmp_transfer_uploaded_at', true);
         $dropship = get_post_meta($order_id, '_store_order_dropship', true);
         $dropship = is_array($dropship) ? $dropship : [];
         $shipping_groups = OrderData::shipping_groups($order_id);
@@ -75,6 +78,19 @@ class OrderAdmin
                 <tr>
                     <th scope="row">Bayar saat Diterima</th>
                     <td><?php echo esc_html($this->money($cod_due_total)); ?></td>
+                </tr>
+                <tr>
+                    <th scope="row">Bukti Transfer</th>
+                    <td>
+                        <?php if ($transfer_proof_url !== '') : ?>
+                            <a class="button button-secondary" href="<?php echo esc_url($transfer_proof_url); ?>" target="_blank" rel="noopener">Lihat Bukti Transfer</a>
+                            <?php if ($transfer_uploaded_at !== '') : ?>
+                                <span class="description"> Diunggah: <?php echo esc_html($transfer_uploaded_at); ?></span>
+                            <?php endif; ?>
+                        <?php else : ?>
+                            <span class="description">Belum diunggah.</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php if ($payment_url !== '') : ?>
                     <tr>

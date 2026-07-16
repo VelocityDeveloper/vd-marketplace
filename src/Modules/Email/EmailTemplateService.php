@@ -206,6 +206,31 @@ class EmailTemplateService
         return $this->send_html_email($to, $subject, $this->render_email_shell($subject, $this->render_template($this->template('admin_order'), $context)));
     }
 
+    public function send_admin_transfer_proof_uploaded($order_id)
+    {
+        $order_id = (int) $order_id;
+        $to = $this->admin_recipient();
+        $attachment_id = (int) get_post_meta($order_id, 'vmp_transfer_proof_id', true);
+        $proof_url = $attachment_id > 0 ? (string) wp_get_attachment_url($attachment_id) : '';
+        if ($order_id <= 0 || $to === '' || $proof_url === '') {
+            return false;
+        }
+
+        $invoice = (string) get_post_meta($order_id, 'vmp_invoice', true);
+        $customer = get_post_meta($order_id, 'vmp_customer', true);
+        $customer_name = is_array($customer) ? (string) ($customer['name'] ?? '') : '';
+        $subject = sprintf(__('Bukti transfer diterima untuk pesanan %s', 'velocity-marketplace'), $invoice);
+        $body = sprintf(
+            '<p>Hallo Admin,</p><p>Pembeli <strong>%1$s</strong> telah mengunggah bukti transfer untuk pesanan <strong>%2$s</strong>.</p><p><a href="%3$s">Lihat bukti transfer</a></p><p><a href="%4$s">Buka dan verifikasi pesanan di WordPress Admin</a></p>',
+            esc_html($customer_name !== '' ? $customer_name : '-'),
+            esc_html($invoice !== '' ? $invoice : ('#' . $order_id)),
+            esc_url($proof_url),
+            esc_url(get_edit_post_link($order_id, 'raw'))
+        );
+
+        return $this->send_html_email($to, $subject, $this->render_email_shell($subject, $body));
+    }
+
     public function send_customer_new_order($order_id)
     {
         $context = $this->build_order_context($order_id);
