@@ -14,7 +14,9 @@ class Actions
 {
     public function register()
     {
-        add_action('init', [$this, 'handle_actions']);
+        // Jalankan setelah post type dan taxonomy dari vd-store didaftarkan pada
+        // hook init prioritas default (10).
+        add_action('init', [$this, 'handle_actions'], 20);
     }
 
     public function handle_actions()

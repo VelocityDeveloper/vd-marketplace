@@ -349,6 +349,7 @@ $error_message = isset($_GET['vmp_error'])
                                 <tr>
                                     <th class="vmp-seller-products-table__thumbnail"><?php echo esc_html__('Gambar', 'velocity-marketplace'); ?></th>
                                     <th><?php echo esc_html__('Judul', 'velocity-marketplace'); ?></th>
+                                    <th><?php echo esc_html__('Kategori', 'velocity-marketplace'); ?></th>
                                     <th><?php echo esc_html__('Status', 'velocity-marketplace'); ?></th>
                                     <th></th>
                                 </tr>
@@ -360,6 +361,11 @@ $error_message = isset($_GET['vmp_error'])
                                     $products_query->the_post();
 
                                     $pid = get_the_ID();
+
+                                    $category_terms = get_the_terms($pid, \VelocityMarketplace\Support\Contract::PRODUCT_TAXONOMY);
+                                    $category_names = !is_wp_error($category_terms) && !empty($category_terms)
+                                        ? wp_list_pluck($category_terms, 'name')
+                                        : [];
 
                                     $delete_url = add_query_arg([
                                         'tab'                => 'seller_products',
@@ -409,6 +415,12 @@ $error_message = isset($_GET['vmp_error'])
                                                     <?php echo esc_html__('Pengajuan premium sedang ditinjau.', 'velocity-marketplace'); ?>
                                                 </div>
                                             <?php endif; ?>
+                                        </td>
+
+                                        <td>
+                                            <?php echo !empty($category_names)
+                                                ? esc_html(implode(', ', $category_names))
+                                                : '<span class="text-muted">&mdash;</span>'; ?>
                                         </td>
 
                                         <td>

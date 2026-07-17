@@ -65,7 +65,8 @@ class ProductActionHandler extends BaseActionHandler
 
         $title = sanitize_text_field((string) ($_POST['title'] ?? ''));
         $description = wp_kses_post((string) ($_POST['description'] ?? ''));
-        $cat_id = isset($_POST['category_id']) ? (int) $_POST['category_id'] : 0;
+        $cat_id = isset($_POST['category_id']) ? (int) wp_unslash($_POST['category_id']) : 0;
+        $brand_id = isset($_POST['brand_id']) ? (int) wp_unslash($_POST['brand_id']) : 0;
         $premium_requested = !empty($_POST['premium_request']);
 
         if ($title === '') {
@@ -121,16 +122,25 @@ class ProductActionHandler extends BaseActionHandler
             update_post_meta($saved_id, 'is_premium', 0);
         }
 
-        if ($cat_id > 0) {
-            wp_set_object_terms($saved_id, [$cat_id], Contract::PRODUCT_TAXONOMY, false);
-        } else {
-            wp_set_object_terms($saved_id, [], Contract::PRODUCT_TAXONOMY, false);
-        }
+        $category_result = wp_set_object_terms(
+            $saved_id,
+            $cat_id > 0 ? [$cat_id] : [],
+            Contract::PRODUCT_TAXONOMY,
+            false
+        );
 
-        if ($brand_id > 0) {
-            wp_set_object_terms($saved_id, [$brand_id], Contract::BRAND_TAXONOMY, false);
-        } else {
-            wp_set_object_terms($saved_id, [], Contract::BRAND_TAXONOMY, false);
+        $brand_result = wp_set_object_terms(
+            $saved_id,
+            $brand_id > 0 ? [$brand_id] : [],
+            Contract::BRAND_TAXONOMY,
+            false
+        );
+
+        if (is_wp_error($category_result) || is_wp_error($brand_result)) {
+            $taxonomy_error = is_wp_error($category_result) ? $category_result : $brand_result;
+            $this->redirect_product_form([
+                'vmp_error' => 'Produk tersimpan, tetapi taxonomy gagal disimpan: ' . $taxonomy_error->get_error_message(),
+            ], $saved_id);
         }
 
         if (array_key_exists('featured_image_id', $_POST)) {

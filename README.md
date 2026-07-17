@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.4`
+Versi: `1.0.5`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 
@@ -35,11 +35,12 @@ Kalau `VD Store` tidak aktif:
 - template email marketplace untuk admin dan pembeli
 - badge dan filter `Star Seller`
 
-## Ringkasan update 1.0.4
+## Ringkasan update 1.0.5
 
-- Mengirim email kepada admin ketika pembeli mengunggah bukti transfer.
-- Menambahkan tautan bukti transfer dan halaman edit pesanan pada email admin.
-- Menampilkan bukti transfer dan waktu upload pada halaman edit pesanan di WordPress Admin.
+- Memperbaiki penyimpanan kategori dan brand saat seller menambah atau mengedit produk dari frontend.
+- Menjalankan handler frontend setelah taxonomy produk VD Store selesai didaftarkan.
+- Menambahkan pelaporan error ketika relasi taxonomy produk gagal disimpan.
+- Menambahkan kolom kategori pada daftar produk di dashboard seller.
 
 ## COD per seller
 
