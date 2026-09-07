@@ -151,8 +151,17 @@ class CheckoutController
             return new WP_REST_Response(['message' => 'Keranjang tidak valid.'], 400);
         }
 
+        $has_physical_items = $requires_shipping;
         $requires_shipping = $requires_shipping && !$shipping_disabled;
-        $address_required = $requires_shipping || ($collect_address && $shipping_disabled);
+        $address_required = $has_physical_items && ($requires_shipping || $collect_address);
+        $checkout_fields = [];
+        if (class_exists(\WpStore\Domain\Order\CheckoutFields::class)) {
+            $checkout_fields = \WpStore\Domain\Order\CheckoutFields::validate($payload['checkout_fields'] ?? [], $address_required);
+            if (is_wp_error($checkout_fields)) {
+                return $checkout_fields;
+            }
+        }
+
 
         if ($address_required && $customer['address'] === '') {
             return new WP_REST_Response(['message' => 'Alamat wajib diisi.'], 400);
@@ -271,6 +280,7 @@ class CheckoutController
             'subdistrict_name' => $shipping_destination['subdistrict_destination_name'],
             'postal_code' => $customer['postal_code'],
             'notes' => $notes,
+            'checkout_fields' => $checkout_fields,
             'items' => $order_items,
             'payment_method' => OrderData::core_payment_method($effective_payment_method),
             'status' => OrderData::core_status($order_status),

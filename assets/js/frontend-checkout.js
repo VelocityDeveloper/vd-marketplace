@@ -678,6 +678,7 @@
           {
             shipping_groups: this.shippingGroups.map((group) => group.selected),
             coupon_code: this.coupon.applied?.code || this.coupon.code || '',
+            checkout_fields: Object.fromEntries(Array.from(formNode.querySelectorAll('[data-wp-store-checkout-field]:not(:disabled)'), field => [field.dataset.wpStoreCheckoutField, field.type === 'checkbox' ? (field.checked ? '1' : '0') : field.value])),
           },
           captchaFields,
         );

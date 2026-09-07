@@ -41,6 +41,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                 <label class="form-label"><?php echo esc_html__('Email', 'velocity-marketplace'); ?></label>
                                 <input type="email" class="form-control" x-model.trim="form.email" placeholder="<?php echo esc_attr__('Opsional', 'velocity-marketplace'); ?>">
                             </div>
+                            <?php if (class_exists(\WpStore\Domain\Order\CheckoutFields::class)) { \WpStore\Domain\Order\CheckoutFields::render(true, 'customer'); } ?>
                             <div class="col-md-6" x-show="shouldCollectAddress()">
                                 <label class="form-label"><?php echo esc_html__('Kode Pos', 'velocity-marketplace'); ?></label>
                                 <input type="text" class="form-control" x-model.trim="form.postal_code">
@@ -96,6 +97,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                     </template>
                                 </select>
                             </div>
+                            <?php if (class_exists(\WpStore\Domain\Order\CheckoutFields::class)) { \WpStore\Domain\Order\CheckoutFields::render(true, 'address'); } ?>
                             <div class="col-md-6">
                                 <label class="form-label"><?php echo esc_html__('Pembayaran', 'velocity-marketplace'); ?></label>
                                 <select class="form-select" x-model="form.payment_method" @change="onPaymentMethodChange()">
@@ -211,6 +213,9 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                 <label class="form-label"><?php echo esc_html__('Catatan Pesanan', 'velocity-marketplace'); ?></label>
                                 <textarea class="form-control" rows="2" x-model.trim="form.notes"></textarea>
                             </div>
+                            <?php if (class_exists(\WpStore\Domain\Order\CheckoutFields::class)) {
+                                \WpStore\Domain\Order\CheckoutFields::render(true);
+                            } ?>
                         </div>
 
                         <?php if (!empty($captcha_html)) : ?>
@@ -219,6 +224,9 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                             </div>
                         <?php endif; ?>
 
+                        <div class="row g-3 mt-2">
+                            <?php if (class_exists(\WpStore\Domain\Order\CheckoutFields::class)) { \WpStore\Domain\Order\CheckoutFields::render(true, 'before_submit'); } ?>
+                        </div>
                         <button class="btn btn-primary mt-4" type="submit" :disabled="submitting || items.length === 0">
                             <span x-show="!submitting"><?php echo esc_html__('Buat Pesanan', 'velocity-marketplace'); ?></span>
                             <span x-show="submitting"><?php echo esc_html__('Memproses Pesanan...', 'velocity-marketplace'); ?></span>
