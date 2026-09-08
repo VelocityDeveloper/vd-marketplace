@@ -147,10 +147,6 @@ class ProductController
             $extra_html .= '<div class="small text-muted mb-1">' . esc_html__('Belum ada ulasan', 'velocity-marketplace') . '</div>';
         }
 
-        $actions_html = '<div>'
-            . '<button type="button" class="btn btn-sm btn-dark flex-grow-1" data-vmp-catalog-add-to-cart="1" data-product-id="' . esc_attr((string) $product_id) . '">' . esc_html__('Tambah Keranjang', 'velocity-marketplace') . '</button>'
-            . '</div>';
-
         return \WpStore\Frontend\Template::render('components/product-card', [
             'item' => [
                 'id' => $product_id,
@@ -162,7 +158,6 @@ class ProductController
             ],
             'currency' => Settings::currency_symbol(),
             'extra_html' => $extra_html,
-            'actions_html' => $actions_html,
             'card_class' => 'vmp-product-card',
         ]);
     }

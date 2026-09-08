@@ -215,7 +215,6 @@ if ($product_query->have_posts()) {
                                 <span><?php echo esc_html(number_format($product_rating_average, 1, ',', '.') . '/5 dari ' . (int) ($item['review_count'] ?? 0) . ' ulasan'); ?></span>
                             </div>
                             <div class="mt-auto d-flex flex-wrap gap-2">
-                                <?php echo do_shortcode('[vmp_add_to_cart id="' . (int) ($item['id'] ?? 0) . '" text="' . esc_attr__('Tambah Keranjang', 'velocity-marketplace') . '" class="btn btn-sm btn-dark"]'); ?>
                                 <a href="<?php echo esc_url((string) ($item['link'] ?? '#')); ?>" class="btn btn-sm btn-outline-dark"><?php echo esc_html__('Detail', 'velocity-marketplace'); ?></a>
                             </div>
                         </div>

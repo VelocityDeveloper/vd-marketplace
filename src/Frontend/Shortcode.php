@@ -812,9 +812,7 @@ class Shortcode
         }
         $html .= $this->render_price_markup($item, '', Settings::currency_symbol());
         $html .= '<div class="small text-muted mb-3">' . esc_html($stock_text) . '</div>';
-        $html .= '<div class="mt-auto vmp-product-card__actions">';
-        $html .= $this->render_add_to_cart_markup($item, __('Tambah Keranjang', 'velocity-marketplace'), 'btn btn-sm btn-dark w-100');
-        $html .= '</div></div></div>';
+        $html .= '</div></div>';
 
         return $html;
     }
