@@ -2,7 +2,7 @@
 /**
  * Plugin Name: VD Marketplace
  * Description: Addon marketplace untuk VD Store dengan seller, checkout multi-seller, dan kompatibilitas mode ongkir VD Store.
- * Version: 1.0.8
+ * Version: 1.0.9
  * Author: Velocity Developer
  * Author URI: https://velocitydeveloper.com/
  * Text Domain: velocity-marketplace
@@ -12,7 +12,7 @@ if (!defined('ABSPATH')) {
     exit;
 }
 
-define('VMP_VERSION', '1.0.8');
+define('VMP_VERSION', '1.0.9');
 define('VMP_PATH', plugin_dir_path(__FILE__));
 define('VMP_URL', plugin_dir_url(__FILE__));
 define('VMP_SETTINGS_OPTION', 'vmp_settings');
@@ -106,9 +106,13 @@ register_activation_hook(__FILE__, function () {
     $upgrade = new \VelocityMarketplace\Core\Upgrade();
     $upgrade->activate();
 
-    flush_rewrite_rules();
+    $store_profile_route = new \VelocityMarketplace\Frontend\StoreProfileRoute();
+    $store_profile_route->register_rewrite();
+    $store_profile_route->maybe_flush_rewrite();
 });
 
 register_deactivation_hook(__FILE__, function () {
+    $store_profile_route = new \VelocityMarketplace\Frontend\StoreProfileRoute();
+    $store_profile_route->clear_rewrite_signature();
     flush_rewrite_rules();
 });

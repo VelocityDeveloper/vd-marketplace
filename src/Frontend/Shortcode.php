@@ -44,7 +44,7 @@ class Shortcode
         $this->register_shortcode_aliases(['vmp_profile_icon'], 'render_profile_icon');
 
         add_action('wp_footer', [$this, 'render_cart_drawer_footer'], 30);
-        add_action('wp_store_single_after_summary', [$this, 'render_core_single_marketplace_extension'], 20, 2);
+        add_action('wp_store_single_before_description', [$this, 'render_core_single_marketplace_extension'], 20, 2);
         add_filter('the_content', [$this, 'filter_managed_core_page_content'], 30);
         add_filter('template_include', [$this, 'override_managed_page_template'], 120);
     }
@@ -441,6 +441,10 @@ class Shortcode
 
     public function render_checkout($atts = [])
     {
+        if (function_exists('wp_store_checkout_requires_login') && wp_store_checkout_requires_login() && !is_user_logged_in()) {
+            $login_url = function_exists('wp_store_checkout_login_url') ? wp_store_checkout_login_url() : wp_login_url();
+            return '<div class="card"><div class="card-body p-4 text-center"><p class="mb-4">Silakan masuk atau daftar untuk melanjutkan checkout.</p><a class="btn btn-primary" href="' . esc_url($login_url) . '">Masuk / Daftar</a></div></div>';
+        }
         $this->ensure_frontend_assets();
         return Template::render('checkout', []);
     }
@@ -484,8 +488,7 @@ class Shortcode
         }
 
         if ((int) $page_id === Settings::checkout_page_id()) {
-            $this->ensure_frontend_assets();
-            return Template::render('checkout', []);
+            return $this->render_checkout();
         }
 
         return $content;
@@ -806,7 +809,7 @@ class Shortcode
         $html = '<div class="card h-100 shadow-sm border-0 vmp-product-card">';
         $html .= $this->render_thumbnail_markup($item, isset($item['image']) ? (string) $item['image'] : '', '');
         $html .= '<div class="card-body d-flex flex-column">';
-        $html .= '<h3 class="card-title h6 mb-1">' . esc_html((string) ($item['title'] ?? '')) . '</h3>';
+        $html .= '<h3 class="card-title h6 mb-3">' . esc_html((string) ($item['title'] ?? '')) . '</h3>';
         if (!empty($item['label'])) {
             $html .= '<div class="small text-muted mb-2">' . esc_html((string) $item['label']) . '</div>';
         }

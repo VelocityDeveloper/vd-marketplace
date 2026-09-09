@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.8`
+Versi: `1.0.9`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 
@@ -34,6 +34,13 @@ Kalau `VD Store` tidak aktif:
 - notifikasi seller
 - template email marketplace untuk admin dan pembeli
 - badge dan filter `Star Seller`
+
+## Ringkasan update 1.0.9
+
+- Mendukung kebijakan checkout wajib login dari filter VD Store pada halaman dan endpoint checkout marketplace.
+- Memperbaiki rewrite halaman toko publik `/store/{username}/` dan memulihkan aturan instalasi lama secara otomatis.
+- Merapikan halaman profil toko publik dengan susunan informasi, statistik, ulasan, dan produk yang responsif.
+- Memindahkan profil seller pada halaman single produk ke area penuh sebelum deskripsi, dengan metrik yang sesuai fitur marketplace.
 
 ## Ringkasan update 1.0.7
 
@@ -576,7 +583,7 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.8`
+- plugin version: `1.0.9`
 - constant: `VMP_VERSION`
 
 ## Contoh hook field checkout
@@ -728,3 +735,40 @@ Marketplace memakai template dan endpoint sendiri, tetapi menggunakan definisi
 field dan penyimpanan core yang sama. Hook controller VD Store
 `wp_store_before_create_order`, `wp_store_order_created`, dan
 `wp_store_after_create_order` tidak otomatis dipanggil oleh endpoint marketplace.
+
+## Membatasi checkout untuk pengguna login
+
+Filter `wp_store_checkout_requires_login` dapat dipakai ketika klien hanya
+mengizinkan pengguna yang sudah mempunyai akun dan sedang login untuk checkout.
+Aturan ini berlaku pada checkout keranjang dan checkout langsung di VD Store
+maupun Velocity Marketplace. Halaman checkout dan REST API sama-sama dilindungi.
+
+### Pasang sebagai custom plugin
+
+1. Buat folder `checkout-wajib-login` di `wp-content/plugins/`.
+2. Buat file `checkout-wajib-login.php` di dalam folder tersebut.
+3. Salin seluruh kode berikut, lalu aktifkan **Checkout Wajib Login** melalui admin WordPress.
+
+```php
+<?php
+/**
+ * Plugin Name: Checkout Wajib Login
+ * Description: Membatasi checkout VD Store dan Velocity Marketplace untuk pengguna login.
+ * Version: 1.0.0
+ */
+
+if (!defined('ABSPATH')) {
+    exit;
+}
+
+add_filter('wp_store_checkout_requires_login', '__return_true');
+```
+
+Setelah plugin aktif, tamu yang menekan **Beli Sekarang** diarahkan ke halaman
+login dan kembali ke produk sesudah berhasil masuk. Jika tamu membuka halaman
+checkout secara langsung, halaman menampilkan tombol **Masuk / Daftar**. Permintaan
+checkout langsung ke REST API juga ditolak sampai pengguna login.
+
+Pendaftaran akun mengikuti pengaturan WordPress. Aktifkan **Keanggotaan: Setiap
+orang dapat mendaftar** pada **Pengaturan > Umum** jika klien mengizinkan pembeli
+membuat akun sendiri. Menonaktifkan custom plugin mengembalikan checkout tamu.
