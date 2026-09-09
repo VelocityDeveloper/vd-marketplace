@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.7`
+Versi: `1.0.8`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 
@@ -576,7 +576,7 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.7`
+- plugin version: `1.0.8`
 - constant: `VMP_VERSION`
 
 ## Contoh hook field checkout

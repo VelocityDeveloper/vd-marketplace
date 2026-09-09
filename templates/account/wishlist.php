@@ -22,10 +22,10 @@ else :
             <?php
             $card_extra_html = '';
             if (!empty($item['seller_city'])) {
-                $card_extra_html .= '<div class="small text-muted mb-1">' . esc_html((string) $item['seller_city']) . '</div>';
+                $card_extra_html .= '<div class="small text-muted' . (!empty($item['rating_html']) ? ' mb-1' : '') . '">' . esc_html((string) $item['seller_city']) . '</div>';
             }
             if (!empty($item['rating_html'])) {
-                $card_extra_html .= '<div class="mb-1">' . $item['rating_html'] . '</div>';
+                $card_extra_html .= '<div>' . $item['rating_html'] . '</div>';
             }
             ?>
             <div class="col-6 col-md-4 col-xl-3">

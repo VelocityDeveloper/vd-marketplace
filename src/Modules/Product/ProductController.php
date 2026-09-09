@@ -142,9 +142,9 @@ class ProductController
             $extra_html .= '<div class="small text-muted mb-1">' . esc_html(sprintf(__('%d terjual', 'velocity-marketplace'), (int) $item['sold_count'])) . '</div>';
         }
         if (!empty($item['rating_html'])) {
-            $extra_html .= '<div class="mb-1">' . $item['rating_html'] . '</div>';
+            $extra_html .= '<div>' . $item['rating_html'] . '</div>';
         } else {
-            $extra_html .= '<div class="small text-muted mb-1">' . esc_html__('Belum ada ulasan', 'velocity-marketplace') . '</div>';
+            $extra_html .= '<div class="small text-muted">' . esc_html__('Belum ada ulasan', 'velocity-marketplace') . '</div>';
         }
 
         return \WpStore\Frontend\Template::render('components/product-card', [

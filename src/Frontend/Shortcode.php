@@ -811,7 +811,7 @@ class Shortcode
             $html .= '<div class="small text-muted mb-2">' . esc_html((string) $item['label']) . '</div>';
         }
         $html .= $this->render_price_markup($item, '', Settings::currency_symbol());
-        $html .= '<div class="small text-muted mb-3">' . esc_html($stock_text) . '</div>';
+        $html .= '<div class="small text-muted">' . esc_html($stock_text) . '</div>';
         $html .= '</div></div>';
 
         return $html;
