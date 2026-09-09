@@ -21,6 +21,9 @@ class CheckoutController
 {
     public function register_routes()
     {
+        register_rest_route('velocity-marketplace/v1', '/checkout/items', [
+            'methods' => 'GET', 'callback' => [$this, 'get_items'], 'permission_callback' => [$this, 'check_rest_nonce'],
+        ]);
         register_rest_route('velocity-marketplace/v1', '/checkout', [
             [
                 'methods' => 'POST',
@@ -39,7 +42,23 @@ class CheckoutController
         return is_string($nonce) && wp_verify_nonce($nonce, 'wp_rest');
     }
 
+    public function get_items(WP_REST_Request $request)
+    {
+        $cart = (new CartRepository())->get_checkout_data(\WpStore\Domain\Order\DirectCheckout::token($request));
+        if (is_wp_error($cart)) {
+            return $cart;
+        }
+        $response = new WP_REST_Response($cart);
+        $response->header('Cache-Control', 'no-store, private');
+        return $response;
+    }
+
     public function create_order(WP_REST_Request $request)
+    {
+        return \WpStore\Domain\Order\DirectCheckout::submit($request, [$this, 'process_order']);
+    }
+
+    public function process_order(WP_REST_Request $request)
     {
         $payload = $request->get_json_params();
         if (!is_array($payload)) {
@@ -47,7 +66,11 @@ class CheckoutController
         }
 
         $repo = new CartRepository();
-        $cart = $repo->get_cart_data();
+        $direct_token = \WpStore\Domain\Order\DirectCheckout::token($request);
+        $cart = $repo->get_checkout_data($direct_token);
+        if (is_wp_error($cart)) {
+            return $cart;
+        }
         $items = isset($cart['items']) && is_array($cart['items']) ? $cart['items'] : [];
         if (empty($items)) {
             return new WP_REST_Response(['message' => 'Keranjang kosong.'], 400);
@@ -189,6 +212,37 @@ class CheckoutController
             }
         }
 
+        if ($direct_token !== '' && $requires_shipping && $payment_method !== 'cod') {
+            foreach ($submitted_shipping_groups as &$selection) {
+                if (!is_array($selection) || ($selection['courier'] ?? '') === 'cod') {
+                    continue; // COD eligibility is checked by build_shipping_groups.
+                }
+                $quote_request = new WP_REST_Request('POST');
+                $quote_request->set_header('Content-Type', 'application/json');
+                $quote_request->set_body(wp_json_encode([
+                    'direct_checkout' => $direct_token,
+                    'seller_id' => $selection['seller_id'] ?? 0,
+                    'destination_subdistrict' => $shipping_destination['subdistrict_destination_id'],
+                ]));
+                $quote = (new ShippingController())->calculate_cost($quote_request);
+                if (is_wp_error($quote)) {
+                    return $quote;
+                }
+                $quote_data = $quote->get_data();
+                $matched = false;
+                foreach (($quote_data['data']['services'] ?? []) as $rate) {
+                    if (($rate['code'] ?? '') === ($selection['courier'] ?? '') && ($rate['service'] ?? '') === ($selection['service'] ?? '')) {
+                        $selection['cost'] = max(0, (float) $rate['cost']);
+                        $matched = true;
+                        break;
+                    }
+                }
+                if (!$matched) {
+                    return new WP_REST_Response(['message' => 'Layanan ongkir tidak tersedia. Silakan pilih ulang.'], 400);
+                }
+            }
+            unset($selection);
+        }
         $shipping_groups = $this->build_shipping_groups($submitted_shipping_groups, $shipping_destination, $shipping_context_data, $order_items, $payment_method, $default_order_status);
         if (is_wp_error($shipping_groups)) {
             return new WP_REST_Response([
@@ -281,6 +335,7 @@ class CheckoutController
             'postal_code' => $customer['postal_code'],
             'notes' => $notes,
             'checkout_fields' => $checkout_fields,
+            'direct_checkout' => $direct_token,
             'items' => $order_items,
             'payment_method' => OrderData::core_payment_method($effective_payment_method),
             'status' => OrderData::core_status($order_status),
@@ -432,7 +487,9 @@ class CheckoutController
             (new CouponService())->increment_usage($coupon_id);
         }
 
-        $repo->clear();
+        if ($direct_token === '') {
+            $repo->clear();
+        }
 
         return new WP_REST_Response([
             'success' => true,

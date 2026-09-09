@@ -37,6 +37,26 @@ class CartRepository
         ];
     }
 
+    public function get_checkout_data($token = '')
+    {
+        if ($token === '') {
+            return $this->get_cart_data();
+        }
+        $rows = \WpStore\Domain\Order\DirectCheckout::read($token);
+        if (is_wp_error($rows)) {
+            return $rows;
+        }
+        $items = $this->hydrate_items($rows);
+        $snapshot = $this->build_marketplace_snapshot($rows, $items);
+        return [
+            'items' => $items,
+            'total' => array_sum(array_column($items, 'subtotal')),
+            'count' => array_sum(array_column($items, 'qty')),
+            'seller_groups' => $this->format_seller_groups($snapshot),
+            'marketplace_snapshot' => $snapshot,
+        ];
+    }
+
     public function upsert_item($product_id, $qty, $options = [], $cart_key = '', $add_qty = null)
     {
         $product_id = (int) $product_id;

@@ -219,7 +219,7 @@ class ShippingController
 
     public function get_checkout_context(WP_REST_Request $request)
     {
-        $context = $this->resolve_checkout_context();
+        $context = $this->resolve_checkout_context($request);
         $status = !empty($context['success']) ? 200 : 400;
         return new WP_REST_Response($context, $status);
     }
@@ -252,7 +252,7 @@ class ShippingController
             ];
         }
 
-        $context = $this->resolve_checkout_context();
+        $context = $this->resolve_checkout_context($request);
         if (empty($context['success'])) {
             return new WP_REST_Response($context, 400);
         }
@@ -407,7 +407,7 @@ class ShippingController
         ], 200);
     }
 
-    private function resolve_checkout_context()
+    private function resolve_checkout_context($request)
     {
         if (Settings::shipping_disabled()) {
             return [
@@ -428,7 +428,10 @@ class ShippingController
         }
 
         $repo = new CartRepository();
-        $cart = $repo->get_cart_data();
+        $cart = $repo->get_checkout_data(\WpStore\Domain\Order\DirectCheckout::token($request));
+        if (is_wp_error($cart)) {
+            return ['success' => false, 'message' => $cart->get_error_message()];
+        }
         $cart_items = isset($cart['items']) && is_array($cart['items']) ? $cart['items'] : [];
         $groups = isset($cart['seller_groups']) && is_array($cart['seller_groups']) ? $cart['seller_groups'] : [];
         if (empty($cart_items)) {

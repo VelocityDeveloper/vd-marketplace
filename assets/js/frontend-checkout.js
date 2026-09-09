@@ -39,6 +39,15 @@
   };
 
   // Menyediakan state Alpine utama untuk alur checkout marketplace.
+  const directToken = new URLSearchParams(window.location.search).has('direct_checkout')
+    ? (new URLSearchParams(window.location.search).get('direct_checkout') || 'invalid') : '';
+  const checkoutRequest = (path, options = {}) => {
+    if (directToken) {
+      path += (path.includes('?') ? '&' : '?') + 'direct_checkout=' + encodeURIComponent(directToken);
+    }
+    return requireShared().request(path, options);
+  };
+
   const vmpCheckout = () => {
     const current = shared();
     const cfg = current && current.cfg ? current.cfg : {};
@@ -50,6 +59,7 @@
 
     return {
     ...cartHelpers,
+    directCheckout: !!directToken,
     loading: false,
     isLoadingProvinces: false,
     isLoadingCities: false,
@@ -280,7 +290,7 @@
       this.loading = true;
       try {
         const { request } = requireShared();
-        const data = await request('cart', { method: 'GET' });
+        const data = await checkoutRequest(directToken ? 'checkout/items' : 'cart', { method: 'GET' });
         this.items = Array.isArray(data.items) ? data.items : [];
         this.subtotal = Number(data.total || 0);
         this.recalculateTotal();
@@ -363,7 +373,7 @@
       }
       try {
         const { request } = requireShared();
-        const data = await request('shipping/checkout-context', { method: 'GET' });
+        const data = await checkoutRequest('shipping/checkout-context', { method: 'GET' });
         this.shippingGroups = Array.isArray(data.data?.groups)
           ? data.data.groups.map((group) => ({
               ...group,
@@ -509,7 +519,7 @@
           return;
         }
 
-        const data = await request('shipping/calculate', {
+        const data = await checkoutRequest('shipping/calculate', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -582,7 +592,7 @@
       this.coupon.loading = true;
       try {
         const { request } = requireShared();
-        const data = await request('coupon/preview', {
+        const data = await checkoutRequest('coupon/preview', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
@@ -701,7 +711,7 @@
           payload.shipping_service = '';
         }
 
-        const data = await request('checkout', {
+        const data = await checkoutRequest('checkout', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify(payload),
@@ -712,11 +722,13 @@
         this.subtotal = 0;
         this.total = 0;
         this.shippingGroups = [];
+        if (!directToken) {
         emitCartUpdated({
           items: [],
           total: 0,
           count: 0,
         });
+        }
 
         if (data.redirect) {
           setTimeout(() => {

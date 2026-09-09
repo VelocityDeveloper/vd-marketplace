@@ -21,6 +21,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
     </div>
 
     <div class="alert alert-danger py-2" x-show="errorMessage" x-text="errorMessage"></div>
+    <div class="alert alert-info py-2" x-show="directCheckout && items.length" x-cloak>Beli Sekarang: pesanan ini hanya berisi produk yang Anda pilih.</div>
     <div class="alert alert-success py-2" x-show="successMessage" x-text="successMessage"></div>
 
     <div class="row g-3">

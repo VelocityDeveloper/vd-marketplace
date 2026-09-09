@@ -34,7 +34,10 @@ class CouponController
             ], 400);
         }
 
-        $cart = (new CartRepository())->get_cart_data();
+        $cart = (new CartRepository())->get_checkout_data(\WpStore\Domain\Order\DirectCheckout::token($request));
+        if (is_wp_error($cart)) {
+            return $cart;
+        }
         $subtotal = isset($cart['total']) ? (float) $cart['total'] : 0;
         $shipping_total = isset($payload['shipping_total']) ? (float) $payload['shipping_total'] : 0;
         $coupon = (new CouponService())->preview($code, $subtotal, $shipping_total);

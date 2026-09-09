@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.6`
+Versi: `1.0.7`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 
@@ -34,6 +34,19 @@ Kalau `VD Store` tidak aktif:
 - notifikasi seller
 - template email marketplace untuk admin dan pembeli
 - badge dan filter `Star Seller`
+
+## Ringkasan update 1.0.7
+
+- Mendukung mode **Beli Sekarang** sebagai checkout langsung yang terpisah dari keranjang marketplace.
+- Menghitung produk, varian, jumlah, kupon, ongkir per seller, dan total hanya dari sesi checkout langsung.
+- Memvalidasi ulang harga dan ongkir pada server sehingga nilai kiriman browser tidak langsung dipercaya.
+- Menjaga isi keranjang marketplace tetap utuh setelah checkout langsung selesai atau dibatalkan.
+- Menolak sesi milik pembeli lain, sesi kedaluwarsa, dan penggunaan ulang sesi yang sudah menghasilkan pesanan.
+
+Mode checkout langsung berasal dari tombol **Beli Sekarang** milik VD Store.
+Gunakan VD Store `1.4.8` atau yang lebih baru bersama VD Marketplace `1.0.7`
+atau yang lebih baru agar pemuatan produk, ongkir per seller, kupon, dan pembuatan
+pesanan memakai sumber checkout langsung yang sama.
 
 ## Ringkasan update 1.0.6
 
@@ -563,7 +576,7 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.6`
+- plugin version: `1.0.7`
 - constant: `VMP_VERSION`
 
 ## Contoh hook field checkout
