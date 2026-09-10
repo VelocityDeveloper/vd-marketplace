@@ -253,6 +253,7 @@ $qris = \VelocityMarketplace\Support\Settings::qris_details();
                                 >
                                 <div class="min-w-0">
                                     <div class="fw-semibold small" x-text="item.title"></div>
+                                    <div class="text-muted vmp-xs" x-show="optionText(item.options)" x-text="optionText(item.options)"></div>
                                     <div class="text-muted vmp-xs" x-text="item.qty + ' x ' + formatPrice(item.price)"></div>
                                 </div>
                             </div>

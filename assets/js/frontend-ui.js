@@ -185,14 +185,16 @@
       );
     };
 
-    const renderAdjustmentOptions = (rows, basePrice = 0) =>
+    const renderAdjustmentOptions = (rows, basePrice = 0, priceOptionMode = 'adjustment') =>
       rows
         .map((row, index) => {
           const label = String(row?.label || '').trim();
           if (!label) return '';
           const amount = Number(row?.amount || 0);
           const { money } = requireShared();
-          const finalPrice = Number(basePrice || 0) + Math.max(0, amount);
+          const finalPrice = priceOptionMode === 'absolute'
+            ? Math.max(0, amount)
+            : Number(basePrice || 0) + Math.max(0, amount);
           const suffix = finalPrice > 0 ? ` - ${money(finalPrice)}` : '';
           return `<option value="${escapeHtml(label)}" ${index === 0 ? 'selected' : ''}>${escapeHtml(label + suffix)}</option>`;
         })
@@ -215,6 +217,7 @@
       const fields = node.querySelector('.vmp-cart-option-modal__fields');
       const parts = [];
       const basePrice = Number(payload.base_price || 0);
+      const priceOptionMode = payload.price_option_mode === 'absolute' ? 'absolute' : 'adjustment';
 
       if (Array.isArray(payload.variant_options) && payload.variant_options.length > 0) {
         parts.push(`
@@ -235,7 +238,7 @@
           <div>
             <label class="form-label">${escapeHtml(String(payload.price_adjustment_name || 'Pilihan Harga'))}</label>
             <select class="form-select" name="price_adjustment">
-              ${renderAdjustmentOptions(payload.price_adjustment_options, basePrice)}
+              ${renderAdjustmentOptions(payload.price_adjustment_options, basePrice, priceOptionMode)}
             </select>
             <div class="form-text">Harga yang tampil adalah harga produk setelah pilihan dipakai.</div>
           </div>

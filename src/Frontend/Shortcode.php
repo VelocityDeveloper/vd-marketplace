@@ -873,6 +873,7 @@ class Shortcode
             'title' => (string) ($item['title'] ?? ''),
             'variant_name' => (string) ($item['variant_name'] ?? ''),
             'variant_options' => array_values((array) ($item['variant_options'] ?? [])),
+            'price_option_mode' => (string) ($item['price_option_mode'] ?? 'adjustment'),
             'price_adjustment_name' => (string) ($item['price_adjustment_name'] ?? ''),
             'price_adjustment_options' => array_values((array) ($item['price_adjustment_options'] ?? [])),
             'base_price' => isset($item['price']) && is_numeric($item['price']) ? (float) $item['price'] : 0.0,
@@ -909,6 +910,9 @@ class Shortcode
         $price_adjustment_options = isset($payload['price_adjustment_options']) && is_array($payload['price_adjustment_options'])
             ? array_values($payload['price_adjustment_options'])
             : [];
+        $price_option_mode = isset($payload['price_option_mode']) && $payload['price_option_mode'] === 'absolute'
+            ? 'absolute'
+            : 'adjustment';
 
         if (empty($variant_options) && empty($price_adjustment_options)) {
             return '';
@@ -936,7 +940,9 @@ class Shortcode
                     continue;
                 }
                 $amount = isset($option_row['amount']) ? (float) $option_row['amount'] : 0.0;
-                $suffix = $amount > 0 ? ' (+' . Settings::currency_symbol() . ' ' . number_format($amount, 0, ',', '.') . ')' : '';
+                $suffix = $price_option_mode === 'absolute'
+                    ? ' — ' . Settings::currency_symbol() . ' ' . number_format(max(0, $amount), 0, ',', '.')
+                    : ($amount > 0 ? ' (+' . Settings::currency_symbol() . ' ' . number_format($amount, 0, ',', '.') . ')' : '');
                 $html .= '<option value="' . esc_attr($option_label) . '"' . selected($index, 0, false) . '>' . esc_html($option_label . $suffix) . '</option>';
             }
             $html .= '</select></div>';

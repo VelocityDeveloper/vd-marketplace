@@ -27,6 +27,10 @@ class ProductData
         $variant_options = $core_product !== null && array_key_exists('variant_options', $core_product)
             ? (array) $core_product['variant_options']
             : self::variant_options($post_id);
+        $price_option_mode = $core_product !== null && array_key_exists('price_option_mode', $core_product)
+            ? (string) $core_product['price_option_mode']
+            : ProductMeta::get_text($post_id, 'price_option_mode', 'adjustment');
+        $price_option_mode = $price_option_mode === 'absolute' ? 'absolute' : 'adjustment';
         $price_adjustment_name = $core_product !== null && array_key_exists('price_adjustment_name', $core_product)
             ? (string) $core_product['price_adjustment_name']
             : ProductMeta::get_text($post_id, 'price_adjustment_name', 'Pilihan Harga');
@@ -81,6 +85,7 @@ class ProductData
             'is_premium' => (int) self::meta_number($post_id, 'is_premium', 0) === 1,
             'variant_name' => $variant_name,
             'variant_options' => $variant_options,
+            'price_option_mode' => $price_option_mode,
             'price_adjustment_name' => $price_adjustment_name,
             'price_adjustment_options' => $price_adjustment_options,
             'review_count' => $review_count,

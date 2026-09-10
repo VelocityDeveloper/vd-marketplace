@@ -129,12 +129,8 @@ class CartRepository
             $seller_url = $seller_id > 0 ? Settings::store_profile_url($seller_id) : '';
 
             $options = ProductData::normalize_options($product_id, $options);
-            $price_adjustment_name = isset($product['price_adjustment_name']) ? (string) $product['price_adjustment_name'] : '';
-            $price_adjustment_label = $price_adjustment_name !== '' && isset($options[$price_adjustment_name])
-                ? (string) $options[$price_adjustment_name]
-                : '';
-            $price_adjustment = ProductData::resolve_price_adjustment($product_id, $price_adjustment_label);
-            $price = (float) $product['price'] + (float) $price_adjustment;
+            // Gunakan kalkulasi harga dari core agar mode tambahan dan harga akhir selalu konsisten.
+            $price = \WpStore\Domain\Product\ProductData::resolve_price_with_options($product_id, $options);
             $subtotal = $price * $qty;
 
             $item = [

@@ -20,6 +20,7 @@ class ProductMeta
             'gallery_ids' => \WpStore\Domain\Product\ProductMeta::meta_key('gallery_ids'),
             'variant_name' => \WpStore\Domain\Product\ProductMeta::meta_key('variant_name'),
             'variant_options' => \WpStore\Domain\Product\ProductMeta::meta_key('variant_options'),
+            'price_option_mode' => \WpStore\Domain\Product\ProductMeta::meta_key('price_option_mode'),
             'price_adjustment_name' => \WpStore\Domain\Product\ProductMeta::meta_key('price_adjustment_name'),
             'price_adjustment_options' => \WpStore\Domain\Product\ProductMeta::meta_key('price_adjustment_options'),
         ];
