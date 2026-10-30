@@ -1,6 +1,6 @@
 # VD Marketplace
 
-Versi: `1.0.11`
+Versi: `1.1.0`
 
 `VD Marketplace` adalah addon marketplace untuk `VD Store`.
 
@@ -106,6 +106,8 @@ Badge `Star Seller` dipakai di:
 - ringkasan checkout menampilkan thumbnail produk
 - ringkasan checkout menampilkan opsi yang dipilih di bawah nama setiap produk
 - blok pengiriman per toko memakai nama toko, bukan nama user
+- pembayaran online **Duitku** dan **DOKU**: tagihan sebesar total non-COD dibuat lewat PaymentService VD Store, pembeli diarahkan ke halaman bayar gateway, dan pesanan jadi `processing` (stok dikurangi, notifikasi + email ke pembeli) setelah notifikasi lunas masuk
+- DOKU butuh VD Store 1.5+ dan plugin VD Payment Gateway dengan DOKU aktif; centang DOKU di Pengaturan > Pembayaran VD Store. Gateway yang nonaktif tidak ditawarkan di checkout
 
 ## Shortcode utama
 
@@ -554,7 +556,7 @@ Kalau mengubah area ini, tes ulang end-to-end:
 
 ## Versi saat ini
 
-- plugin version: `1.0.11`
+- plugin version: `1.1.0`
 - constant: `VMP_VERSION`
 
 ## Contoh hook field checkout
