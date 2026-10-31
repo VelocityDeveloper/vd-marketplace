@@ -7,6 +7,10 @@ use VelocityMarketplace\Modules\Notification\NotificationRepository;
 use VelocityMarketplace\Modules\Order\OrderData;
 use VelocityMarketplace\Support\Settings;
 
+/**
+ * Meneruskan hasil pembayaran gateway online (Duitku, DOKU) dari VD Store ke pesanan marketplace.
+ * Nama kelas dipertahankan agar kode lain yang merujuknya tidak rusak.
+ */
 class DuitkuCallbackListener
 {
     public function register()
@@ -19,14 +23,14 @@ class DuitkuCallbackListener
     public function sync_gateway_meta($order_id, $gateway, $payment_data, $payload)
     {
         $order_id = (int) $order_id;
-        if ($order_id <= 0 || sanitize_key((string) $gateway) !== 'duitku') {
+        if ($order_id <= 0 || !in_array(sanitize_key((string) $gateway), Settings::online_gateways(), true)) {
             return;
         }
         if (!is_array($payload) || !is_array($payment_data)) {
             return;
         }
 
-        update_post_meta($order_id, 'vmp_gateway_name', 'duitku');
+        update_post_meta($order_id, 'vmp_gateway_name', sanitize_key((string) $gateway));
         update_post_meta($order_id, 'vmp_gateway_reference', sanitize_text_field((string) ($payment_data['reference'] ?? '')));
         update_post_meta($order_id, 'vmp_gateway_payment_code', sanitize_text_field((string) ($payment_data['payment_code'] ?? '')));
         update_post_meta($order_id, 'vmp_gateway_amount', (float) ($payment_data['amount'] ?? 0));
@@ -38,7 +42,7 @@ class DuitkuCallbackListener
     public function handle_completed($order_id, $gateway, $payment_data, $payload)
     {
         $order_id = (int) $order_id;
-        if ($order_id <= 0 || sanitize_key((string) $gateway) !== 'duitku') {
+        if ($order_id <= 0 || !in_array(sanitize_key((string) $gateway), Settings::online_gateways(), true)) {
             return;
         }
         $this->sync_gateway_meta($order_id, $gateway, $payment_data, $payload);
@@ -70,7 +74,7 @@ class DuitkuCallbackListener
                 $user_id,
                 'payment',
                 'Pembayaran Berhasil',
-                'Pembayaran untuk invoice ' . $invoice . ' berhasil dikonfirmasi oleh Duitku.',
+                'Pembayaran untuk invoice ' . $invoice . ' berhasil dikonfirmasi oleh ' . Settings::gateway_label(sanitize_key((string) $gateway)) . '.',
                 Settings::customer_order_url($invoice)
             );
         }
@@ -81,7 +85,7 @@ class DuitkuCallbackListener
     public function handle_failed($order_id, $gateway, $payment_data, $payload)
     {
         $order_id = (int) $order_id;
-        if ($order_id <= 0 || sanitize_key((string) $gateway) !== 'duitku') {
+        if ($order_id <= 0 || !in_array(sanitize_key((string) $gateway), Settings::online_gateways(), true)) {
             return;
         }
 

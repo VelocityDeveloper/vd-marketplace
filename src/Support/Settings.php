@@ -92,6 +92,7 @@ class Settings
             'bank_transfer' => 'bank',
             'bank' => 'bank',
             'duitku' => 'duitku',
+            'doku' => 'doku',
             'paypal' => 'paypal',
             'cod' => 'cod',
             'qris' => 'qris',
@@ -103,7 +104,7 @@ class Settings
             if ($normalized === '') {
                 continue;
             }
-            if ($normalized === 'duitku' && !DuitkuGateway::is_available()) {
+            if (in_array($normalized, self::online_gateways(), true) && !self::gateway_available($normalized)) {
                 continue;
             }
             if ($normalized === 'cod' && !self::shipping_allow_cod()) {
@@ -119,9 +120,35 @@ class Settings
 
     public static function gateway_flags()
     {
-        return [
-            'duitku' => DuitkuGateway::is_available(),
-        ];
+        $flags = [];
+        foreach (self::online_gateways() as $gateway) {
+            $flags[$gateway] = self::gateway_available($gateway);
+        }
+
+        return $flags;
+    }
+
+    /** Metode bayar online: tagihan dibuat lewat PaymentService VD Store, pembeli diarahkan ke halaman bayar gateway. */
+    public static function online_gateways()
+    {
+        return ['duitku', 'doku'];
+    }
+
+    public static function gateway_label($gateway)
+    {
+        $labels = ['duitku' => 'Duitku', 'doku' => 'DOKU'];
+
+        return $labels[$gateway] ?? strtoupper((string) $gateway);
+    }
+
+    public static function gateway_available($gateway)
+    {
+        if ($gateway === 'duitku') {
+            return DuitkuGateway::is_available();
+        }
+
+        // DOKU butuh VD Store 1.5+ (registry mengenal metode doku) dan VD Payment Gateway aktif.
+        return (new PaymentMethodRegistry())->is_available($gateway);
     }
 
     public static function default_order_status()

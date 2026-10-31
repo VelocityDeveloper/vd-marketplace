@@ -403,8 +403,8 @@ class CheckoutController
         OrderData::sync_core_status($order_id, $order_status);
 
         $redirect = $this->resolve_tracking_url($invoice);
-        if ($effective_payment_method === 'duitku' && $pay_now_total > 0) {
-            $duitku_invoice = (new PaymentService())->initialize_order_payment($order_id, 'duitku', [
+        if (in_array($effective_payment_method, Settings::online_gateways(), true) && $pay_now_total > 0) {
+            $gateway_invoice = (new PaymentService())->initialize_order_payment($order_id, $effective_payment_method, [
                 'order_number' => $invoice,
                 'name' => $customer['name'],
                 'email' => $customer['email'],
@@ -421,21 +421,21 @@ class CheckoutController
                 'return_url' => Settings::tracking_url((string) $invoice),
                 'expiry_period' => 60,
             ], $pay_now_total);
-            if (is_wp_error($duitku_invoice)) {
+            if (is_wp_error($gateway_invoice)) {
                 wp_delete_post($order_id, true);
 
                 return new WP_REST_Response([
-                    'message' => $duitku_invoice->get_error_message(),
+                    'message' => $gateway_invoice->get_error_message(),
                 ], 400);
             }
 
-            update_post_meta($order_id, 'vmp_gateway_name', 'duitku');
-            update_post_meta($order_id, 'vmp_gateway_reference', sanitize_text_field((string) ($duitku_invoice['payment_token'] ?? $duitku_invoice['reference'] ?? '')));
-            update_post_meta($order_id, 'vmp_gateway_payment_url', esc_url_raw((string) ($duitku_invoice['payment_url'] ?? $duitku_invoice['paymentUrl'] ?? '')));
-            update_post_meta($order_id, 'vmp_gateway_status', sanitize_text_field((string) (($duitku_invoice['extra']['gateway_status'] ?? null) ?: ($duitku_invoice['statusCode'] ?? 'pending'))));
+            update_post_meta($order_id, 'vmp_gateway_name', $effective_payment_method);
+            update_post_meta($order_id, 'vmp_gateway_reference', sanitize_text_field((string) ($gateway_invoice['payment_token'] ?? $gateway_invoice['reference'] ?? '')));
+            update_post_meta($order_id, 'vmp_gateway_payment_url', esc_url_raw((string) ($gateway_invoice['payment_url'] ?? $gateway_invoice['paymentUrl'] ?? '')));
+            update_post_meta($order_id, 'vmp_gateway_status', sanitize_text_field((string) (($gateway_invoice['extra']['gateway_status'] ?? null) ?: ($gateway_invoice['statusCode'] ?? 'pending'))));
             update_post_meta($order_id, 'vmp_status', 'pending_payment');
             OrderData::sync_core_status($order_id, 'pending_payment');
-            $redirect = (string) ($duitku_invoice['payment_url'] ?? $duitku_invoice['paymentUrl'] ?? $redirect);
+            $redirect = (string) ($gateway_invoice['payment_url'] ?? $gateway_invoice['paymentUrl'] ?? $redirect);
         }
 
         // Grup COD langsung diproses. Stok seller COD dikurangi sekarang,

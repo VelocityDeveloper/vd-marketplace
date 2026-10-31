@@ -7,6 +7,7 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
         'bank' => __('Bank Transfer', 'velocity-marketplace'),
         'qris' => 'QRIS',
         'duitku' => 'Duitku',
+        'doku' => 'DOKU',
         'paypal' => 'PayPal',
         'cod' => 'COD',
     ];
@@ -142,9 +143,9 @@ use VelocityMarketplace\Modules\Shipping\ShippingController;
                     </div>
                 </div>
             <?php endif; ?>
-            <?php if ($pay_now_total > 0 && $payment === 'duitku' && $gateway_payment_url !== '' && $gateway_status !== 'paid') : ?>
+            <?php if ($pay_now_total > 0 && in_array($payment, \VelocityMarketplace\Support\Settings::online_gateways(), true) && $gateway_payment_url !== '' && $gateway_status !== 'paid') : ?>
                 <div class="mt-3">
-                    <a href="<?php echo esc_url($gateway_payment_url); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-primary"><?php echo esc_html__('Lanjutkan Pembayaran Duitku', 'velocity-marketplace'); ?></a>
+                    <a href="<?php echo esc_url($gateway_payment_url); ?>" target="_blank" rel="noopener" class="btn btn-sm btn-primary"><?php echo esc_html(sprintf(__('Lanjutkan Pembayaran %s', 'velocity-marketplace'), \VelocityMarketplace\Support\Settings::gateway_label($payment))); ?></a>
                 </div>
             <?php endif; ?>
             <?php if ($pay_now_total > 0 && $payment === 'qris') : ?>

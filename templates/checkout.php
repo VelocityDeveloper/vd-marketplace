@@ -5,6 +5,7 @@ $payment_labels = [
     'bank' => __('Transfer Bank', 'velocity-marketplace'),
     'qris' => 'QRIS',
     'duitku' => 'Duitku',
+    'doku' => 'DOKU',
     'paypal' => 'PayPal',
     'cod' => 'COD',
 ];
